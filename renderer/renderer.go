@@ -1609,10 +1609,15 @@ type FormSection struct {
 // DateRangeConfig presents two ordinary form fields as one range control. It
 // only affects presentation; generated add and update payloads stay flat.
 type DateRangeConfig struct {
-	StartField    string   `json:"start_field"`
-	EndField      string   `json:"end_field"`
-	Min           string   `json:"min,omitempty"`
-	Max           string   `json:"max,omitempty"`
+	StartField string `json:"start_field"`
+	EndField   string `json:"end_field"`
+	Min        string `json:"min,omitempty"`
+	Max        string `json:"max,omitempty"`
+	// MinDays is the shortest range the picker may produce, counted inclusively,
+	// so a control can refuse a shorter span instead of letting the server reject
+	// it after the fact. MinDaysLabel names the localized copy that explains it.
+	MinDays       int      `json:"min_days,omitempty"`
+	MinDaysLabel  string   `json:"min_days_label,omitempty"`
 	DisabledDates []string `json:"disabled_dates,omitempty"`
 	Placeholder   string   `json:"placeholder,omitempty"`
 	ApplyLabel    string   `json:"apply_label,omitempty"`
