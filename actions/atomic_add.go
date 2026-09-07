@@ -211,6 +211,7 @@ const (
 	AtomicValueKindString         AtomicValueKind = "string"
 	AtomicValueKindNullableString AtomicValueKind = "nullable_string"
 	AtomicValueKindInt            AtomicValueKind = "int"
+	AtomicValueKindNullableInt    AtomicValueKind = "nullable_int"
 	AtomicValueKindFloat          AtomicValueKind = "float"
 	AtomicValueKindBool           AtomicValueKind = "bool"
 	AtomicValueKindTime           AtomicValueKind = "time"
@@ -220,7 +221,7 @@ const (
 
 func (kind AtomicValueKind) valid() bool {
 	switch kind {
-	case AtomicValueKindString, AtomicValueKindNullableString, AtomicValueKindInt, AtomicValueKindFloat, AtomicValueKindBool, AtomicValueKindTime, AtomicValueKindStrings, AtomicValueKindInts:
+	case AtomicValueKindString, AtomicValueKindNullableString, AtomicValueKindInt, AtomicValueKindNullableInt, AtomicValueKindFloat, AtomicValueKindBool, AtomicValueKindTime, AtomicValueKindStrings, AtomicValueKindInts:
 		return true
 	default:
 		return false

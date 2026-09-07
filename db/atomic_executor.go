@@ -361,6 +361,16 @@ func atomicSelectScan(kind actions.AtomicValueKind) (interface{}, func() (action
 			}
 			return actions.AtomicInt(value.Int64), nil
 		}, nil
+	case actions.AtomicValueKindNullableInt:
+		// A column that may hold nothing answers "nothing" rather than failing
+		// the whole read: the caller decides what an absent link means.
+		value := &sql.NullInt64{}
+		return value, func() (actions.AtomicValue, error) {
+			if !value.Valid {
+				return actions.AtomicValue{}, nil
+			}
+			return actions.AtomicInt(value.Int64), nil
+		}, nil
 	case actions.AtomicValueKindFloat:
 		value := &sql.NullFloat64{}
 		return value, func() (actions.AtomicValue, error) {
