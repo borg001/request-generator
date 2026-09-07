@@ -45,6 +45,10 @@ func cloneFormPage(v *FormPage) *FormPage {
 	}
 	cp := *v
 	cp.Workflow = cloneFormWorkflow(v.Workflow)
+	if v.Navigation != nil {
+		navigation := *v.Navigation
+		cp.Navigation = &navigation
+	}
 	cp.Actions = cloneActions(v.Actions)
 	cp.Sections = cloneFormSections(v.Sections)
 	cp.Fields = cloneSlice(v.Fields)

@@ -2335,6 +2335,25 @@ Generator behavior:
 }
 ```
 
+### Opt-in form section tabs
+
+`form_page.navigation: {"presentation":"tabs"}` displays the ordinary form
+sections as horizontal tabs on desktop and mobile. Labels come from section
+titles; field ownership and the shared form draft remain unchanged. Switching
+tabs must not save, reset, or reload field values. Submit/reset actions apply to
+the complete form, including inactive sections. Matrix `mode: "tabbed_list"`
+can provide a second level of tabs within a section using its table heads.
+
+Go: `FormPage.Navigation *FormNavigation`, with the closed
+`FormNavigationPresentationTabs` enum value. A navigation block requires this
+value, nonempty sections with unique nonempty IDs, and no `workflow`.
+Navigation has no localized strings; existing section titles are localized as
+usual, and cloning must detach the navigation pointer.
+
+This is an additive, opt-in v2 contract extension. Omitted navigation preserves
+existing behavior. Deploy the supporting consumer before enabling the option
+in a producer; older consumers do not implement this presentation.
+
 ## Record Page
 
 `record_page` описывает страницу просмотра записи. В Go API это `renderer.Universal.Record`.
