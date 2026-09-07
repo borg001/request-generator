@@ -1451,6 +1451,10 @@ type StatusBinding struct {
 	Marker     *bool             `json:"marker,omitempty"`
 	OnlineTone string            `json:"online_tone,omitempty"`
 	ToneMap    map[string]string `json:"tone_map,omitempty"`
+	// LabelMap names each state in the reader's language. A list row carries
+	// plain values, so a producer that cannot ship option metadata beside them
+	// states the words here instead of leaving the raw value on the card.
+	LabelMap map[string]string `json:"label_map,omitempty"`
 }
 
 type Badge struct {
