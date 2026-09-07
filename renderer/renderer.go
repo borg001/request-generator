@@ -2111,6 +2111,10 @@ type DisplayComponent struct {
 	Align               AlignToken               `json:"align,omitempty"`
 	Inset               InsetToken               `json:"inset,omitempty"`
 	Compact             bool                     `json:"compact,omitempty"`
+	// ShowEmpty keeps a block's declared fields on screen even when the record
+	// has no value for them yet. A page meant to be filled in reads as a frame
+	// with blanks rather than as whatever happens to be filled already.
+	ShowEmpty           bool                     `json:"show_empty,omitempty"`
 	Columns             int                      `json:"columns,omitempty"`
 	ReadonlyColumns     int                      `json:"readonly_columns,omitempty"`
 	DisplayType         ComponentDisplayType     `json:"display_type,omitempty"`
