@@ -306,11 +306,13 @@ const (
 	ActionPlacementFull         ActionPlacement = "full"
 	ActionPlacementFilterFooter ActionPlacement = "filter_footer"
 	ActionPlacementBadge        ActionPlacement = "badge"
+	ActionPlacementHead         ActionPlacement = "head"
+	ActionPlacementMenu         ActionPlacement = "menu"
 )
 
 func (placement ActionPlacement) Valid() bool {
 	switch placement {
-	case "", ActionPlacementFull, ActionPlacementFilterFooter, ActionPlacementBadge:
+	case "", ActionPlacementFull, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu:
 		return true
 	default:
 		return false

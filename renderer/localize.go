@@ -199,6 +199,7 @@ func (localizer textLocalizer) localizeFilterPills(rows [][]FilterPill) {
 }
 
 func (localizer textLocalizer) localizeCardSchema(schema *CardSchema) {
+	schema.ActionMenuLabel = localizer.localizeRendererText(schema.ActionMenuLabel, "")
 	for i := range schema.Badges {
 		localizer.localizeBadge(&schema.Badges[i])
 	}

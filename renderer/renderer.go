@@ -1205,6 +1205,7 @@ type CardSchema struct {
 	ActionSize       SizeToken        `json:"action_size,omitempty"`
 	DeleteActionSize SizeToken        `json:"delete_action_size,omitempty"`
 	ActionLayout     CardActionLayout `json:"action_layout,omitempty"`
+	ActionMenuLabel  string           `json:"action_menu_label,omitempty"`
 	PrimaryAction    string           `json:"primary_action,omitempty"`
 	Icon             *IconBinding     `json:"icon,omitempty"`
 	Media            *Media           `json:"media,omitempty"`
