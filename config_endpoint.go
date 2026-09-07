@@ -42,6 +42,10 @@ type ConfigNavigationEntry struct {
 	Group       string                 `json:"group,omitempty"`
 	GroupTitle  string                 `json:"group_title,omitempty"`
 	Query       map[string]interface{} `json:"query,omitempty"`
+	// A destination can exist for an actor and still be closed to them right
+	// now. The entry stays in the menu and says so instead of disappearing.
+	Locked     bool   `json:"locked,omitempty"`
+	LockReason string `json:"lock_reason,omitempty"`
 }
 
 type NavigationPageTarget struct {
@@ -55,12 +59,25 @@ type NavigationPageTarget struct {
 }
 
 type ConfigWidget struct {
-	ID       string                `json:"id"`
-	Order    int                   `json:"order,omitempty"`
-	Renderer renderer.Identity     `json:"renderer"`
-	Widget   renderer.GlobalWidget `json:"widget"`
-	Load     renderer.WidgetLoad   `json:"load"`
+	ID         string                `json:"id"`
+	Order      int                   `json:"order,omitempty"`
+	Renderer   renderer.Identity     `json:"renderer"`
+	Widget     renderer.GlobalWidget `json:"widget"`
+	Load       renderer.WidgetLoad   `json:"load"`
+	Locked     bool                  `json:"locked,omitempty"`
+	LockReason string                `json:"lock_reason,omitempty"`
 }
+
+// AccessTarget names what an access gate is being asked about.
+type AccessTarget struct {
+	Kind string
+	ID   string
+	Path string
+}
+
+// AccessGate answers whether a destination is closed to the current actor and
+// why. It is owned by the application: the generator only asks.
+type AccessGate func(c *gin.Context, target AccessTarget) (bool, string)
 
 // RouteConfig конфигурирует маршрут
 type RouteConfig struct {
@@ -234,6 +251,9 @@ func (generator *Generator) buildNavigation(c *gin.Context, role string, lang lo
 			if titleKey, ok := generator.GroupTitles[entry.Group]; ok {
 				configEntry.GroupTitle = generator.Translate(lang, titleKey)
 			}
+			if generator.AccessGate != nil {
+				configEntry.Locked, configEntry.LockReason = generator.AccessGate(c, AccessTarget{Kind: "navigation", ID: configEntry.ID, Path: configEntry.Path})
+			}
 			result = append(result, configEntry)
 		}
 	}
@@ -390,6 +410,9 @@ func (generator *Generator) buildWidgets(c *gin.Context, role string) ([]ConfigW
 				return nil, err
 			}
 			if available {
+				if generator.AccessGate != nil {
+					config.Locked, config.LockReason = generator.AccessGate(c, AccessTarget{Kind: "widget", ID: config.ID})
+				}
 				result = append(result, config)
 			}
 		}
@@ -400,6 +423,9 @@ func (generator *Generator) buildWidgets(c *gin.Context, role string) ([]ConfigW
 				return nil, err
 			}
 			if available {
+				if generator.AccessGate != nil {
+					config.Locked, config.LockReason = generator.AccessGate(c, AccessTarget{Kind: "widget", ID: config.ID})
+				}
 				result = append(result, config)
 			}
 		}

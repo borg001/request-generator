@@ -53,6 +53,11 @@ func NewDefrecResponse(fields []f.ModuleField) DefrecResponse {
 					case "length":
 						item["min_length"] = info.Min
 						item["max_length"] = info.Max
+					case "range":
+						// A control that knows the range it accepts can hold a
+						// value inside it instead of refusing one outside it.
+						item["min"] = info.Min
+						item["max"] = info.Max
 					}
 					break
 				}
