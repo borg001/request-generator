@@ -159,6 +159,8 @@ func TestConfigEndpoint_ValidToken(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Contains(t, response, "navigation")
+	assert.Contains(t, response, "navigation_more_label")
+	assert.Equal(t, "More", response["navigation_more_label"])
 	assert.Contains(t, response, "widgets")
 	assert.Contains(t, response, "role")
 	assert.Equal(t, "admin", response["role"])

@@ -144,6 +144,9 @@ func (localizer textLocalizer) localizeDateRangeToolbar(toolbar *DateRangeToolba
 	for i := range toolbar.Months {
 		toolbar.Months[i] = localizer.localizeRendererText(toolbar.Months[i], "")
 	}
+	for i := range toolbar.FormatMonths {
+		toolbar.FormatMonths[i] = localizer.localizeRendererText(toolbar.FormatMonths[i], "")
+	}
 	for i := range toolbar.Weekdays {
 		toolbar.Weekdays[i] = localizer.localizeRendererText(toolbar.Weekdays[i], "")
 	}
@@ -265,6 +268,9 @@ func (localizer textLocalizer) localizeDateRange(config *DateRangeConfig) {
 	localizer.localizeTextFields(&config.Placeholder, &config.ApplyLabel, &config.CancelLabel, &config.StartLabel, &config.EndLabel, &config.EmptyLabel, &config.DialogLabel, &config.PreviousLabel, &config.NextLabel)
 	for index := range config.Months {
 		config.Months[index] = localizer.localizeRendererText(config.Months[index], "")
+	}
+	for index := range config.FormatMonths {
+		config.FormatMonths[index] = localizer.localizeRendererText(config.FormatMonths[index], "")
 	}
 	for index := range config.Weekdays {
 		config.Weekdays[index] = localizer.localizeRendererText(config.Weekdays[index], "")

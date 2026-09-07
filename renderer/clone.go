@@ -156,6 +156,7 @@ func cloneLayout(v *Layout) *Layout {
 	}
 	cp := *v
 	cp.Slots = cloneSlice(v.Slots)
+	cp.MobileSlots = cloneSlice(v.MobileSlots)
 	return &cp
 }
 
@@ -303,6 +304,7 @@ func cloneDateRangeToolbar(v *DateRangeToolbar) *DateRangeToolbar {
 	cp := *v
 	cp.Presets = cloneSlice(v.Presets)
 	cp.Months = cloneSlice(v.Months)
+	cp.FormatMonths = cloneSlice(v.FormatMonths)
 	cp.Weekdays = cloneSlice(v.Weekdays)
 	return &cp
 }
@@ -424,6 +426,7 @@ func cloneFormSections(values []FormSection) []FormSection {
 	for i, v := range values {
 		out[i] = v
 		out[i].Block = cloneBlock(v.Block)
+		out[i].Actions = cloneSlice(v.Actions)
 		out[i].Fields = cloneSlice(v.Fields)
 		out[i].Matrix = cloneFieldMatrix(v.Matrix)
 		out[i].ListPage = cloneListPage(v.ListPage)
@@ -447,6 +450,7 @@ func cloneDateRangeConfig(v *DateRangeConfig) *DateRangeConfig {
 	cp := *v
 	cp.DisabledDates = cloneSlice(v.DisabledDates)
 	cp.Months = cloneSlice(v.Months)
+	cp.FormatMonths = cloneSlice(v.FormatMonths)
 	cp.Weekdays = cloneSlice(v.Weekdays)
 	return &cp
 }

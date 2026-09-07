@@ -18,10 +18,11 @@ import (
 
 // ConfigResponse структурирует ответ эндпоинта /api/config
 type ConfigResponse struct {
-	Navigation []ConfigNavigationEntry `json:"navigation"`
-	Routes     []ConfigRouteEntry      `json:"routes"`
-	Widgets    []ConfigWidget          `json:"widgets"`
-	Role       string                  `json:"role"`
+	Navigation          []ConfigNavigationEntry `json:"navigation"`
+	NavigationMoreLabel string                  `json:"navigation_more_label"`
+	Routes              []ConfigRouteEntry      `json:"routes"`
+	Widgets             []ConfigWidget          `json:"widgets"`
+	Role                string                  `json:"role"`
 }
 
 type ConfigRouteEntry struct {
@@ -30,15 +31,17 @@ type ConfigRouteEntry struct {
 }
 
 type ConfigNavigationEntry struct {
-	ID         string                 `json:"id,omitempty"`
-	Path       string                 `json:"path,omitempty"`
-	Target     NavigationPageTarget   `json:"target"`
-	Title      string                 `json:"title"`
-	Icon       string                 `json:"icon,omitempty"`
-	Order      int                    `json:"order,omitempty"`
-	Group      string                 `json:"group,omitempty"`
-	GroupTitle string                 `json:"group_title,omitempty"`
-	Query      map[string]interface{} `json:"query,omitempty"`
+	ID          string                 `json:"id,omitempty"`
+	Path        string                 `json:"path,omitempty"`
+	Target      NavigationPageTarget   `json:"target"`
+	Title       string                 `json:"title"`
+	Icon        string                 `json:"icon,omitempty"`
+	Order       int                    `json:"order,omitempty"`
+	MobileOrder int                    `json:"mobile_order,omitempty"`
+	MobileTitle string                 `json:"mobile_title,omitempty"`
+	Group       string                 `json:"group,omitempty"`
+	GroupTitle  string                 `json:"group_title,omitempty"`
+	Query       map[string]interface{} `json:"query,omitempty"`
 }
 
 type NavigationPageTarget struct {
@@ -109,10 +112,11 @@ func (generator *Generator) actionConfigEndpoint() gin.HandlerFunc {
 		}
 
 		config := ConfigResponse{
-			Navigation: navigation,
-			Routes:     routes,
-			Widgets:    widgets,
-			Role:       role,
+			Navigation:          navigation,
+			NavigationMoreLabel: generator.TranslateWithFallback(lang, "nav.more", "More"),
+			Routes:              routes,
+			Widgets:             widgets,
+			Role:                role,
 		}
 
 		response.Response(l, c, config)
@@ -216,14 +220,16 @@ func (generator *Generator) buildNavigation(c *gin.Context, role string, lang lo
 			}
 
 			configEntry := ConfigNavigationEntry{
-				ID:     navigationID(module, entry),
-				Path:   navigationPath(module, entry, target.Type),
-				Title:  generator.Translate(lang, entry.Title),
-				Icon:   entry.Icon,
-				Group:  entry.Group,
-				Order:  entry.Order,
-				Target: target,
-				Query:  entry.Query,
+				ID:          navigationID(module, entry),
+				Path:        navigationPath(module, entry, target.Type),
+				Title:       generator.Translate(lang, entry.Title),
+				Icon:        entry.Icon,
+				Group:       entry.Group,
+				Order:       entry.Order,
+				MobileOrder: entry.MobileOrder,
+				MobileTitle: generator.TranslateWithFallback(lang, entry.MobileTitle, ""),
+				Target:      target,
+				Query:       entry.Query,
 			}
 			if titleKey, ok := generator.GroupTitles[entry.Group]; ok {
 				configEntry.GroupTitle = generator.Translate(lang, titleKey)

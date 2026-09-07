@@ -227,6 +227,12 @@ renderer.FormSection{
             "calendar.july", "calendar.august", "calendar.september",
             "calendar.october", "calendar.november", "calendar.december",
         },
+        FormatMonths: []string{
+            "calendar.format_january", "calendar.format_february", "calendar.format_march",
+            "calendar.format_april", "calendar.format_may", "calendar.format_june",
+            "calendar.format_july", "calendar.format_august", "calendar.format_september",
+            "calendar.format_october", "calendar.format_november", "calendar.format_december",
+        },
         Weekdays: []string{
             "calendar.monday", "calendar.tuesday", "calendar.wednesday",
             "calendar.thursday", "calendar.friday", "calendar.saturday",
@@ -237,8 +243,12 @@ renderer.FormSection{
 ```
 
 Оба field id должны входить и в `form_page.fields`, и в `section.fields`.
-`min`, `max` и `disabled_dates` используют ISO `YYYY-MM-DD`. Месяцы и дни
-недели передаются producer-ом и локализуются обычным renderer localizer.
+`min`, `max` и `disabled_dates` используют ISO `YYYY-MM-DD`. `months` содержит
+формы для заголовка календаря, а необязательный `format_months` — формы для
+полной выбранной даты. Например, русская локаль передаёт `Август` и `августа`,
+чтобы renderer вывел заголовок `Август 2026` и значение `1 августа 2026` без
+языковой логики на клиенте. Месяцы и дни недели передаются producer-ом и
+локализуются обычным renderer localizer.
 
 ### Prompt List Внутри Формы
 
@@ -644,6 +654,8 @@ presentation. Значения переключателей, availability и upd
       "title": "entities.menu.list",
       "icon": "list",
       "order": 10,
+      "mobile_order": 2,
+      "mobile_title": "Catalog",
       "group": "navigation.main",
       "query": {},
       "data": {}
@@ -656,6 +668,7 @@ presentation. Значения переключателей, availability и upd
       }
     }
   ],
+  "navigation_more_label": "More",
   "widgets": [
     {
       "id": "profile-menu",
@@ -702,6 +715,9 @@ presentation. Значения переключателей, availability и upd
 | `navigation[].target.page_type` | Тип страницы: `list`, `form`, `record`, `resource_grid`. |
 | `navigation[].target.query` | Endpoint и method для загрузки данных page route. |
 | `navigation[].target.children` | Вложенные route configs. |
+| `navigation[].mobile_order` | Порядок в нижней mobile navigation. Положительные значения получают приоритет над пунктами без mobile order. |
+| `navigation[].mobile_title` | Уже локализованная короткая подпись для mobile navigation. Если поле пусто, frontend использует `title`. |
+| `navigation_more_label` | Уже локализованная подпись overflow-кнопки mobile navigation. |
 | `widgets` | Глобальные виджеты, построенные из действий модулей с `WidgetConfig`. |
 | `widgets[].renderer` | Renderer identity/version глобального typed widget contract. |
 | `widgets[].widget` | Typed surface и optional workspace composition. |
@@ -2092,6 +2108,16 @@ Core renderer package owns only stable universal values:
 
 Application-specific values, especially visual color names such as `cyan`, `violet`, `magenta`, shell variants, section IDs, business IDs and translation keys, must be declared by the application as typed constants when reused. The renderer package should not try to maintain every project's color or shell catalog.
 
+`layout.slots` задает порядок колонок на desktop. Если mobile layout должен
+отличаться, producer задает `layout.mobile_slots`; frontend меняет порядок
+универсальных slot containers только на mobile breakpoint. Нельзя решать такой
+порядок через CSS-селекторы конкретного модуля или по именам section.
+
+Если на mobile нужно чередовать секции из разных desktop-колонок, producer
+задает `record.sections[].mobile_order`. Renderer сортирует такие секции только
+на mobile breakpoint, не меняя `layout_slot` и desktop-порядок. Значение должно
+быть положительным; секции без `mobile_order` следуют после явно упорядоченных.
+
 ## Conditions
 
 `visible_if`, `hidden_if`, `disabled_if` и похожие condition fields используют один grammar.
@@ -2324,7 +2350,11 @@ Generator behavior:
     "badge_tone": "glass-cyan",
     "badge_teleport": "topbar",
     "navigation": {"type": "none", "enabled": false},
-    "layout": {"type": "three_column"},
+    "layout": {
+      "type": "three_column",
+      "slots": ["left", "center", "right"],
+      "mobile_slots": ["center", "left", "right"]
+    },
     "sections": [
       {
         "id": "summary",

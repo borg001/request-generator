@@ -11,17 +11,19 @@ import (
 )
 
 type NavigationEntry struct {
-	ActionName string                 `json:"action"`
-	ID         string                 `json:"id,omitempty"`
-	Path       string                 `json:"path,omitempty"`
-	Title      string                 `json:"title"`
-	Icon       string                 `json:"icon,omitempty"`
-	Show       bool                   `json:"show"`
-	Order      int                    `json:"order"`
-	Group      string                 `json:"group"`
-	Target     NavigationTarget       `json:"target,omitempty"`
-	Roles      []actions.Role         `json:"roles,omitempty"`
-	Query      map[string]interface{} `json:"query,omitempty"`
+	ActionName  string                 `json:"action"`
+	ID          string                 `json:"id,omitempty"`
+	Path        string                 `json:"path,omitempty"`
+	Title       string                 `json:"title"`
+	Icon        string                 `json:"icon,omitempty"`
+	Show        bool                   `json:"show"`
+	Order       int                    `json:"order"`
+	MobileOrder int                    `json:"mobile_order,omitempty"`
+	MobileTitle string                 `json:"mobile_title,omitempty"`
+	Group       string                 `json:"group"`
+	Target      NavigationTarget       `json:"target,omitempty"`
+	Roles       []actions.Role         `json:"roles,omitempty"`
+	Query       map[string]interface{} `json:"query,omitempty"`
 }
 
 type NavigationTarget struct {

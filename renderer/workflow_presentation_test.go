@@ -70,8 +70,9 @@ func TestDateRangeSectionBindsDeclaredOrdinaryFields(t *testing.T) {
 				StartField: "starts_on", EndField: "ends_on", Min: "2026-01-01", Max: "2027-01-01",
 				DisabledDates: []string{"2026-12-31"}, Placeholder: "dates.placeholder", ApplyLabel: "ui.apply",
 				CancelLabel: "ui.cancel", StartLabel: "dates.start", EndLabel: "dates.end", EmptyLabel: "ui.empty",
-				Months:   []string{"month.1", "month.2", "month.3", "month.4", "month.5", "month.6", "month.7", "month.8", "month.9", "month.10", "month.11", "month.12"},
-				Weekdays: []string{"weekday.1", "weekday.2", "weekday.3", "weekday.4", "weekday.5", "weekday.6", "weekday.7"},
+				Months:       []string{"month.1", "month.2", "month.3", "month.4", "month.5", "month.6", "month.7", "month.8", "month.9", "month.10", "month.11", "month.12"},
+				FormatMonths: []string{"month.gen.1", "month.gen.2", "month.gen.3", "month.gen.4", "month.gen.5", "month.gen.6", "month.gen.7", "month.gen.8", "month.gen.9", "month.gen.10", "month.gen.11", "month.gen.12"},
+				Weekdays:     []string{"weekday.1", "weekday.2", "weekday.3", "weekday.4", "weekday.5", "weekday.6", "weekday.7"},
 			},
 		}},
 	}}
@@ -80,11 +81,14 @@ func TestDateRangeSectionBindsDeclaredOrdinaryFields(t *testing.T) {
 	localized := Localize(value, func(value, _ string) string { return "localized:" + value })
 	require.Equal(t, "localized:dates.placeholder", localized.Form.Sections[0].DateRange.Placeholder)
 	require.Equal(t, "localized:month.1", localized.Form.Sections[0].DateRange.Months[0])
+	require.Equal(t, "localized:month.gen.1", localized.Form.Sections[0].DateRange.FormatMonths[0])
 	require.Equal(t, "localized:weekday.7", localized.Form.Sections[0].DateRange.Weekdays[6])
 
 	clone := value.Clone()
 	clone.Form.Sections[0].DateRange.Months[0] = "changed"
+	clone.Form.Sections[0].DateRange.FormatMonths[0] = "changed"
 	require.Equal(t, "month.1", value.Form.Sections[0].DateRange.Months[0])
+	require.Equal(t, "month.gen.1", value.Form.Sections[0].DateRange.FormatMonths[0])
 }
 
 func TestDateRangeSectionRejectsInvalidContracts(t *testing.T) {
@@ -103,6 +107,7 @@ func TestDateRangeSectionRejectsInvalidContracts(t *testing.T) {
 		{name: "same field", edit: func(config *DateRangeConfig) { config.EndField = "from" }, want: `renderer.Universal: date range section "dates" must define distinct start and end fields`},
 		{name: "unknown field", edit: func(config *DateRangeConfig) { config.EndField = "unknown" }, want: `renderer.Universal: date range section "dates" field "unknown" is not declared by the form`},
 		{name: "months", edit: func(config *DateRangeConfig) { config.Months = []string{"one"} }, want: `renderer.Universal: date range section "dates" months must contain 12 values`},
+		{name: "format months", edit: func(config *DateRangeConfig) { config.FormatMonths = []string{"one"} }, want: `renderer.Universal: date range section "dates" format_months must contain 12 values`},
 		{name: "weekdays", edit: func(config *DateRangeConfig) { config.Weekdays = []string{"one"} }, want: `renderer.Universal: date range section "dates" weekdays must contain 7 values`},
 		{name: "date", edit: func(config *DateRangeConfig) { config.Min = "2026-99-99" }, want: `renderer.Universal: date range section "dates" date "2026-99-99" must use YYYY-MM-DD`},
 	}

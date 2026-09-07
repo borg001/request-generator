@@ -84,6 +84,9 @@ func (r Universal) Validate() error {
 			return err
 		}
 		for _, section := range r.Form.Sections {
+			if err := validateFormSectionActions(r.Form, section); err != nil {
+				return err
+			}
 			if err := validateFormSectionColumns(section); err != nil {
 				return err
 			}
@@ -717,15 +720,16 @@ func validateAction(scope string, action *Action) error {
 }
 
 type Layout struct {
-	Type     LayoutType   `json:"type,omitempty"`
-	Mode     string       `json:"mode,omitempty"`
-	Slots    []string     `json:"slots,omitempty"`
-	Left     SizeToken    `json:"left,omitempty"`
-	Center   SizeToken    `json:"center,omitempty"`
-	Right    SizeToken    `json:"right,omitempty"`
-	Align    AlignToken   `json:"align,omitempty"`
-	MaxWidth MaxWidth     `json:"max_width,omitempty"`
-	Gap      SpacingToken `json:"gap,omitempty"`
+	Type        LayoutType   `json:"type,omitempty"`
+	Mode        string       `json:"mode,omitempty"`
+	Slots       []string     `json:"slots,omitempty"`
+	MobileSlots []string     `json:"mobile_slots,omitempty"`
+	Left        SizeToken    `json:"left,omitempty"`
+	Center      SizeToken    `json:"center,omitempty"`
+	Right       SizeToken    `json:"right,omitempty"`
+	Align       AlignToken   `json:"align,omitempty"`
+	MaxWidth    MaxWidth     `json:"max_width,omitempty"`
+	Gap         SpacingToken `json:"gap,omitempty"`
 }
 
 type Filters struct {
@@ -1075,6 +1079,7 @@ type DateRangeToolbar struct {
 	PreviousLabel string            `json:"previous_label,omitempty"`
 	NextLabel     string            `json:"next_label,omitempty"`
 	Months        []string          `json:"months,omitempty"`
+	FormatMonths  []string          `json:"format_months,omitempty"`
 	Weekdays      []string          `json:"weekdays,omitempty"`
 }
 
@@ -1148,6 +1153,9 @@ func (toolbar *DateRangeToolbar) Validate(scope string) error {
 	}
 	if len(toolbar.Months) != 0 && len(toolbar.Months) != 12 {
 		return fmt.Errorf("renderer.DateRangeToolbar: %s months must contain 12 values", scope)
+	}
+	if len(toolbar.FormatMonths) != 0 && len(toolbar.FormatMonths) != 12 {
+		return fmt.Errorf("renderer.DateRangeToolbar: %s format_months must contain 12 values", scope)
 	}
 	if len(toolbar.Weekdays) != 0 && len(toolbar.Weekdays) != 7 {
 		return fmt.Errorf("renderer.DateRangeToolbar: %s weekdays must contain 7 values", scope)
@@ -1538,6 +1546,32 @@ func validateFormWorkflow(page *FormPage) error {
 	return fmt.Errorf("renderer.FormWorkflow: summary submit action %q must reference a form submit action", page.Workflow.Summary.SubmitAction)
 }
 
+func validateFormSectionActions(page *FormPage, section FormSection) error {
+	ids := append([]string{}, section.Action)
+	ids = append(ids, section.Actions...)
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		if _, exists := seen[id]; exists {
+			return fmt.Errorf("renderer.Universal: form section %q action %q is duplicated", section.ID, id)
+		}
+		seen[id] = struct{}{}
+		found := false
+		for _, action := range page.Actions {
+			if action.ID == id {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("renderer.Universal: form section %q action %q is not declared in form page actions", section.ID, id)
+		}
+	}
+	return nil
+}
+
 type FormSection struct {
 	ID           string                 `json:"id,omitempty"`
 	Title        string                 `json:"title,omitempty"`
@@ -1550,6 +1584,7 @@ type FormSection struct {
 	GroupTitle   string                 `json:"group_title,omitempty"`
 	Icon         string                 `json:"icon,omitempty"`
 	Action       string                 `json:"action,omitempty"`
+	Actions      []string               `json:"actions,omitempty"`
 	Mode         string                 `json:"mode,omitempty"`
 	Block        *Block                 `json:"block,omitempty"`
 	Fields       []string               `json:"fields,omitempty"`
@@ -1589,6 +1624,7 @@ type DateRangeConfig struct {
 	PreviousLabel string   `json:"previous_label,omitempty"`
 	NextLabel     string   `json:"next_label,omitempty"`
 	Months        []string `json:"months,omitempty"`
+	FormatMonths  []string `json:"format_months,omitempty"`
 	Weekdays      []string `json:"weekdays,omitempty"`
 }
 
@@ -1624,6 +1660,9 @@ func validateDateRangeSection(page *FormPage, section FormSection) error {
 	}
 	if len(config.Months) != 0 && len(config.Months) != 12 {
 		return fmt.Errorf("renderer.Universal: date range section %q months must contain 12 values", section.ID)
+	}
+	if len(config.FormatMonths) != 0 && len(config.FormatMonths) != 12 {
+		return fmt.Errorf("renderer.Universal: date range section %q format_months must contain 12 values", section.ID)
 	}
 	if len(config.Weekdays) != 0 && len(config.Weekdays) != 7 {
 		return fmt.Errorf("renderer.Universal: date range section %q weekdays must contain 7 values", section.ID)
@@ -1850,8 +1889,8 @@ type MediaGalleryItem struct {
 	// Badges are server-owned annotations for an individual gallery item. They
 	// are useful for state that must survive reloads, such as a published media
 	// item, without making the browser infer state from a URL or local cache.
-	Badges          []Badge         `json:"badges,omitempty"`
-	Actions         []Action        `json:"actions,omitempty"`
+	Badges  []Badge  `json:"badges,omitempty"`
+	Actions []Action `json:"actions,omitempty"`
 }
 
 type MediaGalleryLabels struct {
@@ -2142,6 +2181,7 @@ type RecordSection struct {
 	Renderer      RecordSectionRenderer `json:"renderer,omitempty"`
 	LayoutSlot    LayoutSlotToken       `json:"layout_slot,omitempty"`
 	Order         int                   `json:"order,omitempty"`
+	MobileOrder   int                   `json:"mobile_order,omitempty"`
 	Block         *Block                `json:"block,omitempty"`
 	Stack         *Stack                `json:"stack,omitempty"`
 	Components    []DisplayComponent    `json:"components,omitempty"`
