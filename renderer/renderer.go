@@ -1279,7 +1279,12 @@ type Media struct {
 	GlowFallback string      `json:"glow_fallback,omitempty"`
 	GlowEnabled  *bool       `json:"glow_enabled,omitempty"`
 	StatusField  string      `json:"status_field,omitempty"`
-	Fallback     string      `json:"fallback,omitempty"`
+	// A picture can carry one small mark in its corner - pinned, locked, the
+	// state that belongs to the thing pictured rather than to a row of chips
+	// beside it. MarkerField names the truth, MarkerIcon what to draw.
+	MarkerField string `json:"marker_field,omitempty"`
+	MarkerIcon  string `json:"marker_icon,omitempty"`
+	Fallback    string `json:"fallback,omitempty"`
 }
 
 type FieldPresentation struct {
@@ -1301,6 +1306,10 @@ type FieldPresentation struct {
 	MaxItems    uint16           `json:"max_items,omitempty"`
 	InputMode   FieldInputMode   `json:"input_mode,omitempty"`
 	VisibleIf   *Condition       `json:"visible_if,omitempty"`
+	// RequiredIf marks the control as required only in the state that needs it.
+	// A profile is filled in over several sittings, so a field that review will
+	// not accept empty is still optional while the profile is a draft.
+	RequiredIf *Condition `json:"required_if,omitempty"`
 	ToneByValue []FieldValueTone `json:"tone_by_value,omitempty"`
 }
 

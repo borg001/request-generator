@@ -500,6 +500,7 @@ func CloneFieldPresentation(v *FieldPresentation) *FieldPresentation {
 	}
 	cp := *v
 	cp.VisibleIf = cloneCondition(v.VisibleIf)
+	cp.RequiredIf = cloneCondition(v.RequiredIf)
 	cp.ToneByValue = cloneSlice(v.ToneByValue)
 	return &cp
 }

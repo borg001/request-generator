@@ -215,6 +215,11 @@ type ModuleField struct {
 	Section         string                         `json:"section,omitempty"`
 	RoleSection     map[string]string              `json:"-"`
 	RoleFormType    map[string]ModuleFieldFormType `json:"-"`
+	// TitleFunc names the field for the request at hand. The same column can
+	// mean different things to different subjects - a person has a name, an
+	// organisation has a title - and only the module knows which is being
+	// edited. It returns a translation key; an empty result keeps Title.
+	TitleFunc func(c *gin.Context) string `json:"-"`
 }
 
 // ColumnName returns the database column name from the Jet column.

@@ -1104,6 +1104,11 @@ func (generator *Generator) actionDefrec(module *BaseModule) func(c *gin.Context
 				}
 			}
 
+			if field.TitleFunc != nil {
+				if title := field.TitleFunc(c); title != "" {
+					field.Title = title
+				}
+			}
 			field.Title = generator.Translate(lang, field.Title)
 			field.Options = optionItems
 			field.Check = checkItems
