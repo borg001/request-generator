@@ -1531,6 +1531,11 @@ func (generator *Generator) actionUpdate(module *BaseModule, action actions.Upda
 					}
 				}
 
+				// A field whose projection depends on the caller has to be
+				// resolved here too: the record returned after an update is
+				// read with the same expressions a view is.
+				viewFields = fields.ResolveProjections(c, viewFields)
+
 				viewJoins := viewAction.Join
 				if roleJoins := actions.ResolveRoleJoin(module.RoleJoin, role); roleJoins != nil {
 					viewJoins = append(roleJoins, viewJoins...)
@@ -1547,7 +1552,7 @@ func (generator *Generator) actionUpdate(module *BaseModule, action actions.Upda
 		}
 
 		// Fallback: re-fetch with update columns
-		fallbackResult, fallbackErr := generator.db(module).View(l, module.Table, module.PrimaryKey, realFields, where, nil, tc)
+		fallbackResult, fallbackErr := generator.db(module).View(l, module.Table, module.PrimaryKey, fields.ResolveProjections(c, realFields), where, nil, tc)
 		if fallbackErr != nil {
 			response.ErrorResponse(l, c, http.StatusBadRequest, GeneratorErrorUpdate, nil)
 			return
