@@ -1292,6 +1292,10 @@ type FieldPresentation struct {
 	Prefix      string           `json:"prefix,omitempty"`
 	Suffix      string           `json:"suffix,omitempty"`
 	Hint        string           `json:"hint,omitempty"`
+	// Placeholder is the empty-state copy shown inside the control. A rule the
+	// control already enforces - an accepted range, an expected format - belongs
+	// here rather than on a line of its own under the field.
+	Placeholder string           `json:"placeholder,omitempty"`
 	Description string           `json:"description,omitempty"`
 	Rows        uint8            `json:"rows,omitempty"`
 	MaxItems    uint16           `json:"max_items,omitempty"`
@@ -2249,6 +2253,10 @@ type ActionPresentation struct {
 	Placement        ActionPlacement  `json:"placement,omitempty"`
 	ActiveAppearance ActionAppearance `json:"active_appearance,omitempty"`
 	Active           string           `json:"active,omitempty"`
+	// ActiveIf marks the action as the current choice. Active names a truthy
+	// field, which cannot express "this option equals the record's value", so a
+	// set of mutually exclusive actions states the match as a condition.
+	ActiveIf *Condition `json:"active_if,omitempty"`
 	Block            *bool            `json:"block,omitempty"`
 	VisibleIf        *Condition       `json:"visible_if,omitempty"`
 	HiddenIf         *Condition       `json:"hidden_if,omitempty"`
@@ -2267,6 +2275,9 @@ func (presentation ActionPresentation) Validate() error {
 	}
 	if presentation.DisabledIf != nil && !hasCondition(presentation.DisabledIf) {
 		return fmt.Errorf("disabled_if is invalid")
+	}
+	if presentation.ActiveIf != nil && !hasCondition(presentation.ActiveIf) {
+		return fmt.Errorf("active_if is invalid")
 	}
 	return nil
 }

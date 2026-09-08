@@ -769,6 +769,7 @@ func cloneActionPresentation(value ActionPresentation) ActionPresentation {
 	cloned.VisibleIf = cloneCondition(value.VisibleIf)
 	cloned.HiddenIf = cloneCondition(value.HiddenIf)
 	cloned.DisabledIf = cloneCondition(value.DisabledIf)
+	cloned.ActiveIf = cloneCondition(value.ActiveIf)
 	return cloned
 }
 
