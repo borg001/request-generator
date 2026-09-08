@@ -72,6 +72,13 @@ func realtimeUserTopic(userID int64) string {
 	return fmt.Sprintf("user:%d", userID)
 }
 
+// RealtimeUserTopic names the channel one person listens on. An action that
+// publishes outside the atomic pipeline still has to address the same channel
+// the subscriber is on.
+func RealtimeUserTopic(userID int64) string {
+	return realtimeUserTopic(userID)
+}
+
 func realtimeRoleTopic(role string) string {
 	return "role:" + role
 }
