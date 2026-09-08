@@ -341,6 +341,20 @@ capability. `arguments` имеют `TypedValue`, поэтому обработч
 
 ### Внешняя форма в секции
 
+`RecordSection.Resource` использует тот же `Resource`/`ResourceLoad`, что и
+`FormSection.Resource`. Это композиция существующих страниц, не новый renderer:
+`renderer: "universal.section"`. Источник — стандартный `list`, `view` (с
+`form_page`) или `defrec`. `Components` одновременно с `Resource` запрещены.
+Generator разрешает bindings и проверяет permissions целевого action; при
+отсутствии доступа секция исключается. Source module остаётся server-only.
+`loading_label` и `retry_label` — локализуемые подписи состояний секции.
+Для списка используется его `list_page`, карточки, `count`, `size` и server
+pagination. Форма использует свой обычный контракт полей/actions; успешная
+запись обновляет соседние встроенные списки, не отправляя повторную мутацию.
+Никаких module-specific callbacks или схем в `context` не требуется.
+Изменение аддитивное: существующие секции без `Resource` не меняются. Producer
+подключает новую композицию только после обновления consumer renderer.
+
 `FormSection.Resource` позволяет встроить форму другого стандартного модуля в
 навигацию текущей form page. Это не отдельный frontend route и не новый
 проектный transport: producer указывает только существующий `view` action и

@@ -621,6 +621,8 @@ func cloneRecordSections(values []RecordSection) []RecordSection {
 	out := make([]RecordSection, len(values))
 	for i, v := range values {
 		out[i] = v
+		out[i].Resource = cloneResource(v.Resource)
+		out[i].Load = cloneResourceLoad(v.Load)
 		out[i].Block = cloneBlock(v.Block)
 		out[i].Stack = cloneStack(v.Stack)
 		out[i].Components = cloneDisplayComponents(v.Components)

@@ -73,6 +73,22 @@ func (r Universal) IsZero() bool {
 }
 
 func (r Universal) Validate() error {
+	if r.Record != nil {
+		for _, section := range r.Record.Sections {
+			if section.Resource == nil {
+				continue
+			}
+			if section.Renderer != RendererUniversalSection || len(section.Components) != 0 {
+				return fmt.Errorf("record resource section %q requires universal.section and no display components", section.ID)
+			}
+			if section.Resource.Action != "list" && section.Resource.Action != "view" && section.Resource.Action != "defrec" {
+				return fmt.Errorf("record resource section %q requires a read action", section.ID)
+			}
+			if err := section.Resource.Validate("record resource"); err != nil {
+				return err
+			}
+		}
+	}
 	if r.List != nil && r.ResourceGrid != nil {
 		return fmt.Errorf("renderer.Universal: List and ResourceGrid are mutually exclusive for one list route")
 	}
@@ -2215,6 +2231,11 @@ type RecordTheme struct {
 }
 
 type RecordSection struct {
+	// Resource is server-only; Load is resolved with the requesting role's permissions.
+	Resource      *Resource             `json:"-"`
+	Load          *ResourceLoad         `json:"load,omitempty"`
+	LoadingLabel  string                `json:"loading_label,omitempty"`
+	RetryLabel    string                `json:"retry_label,omitempty"`
 	ID            string                `json:"id,omitempty"`
 	Title         string                `json:"title,omitempty"`
 	TitleFallback string                `json:"title_fallback,omitempty"`

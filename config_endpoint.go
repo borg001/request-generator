@@ -609,6 +609,23 @@ func (generator *Generator) buildResourceLoad(c *gin.Context, module *BaseModule
 // into executable standard-action requests for the current principal. A form
 // section never publishes a producer-defined endpoint or request body.
 func (generator *Generator) resolveFormSectionResources(c *gin.Context, render *renderer.Universal, role actions.Role) error {
+	if render != nil && render.Record != nil {
+		sections := make([]renderer.RecordSection, 0, len(render.Record.Sections))
+		for _, section := range render.Record.Sections {
+			if section.Resource != nil {
+				load, available, err := generator.buildReferencedResourceLoad(c, *section.Resource, string(role), nil)
+				if err != nil {
+					return fmt.Errorf("record section %q resource: %w", section.ID, err)
+				}
+				if !available {
+					continue
+				}
+				section.Load = &load
+			}
+			sections = append(sections, section)
+		}
+		render.Record.Sections = sections
+	}
 	if render == nil || render.Form == nil {
 		return nil
 	}
