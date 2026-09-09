@@ -809,6 +809,7 @@ func (generator *Generator) actionList(module *BaseModule, action actions.ListMo
 			Heads            map[string]interface{}              `json:"heads"`
 			Filters          map[string]fields.ModuleFilterField `json:"filters,omitempty"`
 			Sort             []actions.SortResponseItem          `json:"sort,omitempty"`
+			SortActive       *actions.SortActiveResponse         `json:"sort_active,omitempty"`
 		}{
 			Count:            count,
 			Size:             size,
@@ -820,6 +821,7 @@ func (generator *Generator) actionList(module *BaseModule, action actions.ListMo
 			Heads:            heads,
 			Filters:          responseFilters,
 			Sort:             sortOptions,
+			SortActive:       activeSortResponse(activeSort),
 		}
 
 		if isCSV == 0 {
@@ -870,6 +872,19 @@ func (generator *Generator) actionList(module *BaseModule, action actions.ListMo
 			response.ResponseCSV(l, c, b.Bytes())
 		}
 	}
+}
+
+// activeSortResponse reports the order the rows were served in. Nothing is
+// reported when the action does not sort at all.
+func activeSortResponse(sort *actions.SortOption) *actions.SortActiveResponse {
+	if sort == nil || sort.Column == nil {
+		return nil
+	}
+	direction := "asc"
+	if sort.Direction == actions.SortDESC {
+		direction = "desc"
+	}
+	return &actions.SortActiveResponse{Field: sort.Column.Name(), Direction: direction}
 }
 
 func (generator *Generator) actionAdd(module *BaseModule, action actions.AddModuleAction) func(c *gin.Context) {

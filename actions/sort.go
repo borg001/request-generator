@@ -18,3 +18,11 @@ type SortResponseItem struct {
 	Value string `json:"value"`
 	Text  string `json:"text"`
 }
+
+// SortActiveResponse names the order a list was actually served in, so a
+// consumer that adds a row to a loaded page can put it where the list would
+// have put it instead of at the front.
+type SortActiveResponse struct {
+	Field     string `json:"field"`
+	Direction string `json:"direction"`
+}

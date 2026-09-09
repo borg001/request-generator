@@ -260,6 +260,11 @@ func (localizer textLocalizer) localizeFormSection(section *FormSection) {
 	localizer.localizeMediaActions(section.MediaActions)
 	localizer.localizeMediaGalleryItems(section.MediaItems)
 	localizer.localizeDateRange(section.DateRange)
+	// A block nested in a section is read on the same page as its parent, so it
+	// is translated the same way.
+	for i := range section.Sections {
+		localizer.localizeFormSection(&section.Sections[i])
+	}
 }
 
 func (localizer textLocalizer) localizeDateRange(config *DateRangeConfig) {

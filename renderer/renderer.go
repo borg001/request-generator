@@ -1622,6 +1622,10 @@ type FormSection struct {
 	// Load is the generated executable request for Resource. Consumers never
 	// construct endpoints or bindings for a resource section.
 	Load *ResourceLoad `json:"load,omitempty"`
+	// Sections are blocks that belong to this one. A page that answers several
+	// questions at once - rates, services, work mode - is still one place to
+	// visit, and each block keeps the renderer it needs.
+	Sections []FormSection `json:"sections,omitempty"`
 }
 
 // DateRangeConfig presents two ordinary form fields as one range control. It
