@@ -367,6 +367,10 @@ type WorkspaceCommand struct {
 	// row. It defaults to true. A false value is valid only for commands whose
 	// bindings do not read the selection runtime scope.
 	RequireSelection *bool `json:"require_selection,omitempty"`
+	// Multi says the command may be applied to several master rows at once.
+	// The renderer offers a selection of rows and runs the command for each of
+	// them; a row the command is not visible for is not offered.
+	Multi bool `json:"multi,omitempty"`
 	Resource
 	Refresh []WorkspaceRefreshTarget `json:"refresh"`
 }
@@ -383,6 +387,14 @@ func (command WorkspaceCommand) Validate() error {
 	}
 	if command.Trigger != "" && command.Input != nil {
 		return fmt.Errorf("triggered command must not declare input")
+	}
+	// Several rows cannot answer one form, and a command the workspace starts
+	// by itself is never applied to a selection of rows.
+	if command.Multi && (command.Input != nil || command.Trigger != "") {
+		return fmt.Errorf("multi command must not declare input or trigger")
+	}
+	if command.Multi && command.RequireSelection != nil && !*command.RequireSelection {
+		return fmt.Errorf("multi command requires selection")
 	}
 	if command.Trigger == WorkspaceCommandTriggerSelectionOpen && command.RequireSelection != nil && !*command.RequireSelection {
 		return fmt.Errorf("selection_open trigger requires selection")
