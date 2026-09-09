@@ -415,6 +415,7 @@ func cloneStatusBinding(v *StatusBinding) *StatusBinding {
 	cp := *v
 	cp.Marker = clonePtr(v.Marker)
 	cp.ToneMap = cloneMap(v.ToneMap)
+	cp.LabelMap = cloneMap(v.LabelMap)
 	return &cp
 }
 

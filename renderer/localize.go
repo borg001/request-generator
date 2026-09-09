@@ -209,6 +209,18 @@ func (localizer textLocalizer) localizeCardSchema(schema *CardSchema) {
 	for i := range schema.Actions {
 		localizer.localizeRendererAction(&schema.Actions[i])
 	}
+	localizer.localizeStatusBinding(schema.Status)
+}
+
+// The status chip names its states the same way a badge does, so its words go
+// through the same pass instead of reaching the card as translation keys.
+func (localizer textLocalizer) localizeStatusBinding(status *StatusBinding) {
+	if status == nil {
+		return
+	}
+	for value, label := range status.LabelMap {
+		status.LabelMap[value] = localizer.localizeRendererText(label, "")
+	}
 }
 
 func (localizer textLocalizer) localizeBadge(badge *Badge) {
