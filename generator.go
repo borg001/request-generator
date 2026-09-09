@@ -919,6 +919,11 @@ func (generator *Generator) actionAdd(module *BaseModule, action actions.AddModu
 				return
 			}
 			if c.Writer.Written() {
+				// A hook that answered the request has already committed its own
+				// work, and the realtime events it queued belong to that work.
+				// Returning without publishing them left every such change
+				// silent for everyone else watching.
+				generator.publishRealtime(c, module, actions.ModuleActionNameAdd, nil)
 				return
 			}
 		}

@@ -4,7 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/gin-gonic/gin"
 
 	"github.com/darkrain/request-generator/actions"
 	"github.com/darkrain/request-generator/fields"
@@ -163,6 +167,33 @@ func TestValidateRealtimeEventsRejectsNonPublishingAction(t *testing.T) {
 		}},
 	}}}
 	require.EqualError(t, generator.validateRealtimeEvents(), `module "records" action "list": realtime event is only supported by add, update, or delete actions`)
+}
+
+// A hook that answers the request itself still commits domain work, and the
+// events it queued travel with that work. The add handler returns as soon as
+// the response is written, so the queued events are published on that path too.
+func TestQueuedRealtimeSurvivesAResponseWrittenByAHook(t *testing.T) {
+	module := &BaseModule{Name: "records", Actions: []actions.ModuleAction{actions.AddModuleAction{}}}
+	broker := &realtimeBrokerStub{}
+	hub := newRealtimeHub()
+	subscriber := &sseConnection{send: make(chan RealtimeEvent, 2), topics: map[string]struct{}{"user:7": {}}}
+	hub.addSSE(subscriber)
+	generator := &Generator{
+		Modules:     []*BaseModule{module},
+		Realtime:    RealtimeConfig{Enabled: true, Broker: broker},
+		realtimeHub: hub,
+	}
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPut, "/api/records", nil)
+	SetRealtimePublish(context, RealtimePublish{Topics: []string{"user:7"}, Payload: map[string]interface{}{"toast": true}})
+	context.JSON(http.StatusOK, gin.H{"value": 1})
+	require.True(t, context.Writer.Written())
+
+	generator.publishRealtime(context, module, actions.ModuleActionNameAdd, nil)
+	require.Equal(t, 1, broker.publishCount)
+	require.Equal(t, true, (<-subscriber.send).Payload["toast"])
 }
 
 func TestPublishCommittedRealtimeUsesValidatedBrokerAndHubPath(t *testing.T) {
