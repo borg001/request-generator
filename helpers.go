@@ -60,6 +60,13 @@ parentLoop:
 			}
 		}
 
+		// A filter on an array column is written as a Postgres array literal. A
+		// single value - what a one-value pill sends - is the same filter with
+		// one element in it, and reached the database as a malformed literal.
+		if filter.Type == fields.ModuleFieldTypeArray && !strings.HasPrefix(filterValue, "{") {
+			filterValue = "{" + filterValue + "}"
+		}
+
 		resultFilterMap[key] = filterValue
 	}
 
