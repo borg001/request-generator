@@ -44,6 +44,7 @@ func LocalizeGlobalWidget(widget GlobalWidget, resolve TextResolver) GlobalWidge
 	if localized.Workspace == nil {
 		return localized
 	}
+	localized.Workspace.Selection.MultiLabel = resolve(localized.Workspace.Selection.MultiLabel, "")
 	for index := range localized.Workspace.Commands {
 		localized.Workspace.Commands[index].Label = resolve(localized.Workspace.Commands[index].Label, "")
 		if confirm := localized.Workspace.Commands[index].Confirm; confirm != nil {
@@ -303,6 +304,10 @@ type WorkspaceSelection struct {
 	// Field identifies the current master row. Bindings may read this field or
 	// another declared scalar field from that same selected row.
 	Field string `json:"field"`
+	// MultiLabel names what is being picked while several rows are selected
+	// for a multi command. It is a producer translation key and may carry a
+	// {count} placeholder for the number of rows picked so far.
+	MultiLabel string `json:"multi_label,omitempty"`
 }
 
 // ActionResource is a reference to an existing standard module action.
