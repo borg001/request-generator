@@ -257,6 +257,9 @@ func (localizer textLocalizer) localizeFormSection(section *FormSection) {
 	localizer.localizeCollection(section.Collection)
 	section.MediaUpload = localizer.localizeMediaUpload(section.MediaUpload)
 	section.MediaLabels = localizer.localizeMediaLabels(section.MediaLabels)
+	if section.MediaPresets != nil {
+		localizer.localizeTextFields(&section.MediaPresets.Title, &section.MediaPresets.Subtitle, &section.MediaPresets.ShowLabel, &section.MediaPresets.HideLabel, &section.MediaPresets.AddLabel)
+	}
 	localizer.localizeMediaActions(section.MediaActions)
 	localizer.localizeMediaGalleryItems(section.MediaItems)
 	localizer.localizeDateRange(section.DateRange)

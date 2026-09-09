@@ -1285,6 +1285,9 @@ type Media struct {
 	MarkerField string `json:"marker_field,omitempty"`
 	MarkerIcon  string `json:"marker_icon,omitempty"`
 	Fallback    string `json:"fallback,omitempty"`
+	// FallbackField names a value on the record that stands in for a missing
+	// picture, so a card without one can still show what kind of profile it is.
+	FallbackField string `json:"fallback_field,omitempty"`
 }
 
 type FieldPresentation struct {
@@ -1614,6 +1617,7 @@ type FormSection struct {
 	MediaItems   []MediaGalleryItem     `json:"media_items,omitempty"`
 	MediaLabels  *MediaGalleryLabels    `json:"media_labels,omitempty"`
 	MediaActions *MediaGalleryActions   `json:"media_actions,omitempty"`
+	MediaPresets *MediaPresetsConfig    `json:"media_presets,omitempty"`
 	Prompts      *PromptList            `json:"prompts,omitempty"`
 	DateRange    *DateRangeConfig       `json:"date_range,omitempty"`
 	// Resource declares another standard module action rendered inside this
@@ -1895,6 +1899,17 @@ type MediaUploadConfig struct {
 	LoadingTitle string `json:"loading_title,omitempty"`
 	Accept       string `json:"accept,omitempty"`
 	Multiple     bool   `json:"multiple"`
+}
+
+// MediaPresetsConfig offers a gallery a set of ready-made pictures to start
+// from. The producer decides whether the offer is made and what it is called;
+// the pictures themselves belong to the application that serves them.
+type MediaPresetsConfig struct {
+	Title     string `json:"title,omitempty"`
+	Subtitle  string `json:"subtitle,omitempty"`
+	ShowLabel string `json:"show_label,omitempty"`
+	HideLabel string `json:"hide_label,omitempty"`
+	AddLabel  string `json:"add_label,omitempty"`
 }
 
 type MediaGalleryItem struct {
