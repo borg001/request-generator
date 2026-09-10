@@ -45,6 +45,10 @@ func cloneFormPage(v *FormPage) *FormPage {
 	}
 	cp := *v
 	cp.Workflow = cloneFormWorkflow(v.Workflow)
+	if v.Navigation != nil {
+		navigation := *v.Navigation
+		cp.Navigation = &navigation
+	}
 	cp.Actions = cloneActions(v.Actions)
 	cp.Sections = cloneFormSections(v.Sections)
 	cp.Fields = cloneSlice(v.Fields)
@@ -619,6 +623,8 @@ func cloneRecordSections(values []RecordSection) []RecordSection {
 	out := make([]RecordSection, len(values))
 	for i, v := range values {
 		out[i] = v
+		out[i].Resource = cloneResource(v.Resource)
+		out[i].Load = cloneResourceLoad(v.Load)
 		out[i].Block = cloneBlock(v.Block)
 		out[i].Stack = cloneStack(v.Stack)
 		out[i].Components = cloneDisplayComponents(v.Components)

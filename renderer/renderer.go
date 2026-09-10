@@ -73,10 +73,29 @@ func (r Universal) IsZero() bool {
 }
 
 func (r Universal) Validate() error {
+	if r.Record != nil {
+		for _, section := range r.Record.Sections {
+			if section.Resource == nil {
+				continue
+			}
+			if section.Renderer != RendererUniversalSection || len(section.Components) != 0 {
+				return fmt.Errorf("record resource section %q requires universal.section and no display components", section.ID)
+			}
+			if section.Resource.Action != "list" && section.Resource.Action != "view" && section.Resource.Action != "defrec" {
+				return fmt.Errorf("record resource section %q requires a read action", section.ID)
+			}
+			if err := section.Resource.Validate("record resource"); err != nil {
+				return err
+			}
+		}
+	}
 	if r.List != nil && r.ResourceGrid != nil {
 		return fmt.Errorf("renderer.Universal: List and ResourceGrid are mutually exclusive for one list route")
 	}
 	if r.Form != nil {
+		if err := validateFormNavigation(r.Form); err != nil {
+			return err
+		}
 		if err := validateActions("form page", r.Form.Actions); err != nil {
 			return err
 		}
@@ -1527,15 +1546,49 @@ type BadgeState struct {
 }
 
 type FormPage struct {
-	ID       string                 `json:"id,omitempty"`
-	Title    string                 `json:"title,omitempty"`
-	Subtitle string                 `json:"subtitle,omitempty"`
-	Layout   LayoutType             `json:"layout,omitempty"`
-	Workflow *FormWorkflow          `json:"workflow,omitempty"`
-	Actions  []Action               `json:"actions,omitempty"`
-	Sections []FormSection          `json:"sections,omitempty"`
-	Fields   []string               `json:"fields,omitempty"`
-	Context  map[string]interface{} `json:"context,omitempty"`
+	Navigation *FormNavigation        `json:"navigation,omitempty"`
+	ID         string                 `json:"id,omitempty"`
+	Title      string                 `json:"title,omitempty"`
+	Subtitle   string                 `json:"subtitle,omitempty"`
+	Layout     LayoutType             `json:"layout,omitempty"`
+	Workflow   *FormWorkflow          `json:"workflow,omitempty"`
+	Actions    []Action               `json:"actions,omitempty"`
+	Sections   []FormSection          `json:"sections,omitempty"`
+	Fields     []string               `json:"fields,omitempty"`
+	Context    map[string]interface{} `json:"context,omitempty"`
+}
+
+// FormNavigation opts a form into section tabs without changing field ownership
+// or submit behavior. Omission preserves the existing section navigation.
+type FormNavigation struct {
+	Presentation FormNavigationPresentation `json:"presentation"`
+}
+
+type FormNavigationPresentation string
+
+const FormNavigationPresentationTabs FormNavigationPresentation = "tabs"
+
+func validateFormNavigation(page *FormPage) error {
+	if page.Navigation == nil {
+		return nil
+	}
+	if page.Navigation.Presentation != FormNavigationPresentationTabs {
+		return fmt.Errorf("renderer.FormNavigation: unsupported presentation %q", page.Navigation.Presentation)
+	}
+	if page.Workflow != nil {
+		return fmt.Errorf("renderer.FormNavigation: tabs and workflow are mutually exclusive")
+	}
+	seen := map[string]bool{}
+	for _, section := range page.Sections {
+		if section.ID == "" || seen[section.ID] {
+			return fmt.Errorf("renderer.FormNavigation: tabs require unique nonempty section IDs")
+		}
+		seen[section.ID] = true
+	}
+	if len(seen) == 0 {
+		return fmt.Errorf("renderer.FormNavigation: tabs require sections")
+	}
+	return nil
 }
 
 // FormWorkflow selects the generic step-based form presentation. Steps are
@@ -2266,6 +2319,11 @@ type RecordTheme struct {
 }
 
 type RecordSection struct {
+	// Resource is server-only; Load is resolved with the requesting role's permissions.
+	Resource      *Resource             `json:"-"`
+	Load          *ResourceLoad         `json:"load,omitempty"`
+	LoadingLabel  string                `json:"loading_label,omitempty"`
+	RetryLabel    string                `json:"retry_label,omitempty"`
 	ID            string                `json:"id,omitempty"`
 	Title         string                `json:"title,omitempty"`
 	TitleFallback string                `json:"title_fallback,omitempty"`

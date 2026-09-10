@@ -341,6 +341,20 @@ capability. `arguments` имеют `TypedValue`, поэтому обработч
 
 ### Внешняя форма в секции
 
+`RecordSection.Resource` использует тот же `Resource`/`ResourceLoad`, что и
+`FormSection.Resource`. Это композиция существующих страниц, не новый renderer:
+`renderer: "universal.section"`. Источник — стандартный `list`, `view` (с
+`form_page`) или `defrec`. `Components` одновременно с `Resource` запрещены.
+Generator разрешает bindings и проверяет permissions целевого action; при
+отсутствии доступа секция исключается. Source module остаётся server-only.
+`loading_label` и `retry_label` — локализуемые подписи состояний секции.
+Для списка используется его `list_page`, карточки, `count`, `size` и server
+pagination. Форма использует свой обычный контракт полей/actions; успешная
+запись обновляет соседние встроенные списки, не отправляя повторную мутацию.
+Никаких module-specific callbacks или схем в `context` не требуется.
+Изменение аддитивное: существующие секции без `Resource` не меняются. Producer
+подключает новую композицию только после обновления consumer renderer.
+
 `FormSection.Resource` позволяет встроить форму другого стандартного модуля в
 навигацию текущей form page. Это не отдельный frontend route и не новый
 проектный transport: producer указывает только существующий `view` action и
@@ -2334,6 +2348,25 @@ Generator behavior:
   }
 }
 ```
+
+### Opt-in form section tabs
+
+`form_page.navigation: {"presentation":"tabs"}` displays the ordinary form
+sections as horizontal tabs on desktop and mobile. Labels come from section
+titles; field ownership and the shared form draft remain unchanged. Switching
+tabs must not save, reset, or reload field values. Submit/reset actions apply to
+the complete form, including inactive sections. Matrix `mode: "tabbed_list"`
+can provide a second level of tabs within a section using its table heads.
+
+Go: `FormPage.Navigation *FormNavigation`, with the closed
+`FormNavigationPresentationTabs` enum value. A navigation block requires this
+value, nonempty sections with unique nonempty IDs, and no `workflow`.
+Navigation has no localized strings; existing section titles are localized as
+usual, and cloning must detach the navigation pointer.
+
+This is an additive, opt-in v2 contract extension. Omitted navigation preserves
+existing behavior. Deploy the supporting consumer before enabling the option
+in a producer; older consumers do not implement this presentation.
 
 ## Record Page
 
