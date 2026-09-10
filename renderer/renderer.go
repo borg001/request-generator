@@ -760,9 +760,25 @@ func validateMediaVisibilityStates(scope string, states []MediaVisibilityOption)
 	return nil
 }
 
+func validateMediaGalleryItemOpenAction(scope string, item MediaGalleryItem) error {
+	if item.OpenAction == nil {
+		return nil
+	}
+	if item.OpenAction.Type == "" {
+		return fmt.Errorf("%s: gallery item %q open action needs a type", scope, item.ID)
+	}
+	if err := item.OpenAction.Validate(); err != nil {
+		return fmt.Errorf("%s: gallery item %q open action: %w", scope, item.ID, err)
+	}
+	return nil
+}
+
 func validateMediaGalleryItems(scope string, items []MediaGalleryItem) error {
 	for index := range items {
 		if err := validateActions(fmt.Sprintf("%s media item %q", scope, items[index].ID), items[index].Actions); err != nil {
+			return err
+		}
+		if err := validateMediaGalleryItemOpenAction(scope, items[index]); err != nil {
 			return err
 		}
 	}
@@ -2031,6 +2047,10 @@ type MediaGalleryItem struct {
 	// item, without making the browser infer state from a URL or local cache.
 	Badges  []Badge  `json:"badges,omitempty"`
 	Actions []Action `json:"actions,omitempty"`
+	// OpenAction is what opening this item does, when it is more than a
+	// picture: the publication it belongs to, the record it illustrates. An
+	// item without one is opened as what it is - a picture.
+	OpenAction *Action `json:"open_action,omitempty"`
 }
 
 type MediaGalleryLabels struct {

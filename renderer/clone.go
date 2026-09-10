@@ -547,6 +547,7 @@ func cloneMediaGalleryItems(values []MediaGalleryItem) []MediaGalleryItem {
 		out[i] = values[i]
 		out[i].AccessGranted = clonePtr(values[i].AccessGranted)
 		out[i].Actions = cloneActions(values[i].Actions)
+		out[i].OpenAction = cloneAction(values[i].OpenAction)
 	}
 	return out
 }
@@ -558,6 +559,7 @@ func cloneMediaGalleryItem(v *MediaGalleryItem) *MediaGalleryItem {
 	cp := *v
 	cp.AccessGranted = clonePtr(v.AccessGranted)
 	cp.Actions = cloneActions(v.Actions)
+	cp.OpenAction = cloneAction(v.OpenAction)
 	return &cp
 }
 
