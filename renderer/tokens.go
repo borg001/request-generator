@@ -392,6 +392,9 @@ type ComponentRatio string
 const (
 	ComponentRatioSquare   ComponentRatio = "square"
 	ComponentRatioPortrait ComponentRatio = "portrait"
+	// A grid of pictures is read as columns of tall tiles, whatever shape the
+	// pictures inside them were published in.
+	ComponentRatioTall ComponentRatio = "tall"
 )
 
 type MediaOverlayPosition string
