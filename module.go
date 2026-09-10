@@ -21,6 +21,10 @@ type NavigationEntry struct {
 	MobileOrder int                    `json:"mobile_order,omitempty"`
 	MobileTitle string                 `json:"mobile_title,omitempty"`
 	Group       string                 `json:"group"`
+	// Home marks the entry the brand leads to. Which page that is differs by
+	// role, and the roles are the server's business: the browser follows the
+	// first home entry this actor was given.
+	Home        bool                   `json:"home,omitempty"`
 	Target      NavigationTarget       `json:"target,omitempty"`
 	Roles       []actions.Role         `json:"roles,omitempty"`
 	Query       map[string]interface{} `json:"query,omitempty"`

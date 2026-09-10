@@ -230,3 +230,30 @@ func displayComponentsUniversal() Universal {
 		},
 	}}}}
 }
+
+// A preview borrows the actions the page already declares, so a name that is
+// not there has to fail where every other action reference does.
+func TestDisplayComponentPreviewValidation(t *testing.T) {
+	valid := Universal{Record: &RecordPage{
+		Actions: []Action{{ID: "favorite", Type: ActionAPI}, {ID: "share_profile", Type: ActionEmit}},
+		Sections: []RecordSection{{ID: "hero", Components: []DisplayComponent{{
+			ID:      "identity",
+			Type:    DisplayIdentity,
+			Preview: &DisplayPreview{Label: "Profile photo", CloseLabel: "Close", Actions: []string{"favorite", "share_profile"}},
+		}}}},
+	}}
+	require.NoError(t, valid.Validate())
+
+	cloned := valid.Clone()
+	cloned.Record.Sections[0].Components[0].Preview.Actions[0] = "unknown"
+	require.EqualError(t, cloned.Validate(), `renderer.Universal: record section "hero" component "identity" preview action "unknown" is not declared in record page actions`)
+	require.Equal(t, "favorite", valid.Record.Sections[0].Components[0].Preview.Actions[0])
+
+	duplicated := valid.Clone()
+	duplicated.Record.Sections[0].Components[0].Preview.Actions = []string{"favorite", "favorite"}
+	require.Error(t, duplicated.Validate())
+
+	wrongType := valid.Clone()
+	wrongType.Record.Sections[0].Components[0].Type = DisplayDataList
+	require.Error(t, wrongType.Validate())
+}

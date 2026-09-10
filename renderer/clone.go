@@ -664,6 +664,11 @@ func cloneDisplayComponents(values []DisplayComponent) []DisplayComponent {
 		out[i].Items = cloneSlice(v.Items)
 		out[i].CollectionGroups = cloneDisplayCollectionGroups(v.CollectionGroups)
 		out[i].Block = cloneBlock(v.Block)
+		out[i].Preview = cloneDisplayPreview(v.Preview)
+		if v.MediaLabels != nil {
+			labels := *v.MediaLabels
+			out[i].MediaLabels = &labels
+		}
 		if v.Visible != nil {
 			visible := *v.Visible
 			out[i].Visible = &visible
@@ -684,6 +689,15 @@ func cloneDisplayComponents(values []DisplayComponent) []DisplayComponent {
 		}
 	}
 	return out
+}
+
+func cloneDisplayPreview(value *DisplayPreview) *DisplayPreview {
+	if value == nil {
+		return nil
+	}
+	cp := *value
+	cp.Actions = cloneSlice(value.Actions)
+	return &cp
 }
 
 func cloneBlockOverlays(values []BlockOverlay) []BlockOverlay {

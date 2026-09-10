@@ -223,6 +223,11 @@ func validateRecordComponents(page *RecordPage) error {
 			if err := component.Validate(); err != nil {
 				return fmt.Errorf("renderer.Universal: record section %q component %q: %w", section.ID, component.ID, err)
 			}
+			for _, actionID := range component.previewActionIDs() {
+				if !recordPageHasAction(page, actionID) {
+					return fmt.Errorf("renderer.Universal: record section %q component %q preview action %q is not declared in record page actions", section.ID, component.ID, actionID)
+				}
+			}
 			if component.ActionID != "" && !recordPageHasAction(page, component.ActionID) {
 				return fmt.Errorf("renderer.Universal: record section %q component %q action_id %q is not declared in record page actions", section.ID, component.ID, component.ActionID)
 			}
@@ -270,6 +275,20 @@ func (component DisplayComponent) Validate() error {
 				return fmt.Errorf("item field %q is duplicated", item.Field)
 			}
 			seen[item.Field] = struct{}{}
+		}
+	}
+	if component.ThumbLimit < 0 {
+		return fmt.Errorf("thumb limit cannot be negative")
+	}
+	if component.ThumbLimit > 0 && component.Type != DisplayMediaGallery {
+		return fmt.Errorf("thumb limit requires component type %q", DisplayMediaGallery)
+	}
+	if component.Preview != nil {
+		if component.Type != DisplayIdentity && component.Type != DisplayMediaGallery {
+			return fmt.Errorf("preview requires component type %q or %q", DisplayIdentity, DisplayMediaGallery)
+		}
+		if err := component.Preview.Validate(); err != nil {
+			return err
 		}
 	}
 	if component.CollectionGroups != nil {
@@ -2035,6 +2054,11 @@ type MediaGalleryLabels struct {
 	FilterVideo   string `json:"filter_video,omitempty"`
 	Hidden        string `json:"hidden,omitempty"`
 	HiddenHint    string `json:"hidden_hint,omitempty"`
+	// A gallery beside a profile shows the first few pictures and says how to
+	// see the rest. Without these it shows everything it was given.
+	More    string `json:"more,omitempty"`
+	ViewAll string `json:"view_all,omitempty"`
+	Close   string `json:"close,omitempty"`
 }
 
 // MediaVisibilityOption names one state a gallery item can be in and says who
@@ -2233,6 +2257,10 @@ type DisplayComponent struct {
 	MainRadius          ComponentRadiusToken     `json:"main_radius,omitempty"`
 	MainRadiusToken     ComponentRadiusToken     `json:"main_radius_token,omitempty"`
 	ThumbRatio          ComponentRatio           `json:"thumb_ratio,omitempty"`
+	// ThumbLimit is how many thumbnails stand beside the picture before the
+	// rest are offered together. Zero shows them all.
+	ThumbLimit          int                      `json:"thumb_limit,omitempty"`
+	MediaLabels         *MediaGalleryLabels      `json:"media_labels,omitempty"`
 	ThumbsInset         InsetToken               `json:"thumbs_inset,omitempty"`
 	ThumbsInsetToken    SpacingToken             `json:"thumbs_inset_token,omitempty"`
 	VideoControls       *bool                    `json:"video_controls,omitempty"`
@@ -2261,6 +2289,10 @@ type DisplayComponent struct {
 	MatrixLabel         string                   `json:"matrix_label,omitempty"`
 	MatrixLabelIcon     string                   `json:"matrix_label_icon,omitempty"`
 	Block               *Block                   `json:"block,omitempty"`
+	// Preview declares that this component's picture can be opened: it names
+	// the dialog and the page actions that belong to the picture rather than
+	// to the page. A long press is the gesture for it on a touch screen.
+	Preview             *DisplayPreview          `json:"preview,omitempty"`
 	Title               string                   `json:"title,omitempty"`
 	TitleFallback       string                   `json:"title_fallback,omitempty"`
 	Subtitle            string                   `json:"subtitle,omitempty"`
@@ -2268,6 +2300,37 @@ type DisplayComponent struct {
 	TitleLevel          int                      `json:"title_level,omitempty"`
 	TitleTone           ToneToken                `json:"title_tone,omitempty"`
 	BodyClass           string                   `json:"body_class,omitempty"`
+}
+
+// DisplayPreview is the picture of a component shown at full size, with the
+// actions that belong to it underneath. The action ids name actions the page
+// already declares, so a preview adds nothing to the contract but a place to
+// put them.
+type DisplayPreview struct {
+	Label      string   `json:"label,omitempty"`
+	CloseLabel string   `json:"close_label,omitempty"`
+	Actions    []string `json:"actions,omitempty"`
+}
+
+func (component DisplayComponent) previewActionIDs() []string {
+	if component.Preview == nil {
+		return nil
+	}
+	return component.Preview.Actions
+}
+
+func (preview DisplayPreview) Validate() error {
+	seen := make(map[string]struct{}, len(preview.Actions))
+	for _, action := range preview.Actions {
+		if action == "" {
+			return fmt.Errorf("preview action id is required")
+		}
+		if _, exists := seen[action]; exists {
+			return fmt.Errorf("preview action %q is duplicated", action)
+		}
+		seen[action] = struct{}{}
+	}
+	return nil
 }
 
 type DisplayFieldRef struct {
