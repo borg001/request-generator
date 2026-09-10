@@ -255,6 +255,9 @@ type AtomicUpdateOperation string
 const (
 	AtomicUpdateSet       AtomicUpdateOperation = "set"
 	AtomicUpdateIncrement AtomicUpdateOperation = "increment"
+	// AtomicUpdateClear empties a nullable column. Saying "no value" needs an
+	// operation of its own: a value union always carries exactly one value.
+	AtomicUpdateClear AtomicUpdateOperation = "clear"
 )
 
 // AtomicUpdateField is a closed assignment used by AtomicUpdate. Increment is

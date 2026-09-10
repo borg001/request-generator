@@ -220,6 +220,24 @@ func atomicUpdateAssignment(field actions.AtomicUpdateField) (pg.ColumnAssigment
 	if field.Column == nil {
 		return nil, fmt.Errorf("column is required")
 	}
+	if field.Operation == actions.AtomicUpdateClear {
+		switch column := field.Column.(type) {
+		case pg.ColumnTimestampz:
+			return column.SET(pg.TimestampzExp(pg.NULL)), nil
+		case pg.ColumnTimestamp:
+			return column.SET(pg.TimestampExp(pg.NULL)), nil
+		case pg.ColumnDate:
+			return column.SET(pg.DateExp(pg.NULL)), nil
+		case pg.ColumnString:
+			return column.SET(pg.StringExp(pg.NULL)), nil
+		case pg.ColumnInteger:
+			return column.SET(pg.IntExp(pg.NULL)), nil
+		case pg.ColumnFloat:
+			return column.SET(pg.FloatExp(pg.NULL)), nil
+		default:
+			return nil, fmt.Errorf("column %q cannot be cleared", field.Column.Name())
+		}
+	}
 	if err := field.Value.Validate(); err != nil {
 		return nil, err
 	}
