@@ -1946,6 +1946,13 @@ type MediaGalleryLabels struct {
 	PrivateHint  string `json:"private_hint,omitempty"`
 	HideFace     string `json:"hide_face,omitempty"`
 	HideFaceHint string `json:"hide_face_hint,omitempty"`
+	// A gallery large enough to be a page of its own is read in parts. These
+	// name the parts; a consumer that is given none of them shows the gallery
+	// whole, as before.
+	FilterAll     string `json:"filter_all,omitempty"`
+	FilterPublic  string `json:"filter_public,omitempty"`
+	FilterPrivate string `json:"filter_private,omitempty"`
+	FilterVideo   string `json:"filter_video,omitempty"`
 }
 
 type MediaGalleryActions struct {
