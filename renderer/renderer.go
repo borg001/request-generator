@@ -123,6 +123,9 @@ func (r Universal) Validate() error {
 			if err := validateMediaGalleryItems(fmt.Sprintf("form section %q", section.ID), section.MediaItems); err != nil {
 				return err
 			}
+			if err := validateMediaVisibilityStates(fmt.Sprintf("form section %q", section.ID), section.MediaVisibilityStates); err != nil {
+				return err
+			}
 			if section.Collection == nil {
 				if err := validateMediaActions(section.MediaActions); err != nil {
 					return err
@@ -696,6 +699,25 @@ func validateMediaActions(actions *MediaGalleryActions) error {
 		if err := validateAction(scope, action); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func validateMediaVisibilityStates(scope string, states []MediaVisibilityOption) error {
+	seen := make(map[MediaVisibility]struct{}, len(states))
+	for _, state := range states {
+		switch state.Value {
+		case MediaVisibilityPublic, MediaVisibilityPrivate, MediaVisibilityPaid, MediaVisibilityInternal:
+		default:
+			return fmt.Errorf("renderer.Universal: %s media visibility state %q is not a known visibility", scope, state.Value)
+		}
+		if state.Label == "" {
+			return fmt.Errorf("renderer.Universal: %s media visibility state %q must define label", scope, state.Value)
+		}
+		if _, exists := seen[state.Value]; exists {
+			return fmt.Errorf("renderer.Universal: %s media visibility state %q is declared twice", scope, state.Value)
+		}
+		seen[state.Value] = struct{}{}
 	}
 	return nil
 }
@@ -1617,6 +1639,10 @@ type FormSection struct {
 	MediaItems   []MediaGalleryItem     `json:"media_items,omitempty"`
 	MediaLabels  *MediaGalleryLabels    `json:"media_labels,omitempty"`
 	MediaActions *MediaGalleryActions   `json:"media_actions,omitempty"`
+	// MediaVisibilityStates are the states an item of this gallery can be
+	// moved between. A gallery that declares none is read-only in that
+	// respect, as every gallery was before.
+	MediaVisibilityStates []MediaVisibilityOption `json:"media_visibility_states,omitempty"`
 	MediaPresets *MediaPresetsConfig    `json:"media_presets,omitempty"`
 	Prompts      *PromptList            `json:"prompts,omitempty"`
 	DateRange    *DateRangeConfig       `json:"date_range,omitempty"`
@@ -1952,7 +1978,21 @@ type MediaGalleryLabels struct {
 	FilterAll     string `json:"filter_all,omitempty"`
 	FilterPublic  string `json:"filter_public,omitempty"`
 	FilterPrivate string `json:"filter_private,omitempty"`
+	FilterHidden  string `json:"filter_hidden,omitempty"`
 	FilterVideo   string `json:"filter_video,omitempty"`
+	Hidden        string `json:"hidden,omitempty"`
+	HiddenHint    string `json:"hidden_hint,omitempty"`
+}
+
+// MediaVisibilityOption names one state a gallery item can be in and says who
+// that state opens the item to. A consumer offers exactly the states it is
+// given: which of them exist, what they are called and who they are for is the
+// producer's policy, never the browser's guess.
+type MediaVisibilityOption struct {
+	Value MediaVisibility `json:"value"`
+	Label string          `json:"label,omitempty"`
+	Icon  string          `json:"icon,omitempty"`
+	Hint  string          `json:"hint,omitempty"`
 }
 
 type MediaGalleryActions struct {

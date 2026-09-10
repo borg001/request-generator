@@ -273,6 +273,7 @@ func (localizer textLocalizer) localizeFormSection(section *FormSection) {
 		localizer.localizeTextFields(&section.MediaPresets.Title, &section.MediaPresets.Subtitle, &section.MediaPresets.ShowLabel, &section.MediaPresets.HideLabel, &section.MediaPresets.AddLabel)
 	}
 	localizer.localizeMediaActions(section.MediaActions)
+	localizer.localizeMediaVisibilityStates(section.MediaVisibilityStates)
 	localizer.localizeMediaGalleryItems(section.MediaItems)
 	localizer.localizeDateRange(section.DateRange)
 	// A block nested in a section is read on the same page as its parent, so it
@@ -334,9 +335,15 @@ func (localizer textLocalizer) localizeMediaUpload(upload *MediaUploadConfig) *M
 
 func (localizer textLocalizer) localizeMediaLabels(labels *MediaGalleryLabels) *MediaGalleryLabels {
 	if labels != nil {
-		localizer.localizeTextFields(&labels.Public, &labels.Private, &labels.Empty, &labels.CoverBadge, &labels.Remove, &labels.Reorder, &labels.FirstIsCover, &labels.PrivateHint, &labels.HideFace, &labels.HideFaceHint, &labels.FilterAll, &labels.FilterPublic, &labels.FilterPrivate, &labels.FilterVideo)
+		localizer.localizeTextFields(&labels.Public, &labels.Private, &labels.Empty, &labels.CoverBadge, &labels.Remove, &labels.Reorder, &labels.FirstIsCover, &labels.PrivateHint, &labels.HideFace, &labels.HideFaceHint, &labels.FilterAll, &labels.FilterPublic, &labels.FilterPrivate, &labels.FilterHidden, &labels.FilterVideo, &labels.Hidden, &labels.HiddenHint)
 	}
 	return labels
+}
+
+func (localizer textLocalizer) localizeMediaVisibilityStates(states []MediaVisibilityOption) {
+	for index := range states {
+		localizer.localizeTextFields(&states[index].Label, &states[index].Hint)
+	}
 }
 
 func (localizer textLocalizer) localizeMediaActions(actions *MediaGalleryActions) {
