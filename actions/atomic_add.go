@@ -276,6 +276,14 @@ type AtomicUpdate struct {
 	Where  pg.BoolExpression   `json:"-"`
 }
 
+// AtomicDelete removes the rows selected by a mandatory Jet predicate. It runs
+// inside the same transaction as the other atomic writes, so what an operation
+// consumes is gone only if everything else it did is kept.
+type AtomicDelete struct {
+	Table pg.Table          `json:"-"`
+	Where pg.BoolExpression `json:"-"`
+}
+
 // AtomicRecord is both the atomic add response and the source for route
 // interpolation. Fields are serialized at the top level of the response, so a
 // renderer can resolve routes such as /profiles/{nick} from the HTTP result.
@@ -438,6 +446,7 @@ type AtomicExecutor interface {
 	SelectOne(context.Context, AtomicSelect) (AtomicRecord, error)
 	SelectMany(context.Context, AtomicSelectMany) ([]AtomicRecord, error)
 	Update(context.Context, AtomicUpdate) (int64, error)
+	Delete(context.Context, AtomicDelete) (int64, error)
 }
 
 type AtomicAddOperation func(context.Context, AtomicExecutor, AtomicInput) (AtomicRecord, error)

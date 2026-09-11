@@ -216,6 +216,18 @@ func (executor atomicExecutor) Update(ctx context.Context, update actions.Atomic
 	return result.RowsAffected()
 }
 
+func (executor atomicExecutor) Delete(ctx context.Context, request actions.AtomicDelete) (int64, error) {
+	if request.Table == nil || request.Where == nil {
+		return 0, fmt.Errorf("atomic delete requires table and where")
+	}
+	statement, args := request.Table.DELETE().WHERE(request.Where).Sql()
+	result, err := executor.tx.ExecContext(ctx, statement, args...)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 func atomicUpdateAssignment(field actions.AtomicUpdateField) (pg.ColumnAssigment, error) {
 	if field.Column == nil {
 		return nil, fmt.Errorf("column is required")
@@ -263,6 +275,12 @@ func atomicUpdateAssignment(field actions.AtomicUpdateField) (pg.ColumnAssigment
 			return column.SET(column.ADD(pg.Float(*field.Value.Float))), nil
 		}
 	case pg.ColumnString:
+		if field.Value.JSON != nil && field.Operation == actions.AtomicUpdateSet {
+			// A document is sent the way an insert sends it: as an untyped
+			// parameter the column's own type reads, jsonb included. A text
+			// literal would be refused by a jsonb column.
+			return column.SET(pg.StringExp(pg.Raw("#atomic_json", pg.RawArgs{"#atomic_json": string(field.Value.JSON)}))), nil
+		}
 		if field.Value.String == nil {
 			return nil, fmt.Errorf("string column %q requires string value", column.Name())
 		}

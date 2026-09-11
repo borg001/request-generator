@@ -423,3 +423,70 @@ func TestAtomicExecutorUpsertReturnsInsertAndConflictPaths(t *testing.T) {
 		})
 	}
 }
+
+func TestAtomicExecutorDeleteRemovesSelectedRows(t *testing.T) {
+	sqlDB, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+
+	id := pg.IntegerColumn("id")
+	owner := pg.IntegerColumn("owner_id")
+	drafts := pg.NewTable("public", "drafts", "", id, owner)
+	mock.ExpectBegin()
+	tx, err := sqlDB.Begin()
+	require.NoError(t, err)
+	mock.ExpectExec("DELETE FROM public.drafts").WithArgs(int64(5), int64(9)).WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectRollback()
+
+	deleted, err := NewAtomicExecutor(tx).Delete(context.Background(), actions.AtomicDelete{
+		Table: drafts,
+		Where: id.EQ(pg.Int(5)).AND(owner.EQ(pg.Int(9))),
+	})
+	require.NoError(t, err)
+	require.Equal(t, int64(1), deleted)
+	require.NoError(t, tx.Rollback())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestAtomicExecutorDeleteRequiresWhereBeforeExecutingSQL(t *testing.T) {
+	sqlDB, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+
+	mock.ExpectBegin()
+	tx, err := sqlDB.Begin()
+	require.NoError(t, err)
+	mock.ExpectRollback()
+
+	_, err = NewAtomicExecutor(tx).Delete(context.Background(), actions.AtomicDelete{
+		Table: pg.NewTable("public", "drafts", "", pg.IntegerColumn("id")),
+	})
+	require.EqualError(t, err, "atomic delete requires table and where")
+	require.NoError(t, tx.Rollback())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestAtomicExecutorUpdateSetsADocumentAsAnUntypedParameter(t *testing.T) {
+	sqlDB, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+
+	id := pg.IntegerColumn("id")
+	data := pg.StringColumn("data")
+	drafts := pg.NewTable("public", "drafts", "", id, data)
+	mock.ExpectBegin()
+	tx, err := sqlDB.Begin()
+	require.NoError(t, err)
+	mock.ExpectExec(`UPDATE public\.drafts SET data = \(\$1\) WHERE`).WithArgs(`{"price":"700"}`, int64(5)).WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectRollback()
+
+	updated, err := NewAtomicExecutor(tx).Update(context.Background(), actions.AtomicUpdate{
+		Table:  drafts,
+		Fields: []actions.AtomicUpdateField{{Column: data, Operation: actions.AtomicUpdateSet, Value: actions.AtomicValue{JSON: []byte(`{"price":"700"}`)}}},
+		Where:  id.EQ(pg.Int(5)),
+	})
+	require.NoError(t, err)
+	require.Equal(t, int64(1), updated)
+	require.NoError(t, tx.Rollback())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
