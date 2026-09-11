@@ -2057,6 +2057,10 @@ type MediaGalleryItem struct {
 	// Cover marks the picture that stands for the whole set - a profile's
 	// cover. It is shown as the set's face and is not one of its items.
 	Cover bool `json:"cover,omitempty"`
+	// PostCount is how many publications this picture stands in. A picture
+	// that was published has a place of its own - the place its publication
+	// took - so it is not reordered by hand.
+	PostCount int `json:"post_count,omitempty"`
 }
 
 type MediaGalleryLabels struct {
