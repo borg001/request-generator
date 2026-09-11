@@ -2093,6 +2093,9 @@ type MediaVisibilityOption struct {
 	Label string          `json:"label,omitempty"`
 	Icon  string          `json:"icon,omitempty"`
 	Hint  string          `json:"hint,omitempty"`
+	// Confirmation is what the application says once the picture has changed
+	// hands: who can see it now, in the words of whoever owns the gallery.
+	Confirmation string `json:"confirmation,omitempty"`
 }
 
 type MediaGalleryActions struct {
