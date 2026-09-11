@@ -283,6 +283,12 @@ func (component DisplayComponent) Validate() error {
 	if component.ThumbLimit > 0 && component.Type != DisplayMediaGallery {
 		return fmt.Errorf("thumb limit requires component type %q", DisplayMediaGallery)
 	}
+	if component.ThumbLimitWide < 0 {
+		return fmt.Errorf("wide thumb limit cannot be negative")
+	}
+	if component.ThumbLimitWide > 0 && component.Type != DisplayMediaGallery {
+		return fmt.Errorf("wide thumb limit requires component type %q", DisplayMediaGallery)
+	}
 	if component.Preview != nil {
 		if component.Type != DisplayIdentity && component.Type != DisplayMediaGallery {
 			return fmt.Errorf("preview requires component type %q or %q", DisplayIdentity, DisplayMediaGallery)
@@ -2298,6 +2304,10 @@ type DisplayComponent struct {
 	// ThumbLimit is how many thumbnails stand beside the picture before the
 	// rest are offered together. Zero shows them all.
 	ThumbLimit          int                      `json:"thumb_limit,omitempty"`
+	// ThumbLimitWide is the same count on a wide screen, where the strip stands
+	// in a column of its own and fewer, larger thumbnails read better. Zero
+	// keeps ThumbLimit.
+	ThumbLimitWide      int                      `json:"thumb_limit_wide,omitempty"`
 	MediaLabels         *MediaGalleryLabels      `json:"media_labels,omitempty"`
 	ThumbsInset         InsetToken               `json:"thumbs_inset,omitempty"`
 	ThumbsInsetToken    SpacingToken             `json:"thumbs_inset_token,omitempty"`
