@@ -28,6 +28,11 @@ type ConfigResponse struct {
 type ConfigRouteEntry struct {
 	Path   string               `json:"path"`
 	Target NavigationPageTarget `json:"target"`
+	// A page can exist for an actor and still be closed to them right now. The
+	// route carries that with it, so a destination reached by its address is
+	// closed by the same rule as the menu entry that leads to it.
+	Locked     bool   `json:"locked,omitempty"`
+	LockReason string `json:"lock_reason,omitempty"`
 }
 
 type ConfigNavigationEntry struct {
@@ -286,7 +291,11 @@ func (generator *Generator) buildRouteRegistry(c *gin.Context, role string) ([]C
 			return fmt.Errorf("config route path %q is declared more than once", path)
 		}
 		seen[path] = struct{}{}
-		result = append(result, ConfigRouteEntry{Path: path, Target: target})
+		entry := ConfigRouteEntry{Path: path, Target: target}
+		if generator.AccessGate != nil {
+			entry.Locked, entry.LockReason = generator.AccessGate(c, AccessTarget{Kind: "route", Path: path})
+		}
+		result = append(result, entry)
 		return nil
 	}
 
