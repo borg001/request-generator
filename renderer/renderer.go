@@ -2106,6 +2106,11 @@ type MediaGalleryActions struct {
 	Recenter *Action `json:"recenter,omitempty"`
 	Crop     *Action `json:"crop,omitempty"`
 	Remove   *Action `json:"remove,omitempty"`
+	// A picture a profile already has can become the face it shows or the
+	// cover its card carries. Which of the two is offered is the producer's
+	// decision: for some profiles the two are one and the same.
+	SetAvatar *Action `json:"set_avatar,omitempty"`
+	SetCover  *Action `json:"set_cover,omitempty"`
 }
 
 type CollectionConfig struct {

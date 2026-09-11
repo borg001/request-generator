@@ -342,6 +342,9 @@ const (
 	MediaUsageGallery MediaUsage = "gallery"
 	MediaUsageAvatar  MediaUsage = "avatar"
 	MediaUsagePoster  MediaUsage = "poster"
+	// A cover is the picture a card carries. A profile whose face is not the
+	// point - an agency, a manager - keeps one of its own.
+	MediaUsageCover MediaUsage = "cover"
 )
 
 type MediaCropperViewportShape string
