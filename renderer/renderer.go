@@ -957,11 +957,15 @@ const (
 	FilterPillPresentationTabs    FilterPillPresentation = "tabs"
 	FilterPillPresentationToggle  FilterPillPresentation = "toggle"
 	FilterPillPresentationSummary FilterPillPresentation = "summary"
+	// FilterPillPresentationMenu offers the pills of a row as one menu that
+	// names the choice it holds: one choice of a row at a time, the pill with
+	// no key standing for "any" of them.
+	FilterPillPresentationMenu FilterPillPresentation = "menu"
 )
 
 func (presentation FilterPillPresentation) Valid() bool {
 	switch presentation {
-	case "", FilterPillPresentationTabs, FilterPillPresentationToggle, FilterPillPresentationSummary:
+	case "", FilterPillPresentationTabs, FilterPillPresentationToggle, FilterPillPresentationSummary, FilterPillPresentationMenu:
 		return true
 	default:
 		return false

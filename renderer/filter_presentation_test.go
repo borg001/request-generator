@@ -67,3 +67,18 @@ func TestSummaryItemValidation(t *testing.T) {
 	err := (Universal{List: &ListPage{Summary: &Summary{Items: []SummaryItem{{ID: "all", Label: "All"}}}}}).Validate()
 	require.EqualError(t, err, "renderer.Universal: list page: renderer.Summary: item \"all\" value field is required")
 }
+
+func TestFilterPillsCanBeOfferedAsOneMenu(t *testing.T) {
+	value := Universal{List: &ListPage{Filters: &Filters{
+		Presentation: FilterPresentationToolbar,
+		PillRows: [][]FilterPill{
+			{{Label: "Followers", Presentation: FilterPillPresentationTabs}, {Label: "Following", Key: "list_tag", Val: "following", Presentation: FilterPillPresentationTabs}},
+			{{Label: "All roles", Presentation: FilterPillPresentationMenu}, {Label: "Agencies", Key: "profile_type", Val: "agency", Presentation: FilterPillPresentationMenu}},
+		},
+	}}}
+
+	require.NoError(t, value.Validate())
+	payload, err := json.Marshal(value.List.Filters.PillRows[1])
+	require.NoError(t, err)
+	require.JSONEq(t, `[{"label":"All roles","presentation":"menu"},{"label":"Agencies","key":"profile_type","val":"agency","presentation":"menu"}]`, string(payload))
+}
