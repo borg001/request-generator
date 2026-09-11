@@ -311,11 +311,15 @@ func (f ModuleFilterField) ColumnName() string {
 }
 
 type ModuleFieldOptions struct {
-	Value       interface{}       `json:"value"`
-	Label       string            `json:"label"`
-	Description string            `json:"description,omitempty"`
-	Icon        string            `json:"icon,omitempty"`
-	Labels      map[string]string `json:"-"`
+	Value       interface{} `json:"value"`
+	Label       string      `json:"label"`
+	Description string      `json:"description,omitempty"`
+	Icon        string      `json:"icon,omitempty"`
+	// An option can be a picture rather than a name - a cover to pick, a
+	// background to choose. The application resolves the address the same way
+	// it resolves any other picture it is given.
+	Media  string            `json:"media,omitempty"`
+	Labels map[string]string `json:"-"`
 }
 
 type FieldOptionsSourceMode string
