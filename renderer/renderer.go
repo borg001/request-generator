@@ -2051,6 +2051,9 @@ type MediaGalleryItem struct {
 	// picture: the publication it belongs to, the record it illustrates. An
 	// item without one is opened as what it is - a picture.
 	OpenAction *Action `json:"open_action,omitempty"`
+	// Cover marks the picture that stands for the whole set - a profile's
+	// cover. It is shown as the set's face and is not one of its items.
+	Cover bool `json:"cover,omitempty"`
 }
 
 type MediaGalleryLabels struct {
