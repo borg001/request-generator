@@ -1731,6 +1731,9 @@ type FormSection struct {
 	// moved between. A gallery that declares none is read-only in that
 	// respect, as every gallery was before.
 	MediaVisibilityStates []MediaVisibilityOption `json:"media_visibility_states,omitempty"`
+	// MediaCropper is how a picture of this gallery is framed when it is given
+	// a role that has a shape of its own - a round avatar, most of all.
+	MediaCropper *MediaCropperConfig    `json:"media_cropper,omitempty"`
 	MediaPresets *MediaPresetsConfig    `json:"media_presets,omitempty"`
 	Prompts      *PromptList            `json:"prompts,omitempty"`
 	DateRange    *DateRangeConfig       `json:"date_range,omitempty"`
