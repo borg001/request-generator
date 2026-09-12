@@ -248,7 +248,50 @@ func recordPageHasAction(page *RecordPage, id string) bool {
 	return false
 }
 
+// ItemFilter declares how a component may narrow its own items.
+type ItemFilter struct {
+	// Field names the item property that holds the state being chosen.
+	Field string `json:"field,omitempty"`
+	// Search turns on a text search over the title and subtitle of an item.
+	Search bool `json:"search,omitempty"`
+	// SearchLabel and AllLabel are producer text, localized in /api/config.
+	SearchLabel string            `json:"search_label,omitempty"`
+	AllLabel    string            `json:"all_label,omitempty"`
+	Options     []ItemFilterOption `json:"options,omitempty"`
+}
+
+type ItemFilterOption struct {
+	Value string `json:"value"`
+	Label string `json:"label,omitempty"`
+}
+
+func (filter *ItemFilter) Validate() error {
+	if filter == nil {
+		return nil
+	}
+	if !filter.Search && len(filter.Options) == 0 {
+		return fmt.Errorf("item filter needs a search or at least one option")
+	}
+	if len(filter.Options) > 0 && filter.Field == "" {
+		return fmt.Errorf("item filter options require a field")
+	}
+	seen := make(map[string]struct{}, len(filter.Options))
+	for _, option := range filter.Options {
+		if option.Value == "" {
+			return fmt.Errorf("item filter option value is required")
+		}
+		if _, exists := seen[option.Value]; exists {
+			return fmt.Errorf("item filter option %q is duplicated", option.Value)
+		}
+		seen[option.Value] = struct{}{}
+	}
+	return nil
+}
+
 func (component DisplayComponent) Validate() error {
+	if err := component.ItemFilter.Validate(); err != nil {
+		return fmt.Errorf("display component %q: %w", component.ID, err)
+	}
 	if err := validateMediaGalleryItems(fmt.Sprintf("display component %q", component.ID), component.MediaItems); err != nil {
 		return err
 	}
@@ -2404,6 +2447,11 @@ type DisplayComponent struct {
 	Columns             int                      `json:"columns,omitempty"`
 	ReadonlyColumns     int                      `json:"readonly_columns,omitempty"`
 	DisplayType         ComponentDisplayType     `json:"display_type,omitempty"`
+	// ItemFilter narrows a set of items inside the component that shows them:
+	// a search over what they are called, and a choice among the states they
+	// declare. It is the producer that says which field holds the state and
+	// what the choices are called.
+	ItemFilter          *ItemFilter              `json:"item_filter,omitempty"`
 	Items               []DisplayFieldRef        `json:"items,omitempty"`
 	CollectionGroups    *DisplayCollectionGroups `json:"collection_groups,omitempty"`
 	SeparatorVariant    ToneToken                `json:"separator_variant,omitempty"`

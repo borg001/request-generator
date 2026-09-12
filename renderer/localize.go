@@ -427,6 +427,13 @@ func (localizer textLocalizer) localizeRecordPage(page *RecordPage) {
 					group.LabelFallback = ""
 				}
 			}
+			if component.ItemFilter != nil {
+				localizer.localizeTextFields(&component.ItemFilter.SearchLabel, &component.ItemFilter.AllLabel)
+				for index := range component.ItemFilter.Options {
+					option := &component.ItemFilter.Options[index]
+					option.Label = localizer.localizeRendererText(option.Label, "")
+				}
+			}
 			localizer.localizeMediaGalleryItems(component.MediaItems)
 		}
 	}
