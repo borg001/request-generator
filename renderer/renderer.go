@@ -2295,6 +2295,46 @@ type Block struct {
 	HoverEnabled   *bool           `json:"hover_enabled,omitempty"`
 	Effect         string          `json:"effect,omitempty"`
 	Overlays       []BlockOverlay  `json:"overlays,omitempty"`
+	// Icon is the glyph the panel head wears beside its title.
+	Icon string `json:"icon,omitempty"`
+	// Decoration is the one decorative picture a panel may carry. The server
+	// names the picture and the shape it takes; the client resolves the address
+	// and knows nothing about what it shows.
+	Decoration *BlockDecoration `json:"decoration,omitempty"`
+}
+
+// BlockDecoration is a picture that belongs to a panel rather than to its
+// content: it takes no tap and carries no meaning a reader has to act on.
+type BlockDecoration struct {
+	Source  string                 `json:"source"`
+	Variant BlockDecorationVariant `json:"variant,omitempty"`
+}
+
+type BlockDecorationVariant string
+
+const (
+	// The picture stands in the top corner and is cut by the panel edge.
+	BlockDecorationCornerWide BlockDecorationVariant = "corner-wide"
+	// A square picture sits deeper in the corner and fades into the panel.
+	BlockDecorationCornerSquare BlockDecorationVariant = "corner-square"
+	// A floating object hangs beside the text, below the panel head.
+	BlockDecorationCornerFloating BlockDecorationVariant = "corner-floating"
+	// A banner picture leads the row it belongs to.
+	BlockDecorationLeadingBanner BlockDecorationVariant = "leading-banner"
+	// A pattern fills the panel behind everything else.
+	BlockDecorationBackground BlockDecorationVariant = "background"
+)
+
+func (decoration BlockDecoration) Validate() error {
+	if decoration.Source == "" {
+		return fmt.Errorf("block decoration requires a source")
+	}
+	switch decoration.Variant {
+	case "", BlockDecorationCornerWide, BlockDecorationCornerSquare, BlockDecorationCornerFloating, BlockDecorationLeadingBanner, BlockDecorationBackground:
+		return nil
+	default:
+		return fmt.Errorf("unsupported block decoration variant %q", decoration.Variant)
+	}
 }
 
 // BlockOverlay places typed badge data over any visual block.
@@ -2460,22 +2500,25 @@ type RecordTheme struct {
 
 type RecordSection struct {
 	// Resource is server-only; Load is resolved with the requesting role's permissions.
-	Resource      *Resource             `json:"-"`
-	Load          *ResourceLoad         `json:"load,omitempty"`
-	LoadingLabel  string                `json:"loading_label,omitempty"`
-	RetryLabel    string                `json:"retry_label,omitempty"`
-	ID            string                `json:"id,omitempty"`
-	Title         string                `json:"title,omitempty"`
-	TitleFallback string                `json:"title_fallback,omitempty"`
-	TitleLevel    int                   `json:"title_level,omitempty"`
-	TitleTone     ToneToken             `json:"title_tone,omitempty"`
-	Renderer      RecordSectionRenderer `json:"renderer,omitempty"`
-	LayoutSlot    LayoutSlotToken       `json:"layout_slot,omitempty"`
-	Order         int                   `json:"order,omitempty"`
-	MobileOrder   int                   `json:"mobile_order,omitempty"`
-	Block         *Block                `json:"block,omitempty"`
-	Stack         *Stack                `json:"stack,omitempty"`
-	Components    []DisplayComponent    `json:"components,omitempty"`
+	Resource      *Resource     `json:"-"`
+	Load          *ResourceLoad `json:"load,omitempty"`
+	LoadingLabel  string        `json:"loading_label,omitempty"`
+	RetryLabel    string        `json:"retry_label,omitempty"`
+	ID            string        `json:"id,omitempty"`
+	Title         string        `json:"title,omitempty"`
+	TitleFallback string        `json:"title_fallback,omitempty"`
+	// Subtitle is the line a panel head reads under its title. The client
+	// already renders it; a page had no way to say it.
+	Subtitle    string                `json:"subtitle,omitempty"`
+	TitleLevel  int                   `json:"title_level,omitempty"`
+	TitleTone   ToneToken             `json:"title_tone,omitempty"`
+	Renderer    RecordSectionRenderer `json:"renderer,omitempty"`
+	LayoutSlot  LayoutSlotToken       `json:"layout_slot,omitempty"`
+	Order       int                   `json:"order,omitempty"`
+	MobileOrder int                   `json:"mobile_order,omitempty"`
+	Block       *Block                `json:"block,omitempty"`
+	Stack       *Stack                `json:"stack,omitempty"`
+	Components  []DisplayComponent    `json:"components,omitempty"`
 }
 
 type ResourceGridPage struct {
