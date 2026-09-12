@@ -388,6 +388,12 @@ type ComponentDisplayType string
 const (
 	ComponentDisplayKeyValueGrid ComponentDisplayType = "key_value_grid"
 	ComponentDisplayTileGrid     ComponentDisplayType = "tile_grid"
+	// Actions can read as a list of rows - a glyph, a label, its explanation
+	// and a chevron - where a row of buttons would say less.
+	ComponentDisplayActionRows ComponentDisplayType = "action_rows"
+	// A run of steps can be numbered and joined by arrows, which reads as an
+	// order to follow rather than a history that happened.
+	ComponentDisplayFlowSteps ComponentDisplayType = "flow_steps"
 )
 
 type ComponentRatio string

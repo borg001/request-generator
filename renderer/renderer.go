@@ -256,13 +256,20 @@ func (component DisplayComponent) Validate() error {
 		return fmt.Errorf("status timeline requires exactly one field")
 	}
 	if component.DisplayType != "" {
-		if component.Type != DisplayDataList {
-			return fmt.Errorf("display type requires component type %q", DisplayDataList)
+		// A display type says how one kind of component reads, so each belongs
+		// to the type it was written for.
+		owner := map[ComponentDisplayType]DisplayComponentType{
+			ComponentDisplayKeyValueGrid: DisplayDataList,
+			ComponentDisplayTileGrid:     DisplayDataList,
+			ComponentDisplayActionRows:   DisplayActions,
+			ComponentDisplayFlowSteps:    DisplayStatusTimeline,
 		}
-		switch component.DisplayType {
-		case ComponentDisplayKeyValueGrid, ComponentDisplayTileGrid:
-		default:
+		expected, known := owner[component.DisplayType]
+		if !known {
 			return fmt.Errorf("unsupported display type %q", component.DisplayType)
+		}
+		if component.Type != expected {
+			return fmt.Errorf("display type %q requires component type %q", component.DisplayType, expected)
 		}
 	}
 	if len(component.Items) > 0 {
@@ -2563,6 +2570,11 @@ type ResourceGridActionsConfig struct {
 // standard generator action.
 type ActionPresentation struct {
 	Icon             string           `json:"icon,omitempty"`
+	// Description is a line of explanation that belongs to the action itself.
+	// A presentation with room for it shows it under the label; a plain button
+	// ignores it, so the same action can stand in either place.
+	Description      string           `json:"description,omitempty"`
+	DescriptionKey   string           `json:"description_key,omitempty"`
 	IconOnly         *bool            `json:"icon_only,omitempty"`
 	Variant          ActionVariant    `json:"variant,omitempty"`
 	Appearance       ActionAppearance `json:"appearance,omitempty"`
