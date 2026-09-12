@@ -59,6 +59,9 @@ func LocalizeGlobalWidget(widget GlobalWidget, resolve TextResolver) GlobalWidge
 	for index := range localized.Workspace.FooterActions {
 		localizer.localizeRendererAction(&localized.Workspace.FooterActions[index])
 	}
+	for index := range localized.Workspace.ComposerBadges {
+		localizer.localizeBadge(&localized.Workspace.ComposerBadges[index])
+	}
 	return localized
 }
 
@@ -190,7 +193,11 @@ type WorkspaceWidget struct {
 	Master          Resource           `json:"master"`
 	Detail          Resource           `json:"detail"`
 	ComposerActions []Action           `json:"composer_actions,omitempty"`
-	Commands        []WorkspaceCommand `json:"commands,omitempty"`
+	// ComposerBadges stand above the composer and say what the conversation is
+	// about right now - the state of the work it belongs to and who it names -
+	// so the reader can act on it without leaving the thread.
+	ComposerBadges []Badge            `json:"composer_badges,omitempty"`
+	Commands       []WorkspaceCommand `json:"commands,omitempty"`
 	// FooterActions are regular typed actions rendered below the master list.
 	// They give compact popup workspaces a server-declared route or modal
 	// target without requiring a client-side special case.
@@ -232,6 +239,17 @@ func (workspace WorkspaceWidget) Validate() error {
 			return fmt.Errorf("composer action %q is duplicated", action.ID)
 		}
 		seenComposerActions[action.ID] = struct{}{}
+	}
+	seenComposerBadges := make(map[string]struct{}, len(workspace.ComposerBadges))
+	for index := range workspace.ComposerBadges {
+		badge := workspace.ComposerBadges[index]
+		if badge.ID == "" {
+			return fmt.Errorf("composer badge %d: id is required", index)
+		}
+		if _, exists := seenComposerBadges[badge.ID]; exists {
+			return fmt.Errorf("composer badge %q is duplicated", badge.ID)
+		}
+		seenComposerBadges[badge.ID] = struct{}{}
 	}
 	seenCommands := make(map[string]struct{}, len(workspace.Commands))
 	for index, command := range workspace.Commands {
