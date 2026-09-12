@@ -375,6 +375,9 @@ const (
 	DisplayBadgeList       DisplayComponentType = "badge_list"
 	DisplayAccordionGroups DisplayComponentType = "accordion_groups"
 	DisplayStatusTimeline  DisplayComponentType = "status_timeline"
+	// A set of records shown one at a time, or as a strip; the presentation is
+	// chosen by the display type.
+	DisplayRecordCarousel DisplayComponentType = "record_carousel"
 )
 
 type ComponentAction string
@@ -394,6 +397,9 @@ const (
 	// A run of steps can be numbered and joined by arrows, which reads as an
 	// order to follow rather than a history that happened.
 	ComponentDisplayFlowSteps ComponentDisplayType = "flow_steps"
+	// A set of records can read as a strip of narrow cards that scrolls
+	// sideways, where showing many at once matters more than showing one well.
+	ComponentDisplayCardRail ComponentDisplayType = "card_rail"
 )
 
 type ComponentRatio string

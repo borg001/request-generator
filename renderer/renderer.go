@@ -263,6 +263,7 @@ func (component DisplayComponent) Validate() error {
 			ComponentDisplayTileGrid:     DisplayDataList,
 			ComponentDisplayActionRows:   DisplayActions,
 			ComponentDisplayFlowSteps:    DisplayStatusTimeline,
+			ComponentDisplayCardRail:     DisplayRecordCarousel,
 		}
 		expected, known := owner[component.DisplayType]
 		if !known {
