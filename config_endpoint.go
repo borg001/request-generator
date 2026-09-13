@@ -36,19 +36,19 @@ type ConfigRouteEntry struct {
 }
 
 type ConfigNavigationEntry struct {
-	ID          string                 `json:"id,omitempty"`
-	Path        string                 `json:"path,omitempty"`
-	Target      NavigationPageTarget   `json:"target"`
-	Title       string                 `json:"title"`
-	Icon        string                 `json:"icon,omitempty"`
-	Order       int                    `json:"order,omitempty"`
-	MobileOrder int                    `json:"mobile_order,omitempty"`
-	MobileTitle string                 `json:"mobile_title,omitempty"`
-	Group       string                 `json:"group,omitempty"`
-	GroupTitle  string                 `json:"group_title,omitempty"`
+	ID          string               `json:"id,omitempty"`
+	Path        string               `json:"path,omitempty"`
+	Target      NavigationPageTarget `json:"target"`
+	Title       string               `json:"title"`
+	Icon        string               `json:"icon,omitempty"`
+	Order       int                  `json:"order,omitempty"`
+	MobileOrder int                  `json:"mobile_order,omitempty"`
+	MobileTitle string               `json:"mobile_title,omitempty"`
+	Group       string               `json:"group,omitempty"`
+	GroupTitle  string               `json:"group_title,omitempty"`
 	// Home marks the entry the brand leads to for this actor.
-	Home        bool                   `json:"home,omitempty"`
-	Query       map[string]interface{} `json:"query,omitempty"`
+	Home  bool                   `json:"home,omitempty"`
+	Query map[string]interface{} `json:"query,omitempty"`
 	// A destination can exist for an actor and still be closed to them right
 	// now. The entry stays in the menu and says so instead of disappearing.
 	Locked     bool   `json:"locked,omitempty"`
@@ -85,6 +85,10 @@ type AccessTarget struct {
 // AccessGate answers whether a destination is closed to the current actor and
 // why. It is owned by the application: the generator only asks.
 type AccessGate func(c *gin.Context, target AccessTarget) (bool, string)
+
+// NavigationHidden answers whether a destination does not exist for the current
+// actor, so the menu leaves it out instead of showing it closed.
+type NavigationHidden func(c *gin.Context, target AccessTarget) bool
 
 // RouteConfig конфигурирует маршрут
 type RouteConfig struct {
@@ -258,6 +262,12 @@ func (generator *Generator) buildNavigation(c *gin.Context, role string, lang lo
 			}
 			if titleKey, ok := generator.GroupTitles[entry.Group]; ok {
 				configEntry.GroupTitle = generator.Translate(lang, titleKey)
+			}
+			// A destination that does not exist for this actor at all is left
+			// out, rather than shown closed: a lock says "not yet", absence
+			// says "not yours".
+			if generator.NavigationHidden != nil && generator.NavigationHidden(c, AccessTarget{Kind: "navigation", ID: configEntry.ID, Path: configEntry.Path}) {
+				continue
 			}
 			if generator.AccessGate != nil {
 				configEntry.Locked, configEntry.LockReason = generator.AccessGate(c, AccessTarget{Kind: "navigation", ID: configEntry.ID, Path: configEntry.Path})

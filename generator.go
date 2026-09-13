@@ -45,7 +45,8 @@ type Generator struct {
 	realtimeHub          *realtimeHub
 	// AccessGate lets the application close a destination for the current
 	// actor without removing it from the configuration.
-	AccessGate AccessGate
+	AccessGate       AccessGate
+	NavigationHidden NavigationHidden
 }
 
 func NewGenerator(
