@@ -255,9 +255,43 @@ type ItemFilter struct {
 	// Search turns on a text search over the title and subtitle of an item.
 	Search bool `json:"search,omitempty"`
 	// SearchLabel and AllLabel are producer text, localized in /api/config.
-	SearchLabel string            `json:"search_label,omitempty"`
-	AllLabel    string            `json:"all_label,omitempty"`
+	SearchLabel string             `json:"search_label,omitempty"`
+	AllLabel    string             `json:"all_label,omitempty"`
 	Options     []ItemFilterOption `json:"options,omitempty"`
+}
+
+// ItemSelection declares which items of a set can be picked and what happens to
+// the picked ones: they are counted, their amounts are summed, and one page
+// action receives them together under the name the producer gives.
+type ItemSelection struct {
+	// Field and Value say which items can be picked: those whose Field holds
+	// Value.
+	Field string `json:"field,omitempty"`
+	Value string `json:"value,omitempty"`
+	// AmountField is the item property summed into the total.
+	AmountField string `json:"amount_field,omitempty"`
+	// IDsKey is the name the picked ids are sent under.
+	IDsKey string `json:"ids_key,omitempty"`
+	// ActionID names the page action that receives the picked items.
+	ActionID string `json:"action_id,omitempty"`
+	// Labels are producer text, localized in /api/config. CountLabel may
+	// carry {count}, TotalLabel {total}.
+	CountLabel string `json:"count_label,omitempty"`
+	TotalLabel string `json:"total_label,omitempty"`
+	ClearLabel string `json:"clear_label,omitempty"`
+}
+
+func (selection *ItemSelection) Validate() error {
+	if selection == nil {
+		return nil
+	}
+	if selection.Field == "" || selection.Value == "" {
+		return fmt.Errorf("item selection needs a field and the value that can be picked")
+	}
+	if selection.ActionID == "" || selection.IDsKey == "" {
+		return fmt.Errorf("item selection needs the action that receives the picked items and the name they are sent under")
+	}
+	return nil
 }
 
 type ItemFilterOption struct {
@@ -290,6 +324,9 @@ func (filter *ItemFilter) Validate() error {
 
 func (component DisplayComponent) Validate() error {
 	if err := component.ItemFilter.Validate(); err != nil {
+		return fmt.Errorf("display component %q: %w", component.ID, err)
+	}
+	if err := component.ItemSelection.Validate(); err != nil {
 		return fmt.Errorf("display component %q: %w", component.ID, err)
 	}
 	if err := validateMediaGalleryItems(fmt.Sprintf("display component %q", component.ID), component.MediaItems); err != nil {
@@ -2443,15 +2480,18 @@ type DisplayComponent struct {
 	// ShowEmpty keeps a block's declared fields on screen even when the record
 	// has no value for them yet. A page meant to be filled in reads as a frame
 	// with blanks rather than as whatever happens to be filled already.
-	ShowEmpty           bool                     `json:"show_empty,omitempty"`
-	Columns             int                      `json:"columns,omitempty"`
-	ReadonlyColumns     int                      `json:"readonly_columns,omitempty"`
-	DisplayType         ComponentDisplayType     `json:"display_type,omitempty"`
+	ShowEmpty       bool                 `json:"show_empty,omitempty"`
+	Columns         int                  `json:"columns,omitempty"`
+	ReadonlyColumns int                  `json:"readonly_columns,omitempty"`
+	DisplayType     ComponentDisplayType `json:"display_type,omitempty"`
 	// ItemFilter narrows a set of items inside the component that shows them:
 	// a search over what they are called, and a choice among the states they
 	// declare. It is the producer that says which field holds the state and
 	// what the choices are called.
-	ItemFilter          *ItemFilter              `json:"item_filter,omitempty"`
+	ItemFilter *ItemFilter `json:"item_filter,omitempty"`
+	// ItemSelection lets a reader pick several items of the set and act on
+	// them together, with the running total of what they amount to.
+	ItemSelection       *ItemSelection           `json:"item_selection,omitempty"`
 	Items               []DisplayFieldRef        `json:"items,omitempty"`
 	CollectionGroups    *DisplayCollectionGroups `json:"collection_groups,omitempty"`
 	SeparatorVariant    ToneToken                `json:"separator_variant,omitempty"`
@@ -2618,7 +2658,7 @@ type ResourceGridActionsConfig struct {
 // uses it as a nested value because its request is resolved separately from a
 // standard generator action.
 type ActionPresentation struct {
-	Icon             string           `json:"icon,omitempty"`
+	Icon string `json:"icon,omitempty"`
 	// Description is a line of explanation that belongs to the action itself.
 	// A presentation with room for it shows it under the label; a plain button
 	// ignores it, so the same action can stand in either place.
