@@ -2673,7 +2673,12 @@ type ActionPresentation struct {
 	// ActiveIf marks the action as the current choice. Active names a truthy
 	// field, which cannot express "this option equals the record's value", so a
 	// set of mutually exclusive actions states the match as a condition.
-	ActiveIf   *Condition `json:"active_if,omitempty"`
+	ActiveIf *Condition `json:"active_if,omitempty"`
+	// ValueField names a record field whose value the action carries beside
+	// its label, the way a menu row shows the figure it leads to. ValueIcon is
+	// the mark in front of that figure.
+	ValueField string     `json:"value_field,omitempty"`
+	ValueIcon  string     `json:"value_icon,omitempty"`
 	Block      *bool      `json:"block,omitempty"`
 	VisibleIf  *Condition `json:"visible_if,omitempty"`
 	HiddenIf   *Condition `json:"hidden_if,omitempty"`
