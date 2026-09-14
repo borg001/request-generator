@@ -318,8 +318,17 @@ type ModuleFieldOptions struct {
 	// An option can be a picture rather than a name - a cover to pick, a
 	// background to choose. The application resolves the address the same way
 	// it resolves any other picture it is given.
-	Media  string            `json:"media,omitempty"`
-	Labels map[string]string `json:"-"`
+	Media string `json:"media,omitempty"`
+	// An option offered as a card can say more than its name: a short mark in
+	// its corner, a figure on its trailing side with a note under it, and a
+	// line of emphasis under the description. They are words and figures the
+	// producer has already put together; the application only places them.
+	Badge        string            `json:"badge,omitempty"`
+	BadgeTone    string            `json:"badge_tone,omitempty"`
+	Trailing     string            `json:"trailing,omitempty"`
+	TrailingNote string            `json:"trailing_note,omitempty"`
+	Note         string            `json:"note,omitempty"`
+	Labels       map[string]string `json:"-"`
 }
 
 type FieldOptionsSourceMode string
