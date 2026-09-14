@@ -116,6 +116,7 @@ func cloneResourceGridPage(v *ResourceGridPage) *ResourceGridPage {
 	cp := *v
 	cp.List = cloneResourceGridListConfig(v.List)
 	cp.Create = cloneAction(v.Create)
+	cp.HeadActions = cloneActions(v.HeadActions)
 	cp.Delete = cloneAction(v.Delete)
 	cp.Update = cloneAction(v.Update)
 	cp.Card = cloneCardSchema(v.Card)

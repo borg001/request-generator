@@ -463,6 +463,9 @@ func (localizer textLocalizer) localizeWithFallback(value string, fallback strin
 
 func (localizer textLocalizer) localizeResourceGridPage(page *ResourceGridPage) {
 	localizer.localizeRendererAction(page.Create)
+	for i := range page.HeadActions {
+		localizer.localizeRendererAction(&page.HeadActions[i])
+	}
 	localizer.localizeRendererAction(page.Delete)
 	localizer.localizeRendererAction(page.Update)
 	if page.Card != nil {

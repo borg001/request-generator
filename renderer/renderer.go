@@ -196,6 +196,9 @@ func (r Universal) Validate() error {
 		}
 	}
 	if r.ResourceGrid != nil {
+		if err := validateActions("resource grid head", r.ResourceGrid.HeadActions); err != nil {
+			return err
+		}
 		if err := validateAction("resource grid create", r.ResourceGrid.Create); err != nil {
 			return err
 		}
@@ -2618,16 +2621,19 @@ type RecordSection struct {
 }
 
 type ResourceGridPage struct {
-	Endpoint string                     `json:"endpoint,omitempty"`
-	List     *ResourceGridListConfig    `json:"list,omitempty"`
-	Create   *Action                    `json:"create,omitempty"`
-	Delete   *Action                    `json:"delete,omitempty"`
-	Update   *Action                    `json:"update,omitempty"`
-	Card     *CardSchema                `json:"card,omitempty"`
-	Status   *ResourceGridStatusConfig  `json:"status,omitempty"`
-	Actions  *ResourceGridActionsConfig `json:"actions,omitempty"`
-	Text     map[string]string          `json:"text,omitempty"`
-	Context  map[string]interface{}     `json:"context,omitempty"`
+	Endpoint string                  `json:"endpoint,omitempty"`
+	List     *ResourceGridListConfig `json:"list,omitempty"`
+	Create   *Action                 `json:"create,omitempty"`
+	// HeadActions stand beside Create at the head of the grid: other ways to
+	// add to the set, or places that belong to it, each as a card of its own.
+	HeadActions []Action                   `json:"head_actions,omitempty"`
+	Delete      *Action                    `json:"delete,omitempty"`
+	Update      *Action                    `json:"update,omitempty"`
+	Card        *CardSchema                `json:"card,omitempty"`
+	Status      *ResourceGridStatusConfig  `json:"status,omitempty"`
+	Actions     *ResourceGridActionsConfig `json:"actions,omitempty"`
+	Text        map[string]string          `json:"text,omitempty"`
+	Context     map[string]interface{}     `json:"context,omitempty"`
 }
 
 type ResourceGridListConfig struct {

@@ -197,11 +197,11 @@ type WorkspaceWidget struct {
 	// ComposerBadges stand above the composer and say what the conversation is
 	// about right now - the state of the work it belongs to and who it names -
 	// so the reader can act on it without leaving the thread.
-	ComposerBadges []Badge            `json:"composer_badges,omitempty"`
+	ComposerBadges []Badge `json:"composer_badges,omitempty"`
 	// RetryLabel names the second attempt offered when a request from the
 	// composer fails. The shell carries no words of its own.
-	RetryLabel string `json:"retry_label,omitempty"`
-	Commands       []WorkspaceCommand `json:"commands,omitempty"`
+	RetryLabel string             `json:"retry_label,omitempty"`
+	Commands   []WorkspaceCommand `json:"commands,omitempty"`
 	// FooterActions are regular typed actions rendered below the master list.
 	// They give compact popup workspaces a server-declared route or modal
 	// target without requiring a client-side special case.
@@ -872,6 +872,7 @@ func (render Universal) Actions() []Action {
 				appendAction(*action)
 			}
 		}
+		appendActions(render.ResourceGrid.HeadActions)
 		if render.ResourceGrid.Card != nil {
 			appendActions(render.ResourceGrid.Card.Actions)
 		}
