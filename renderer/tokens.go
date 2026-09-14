@@ -202,6 +202,9 @@ const (
 	MediaRatioPortrait  MediaRatio = "portrait"
 	MediaRatioLandscape MediaRatio = "landscape"
 	MediaRatioWide      MediaRatio = "wide"
+	// MediaRatioNatural keeps the shape the picture was taken in: a photo sent
+	// across is shown whole, upright or wide, not cut to a frame.
+	MediaRatioNatural MediaRatio = "natural"
 )
 
 type MediaSize string
@@ -210,6 +213,9 @@ const (
 	MediaSizeThumb MediaSize = "thumb"
 	MediaSizeCard  MediaSize = "card"
 	MediaSizeHero  MediaSize = "hero"
+	// MediaSizeOriginal asks for the file as it was uploaded. Every sized
+	// rendition is cut to its box, so a picture that must stay whole uses this.
+	MediaSizeOriginal MediaSize = "original"
 )
 
 type BlockType string

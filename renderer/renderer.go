@@ -2208,6 +2208,7 @@ type MediaGalleryLabels struct {
 	FilterPrivate string `json:"filter_private,omitempty"`
 	FilterHidden  string `json:"filter_hidden,omitempty"`
 	FilterVideo   string `json:"filter_video,omitempty"`
+	FilterUnpublished string `json:"filter_unpublished,omitempty"`
 	Hidden        string `json:"hidden,omitempty"`
 	HiddenHint    string `json:"hidden_hint,omitempty"`
 	// A gallery beside a profile shows the first few pictures and says how to
@@ -2414,6 +2415,9 @@ const (
 	BlockDecorationLeadingBanner BlockDecorationVariant = "leading-banner"
 	// A pattern fills the panel behind everything else.
 	BlockDecorationBackground BlockDecorationVariant = "background"
+	// BlockDecorationInline stands the picture between the figures of the
+	// panel, level with them, rather than in a corner.
+	BlockDecorationInline BlockDecorationVariant = "inline"
 )
 
 func (decoration BlockDecoration) Validate() error {
@@ -2421,7 +2425,7 @@ func (decoration BlockDecoration) Validate() error {
 		return fmt.Errorf("block decoration requires a source")
 	}
 	switch decoration.Variant {
-	case "", BlockDecorationCornerWide, BlockDecorationCornerSquare, BlockDecorationCornerFloating, BlockDecorationLeadingBanner, BlockDecorationBackground:
+	case "", BlockDecorationCornerWide, BlockDecorationCornerSquare, BlockDecorationCornerFloating, BlockDecorationLeadingBanner, BlockDecorationBackground, BlockDecorationInline:
 		return nil
 	default:
 		return fmt.Errorf("unsupported block decoration variant %q", decoration.Variant)
