@@ -2696,6 +2696,10 @@ type ActionPresentation struct {
 	VisibleIf  *Condition `json:"visible_if,omitempty"`
 	HiddenIf   *Condition `json:"hidden_if,omitempty"`
 	DisabledIf *Condition `json:"disabled_if,omitempty"`
+	// AttentionKey asks for the action to stand out until it is used once.
+	// The renderer remembers under this key that it was used, so the same key
+	// keeps quiet an action that already did its job.
+	AttentionKey string `json:"attention_key,omitempty"`
 }
 
 func (presentation ActionPresentation) Validate() error {
