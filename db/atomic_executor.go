@@ -281,6 +281,12 @@ func atomicUpdateAssignment(field actions.AtomicUpdateField) (pg.ColumnAssigment
 			// literal would be refused by a jsonb column.
 			return column.SET(pg.StringExp(pg.Raw("#atomic_json", pg.RawArgs{"#atomic_json": string(field.Value.JSON)}))), nil
 		}
+		if field.Value.Strings != nil && field.Operation == actions.AtomicUpdateSet {
+			// A text[] column is set the way an insert sets it: the array goes
+			// as an untyped parameter the column reads in its own type. A text
+			// literal would be cast to text and refused.
+			return column.SET(pg.StringExp(pg.Raw("#atomic_array", pg.RawArgs{"#atomic_array": pq.Array(field.Value.Strings)}))), nil
+		}
 		if field.Value.String == nil {
 			return nil, fmt.Errorf("string column %q requires string value", column.Name())
 		}

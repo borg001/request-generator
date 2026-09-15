@@ -261,6 +261,31 @@ func TestAtomicExecutorUpdateSetAndIncrement(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestAtomicExecutorUpdateSetsTextArray(t *testing.T) {
+	sqlDB, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+
+	id := pg.IntegerColumn("id")
+	roles := pg.StringColumn("privacy_order_roles")
+	profiles := pg.NewTable("public", "profiles", "", id, roles)
+	mock.ExpectBegin()
+	tx, err := sqlDB.Begin()
+	require.NoError(t, err)
+	mock.ExpectExec(`SET privacy_order_roles = \(\$1\) WHERE`).WithArgs(`{"client","manager"}`, int64(17)).WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectRollback()
+
+	updated, err := NewAtomicExecutor(tx).Update(context.Background(), actions.AtomicUpdate{
+		Table:  profiles,
+		Fields: []actions.AtomicUpdateField{{Column: roles, Operation: actions.AtomicUpdateSet, Value: actions.AtomicValue{Strings: []string{"client", "manager"}}}},
+		Where:  id.EQ(pg.Int(17)),
+	})
+	require.NoError(t, err)
+	require.Equal(t, int64(1), updated)
+	require.NoError(t, tx.Rollback())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestAtomicExecutorUpdateRequiresFieldsAndWhereBeforeExecutingSQL(t *testing.T) {
 	for _, testCase := range []struct {
 		name   string
