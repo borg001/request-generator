@@ -330,7 +330,7 @@ func (localizer textLocalizer) localizeFieldMatrix(matrix *FieldMatrix) {
 
 func (localizer textLocalizer) localizeMediaUpload(upload *MediaUploadConfig) *MediaUploadConfig {
 	if upload != nil {
-		localizer.localizeTextFields(&upload.Title, &upload.Subtitle, &upload.LoadingTitle)
+		localizer.localizeTextFields(&upload.Title, &upload.Subtitle, &upload.LoadingTitle, &upload.MinDurationError)
 	}
 	return upload
 }

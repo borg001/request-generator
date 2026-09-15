@@ -1494,6 +1494,9 @@ type FieldPresentation struct {
 	// not accept empty is still optional while the profile is a draft.
 	RequiredIf  *Condition       `json:"required_if,omitempty"`
 	ToneByValue []FieldValueTone `json:"tone_by_value,omitempty"`
+	// NoticeByValue tells the person, the moment they choose a value, what
+	// that choice brings with it.
+	NoticeByValue []FieldValueNotice `json:"notice_by_value,omitempty"`
 }
 
 // FieldInputMode hints which virtual keyboard a text control should open.
@@ -1533,6 +1536,15 @@ func (presentation *FieldPresentation) Validate() error {
 type FieldValueTone struct {
 	Value TypedValue `json:"value"`
 	Tone  string     `json:"tone"`
+}
+
+// FieldValueNotice is said once a value is chosen: a title, what the choice
+// means, and the words that close it.
+type FieldValueNotice struct {
+	Value        TypedValue `json:"value"`
+	Title        string     `json:"title,omitempty"`
+	Message      string     `json:"message"`
+	ConfirmLabel string     `json:"confirm_label,omitempty"`
 }
 
 type FieldMediaConfig struct {
@@ -2142,6 +2154,10 @@ type MediaUploadConfig struct {
 	LoadingTitle string `json:"loading_title,omitempty"`
 	Accept       string `json:"accept,omitempty"`
 	Multiple     bool   `json:"multiple"`
+	// MinDurationSeconds refuses a video shorter than this before it is
+	// uploaded; MinDurationError is what the person is told.
+	MinDurationSeconds int    `json:"min_duration_seconds,omitempty"`
+	MinDurationError   string `json:"min_duration_error,omitempty"`
 }
 
 // MediaPresetsConfig offers a gallery a set of ready-made pictures to start
