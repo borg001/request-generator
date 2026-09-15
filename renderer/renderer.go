@@ -2203,14 +2203,14 @@ type MediaGalleryLabels struct {
 	// A gallery large enough to be a page of its own is read in parts. These
 	// name the parts; a consumer that is given none of them shows the gallery
 	// whole, as before.
-	FilterAll     string `json:"filter_all,omitempty"`
-	FilterPublic  string `json:"filter_public,omitempty"`
-	FilterPrivate string `json:"filter_private,omitempty"`
-	FilterHidden  string `json:"filter_hidden,omitempty"`
-	FilterVideo   string `json:"filter_video,omitempty"`
+	FilterAll         string `json:"filter_all,omitempty"`
+	FilterPublic      string `json:"filter_public,omitempty"`
+	FilterPrivate     string `json:"filter_private,omitempty"`
+	FilterHidden      string `json:"filter_hidden,omitempty"`
+	FilterVideo       string `json:"filter_video,omitempty"`
 	FilterUnpublished string `json:"filter_unpublished,omitempty"`
-	Hidden        string `json:"hidden,omitempty"`
-	HiddenHint    string `json:"hidden_hint,omitempty"`
+	Hidden            string `json:"hidden,omitempty"`
+	HiddenHint        string `json:"hidden_hint,omitempty"`
 	// A gallery beside a profile shows the first few pictures and says how to
 	// see the rest. Without these it shows everything it was given.
 	More    string `json:"more,omitempty"`
@@ -2478,12 +2478,15 @@ type DisplayComponent struct {
 	VideoControls    *bool               `json:"video_controls,omitempty"`
 	Size             SizeToken           `json:"size,omitempty"`
 	Wrap             *bool               `json:"wrap,omitempty"`
-	Gap              SpacingToken        `json:"gap,omitempty"`
-	Direction        DirectionToken      `json:"direction,omitempty"`
-	Justify          JustifyToken        `json:"justify,omitempty"`
-	Align            AlignToken          `json:"align,omitempty"`
-	Inset            InsetToken          `json:"inset,omitempty"`
-	Compact          bool                `json:"compact,omitempty"`
+	// AutoScroll keeps a strip of cards moving slowly sideways in a loop: it
+	// stops while a pointer rests on it and goes on when the pointer leaves.
+	AutoScroll bool           `json:"auto_scroll,omitempty"`
+	Gap        SpacingToken   `json:"gap,omitempty"`
+	Direction  DirectionToken `json:"direction,omitempty"`
+	Justify    JustifyToken   `json:"justify,omitempty"`
+	Align      AlignToken     `json:"align,omitempty"`
+	Inset      InsetToken     `json:"inset,omitempty"`
+	Compact    bool           `json:"compact,omitempty"`
 	// ShowEmpty keeps a block's declared fields on screen even when the record
 	// has no value for them yet. A page meant to be filled in reads as a frame
 	// with blanks rather than as whatever happens to be filled already.
