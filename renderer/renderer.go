@@ -1495,7 +1495,11 @@ type FieldPresentation struct {
 	// RequiredIf marks the control as required only in the state that needs it.
 	// A profile is filled in over several sittings, so a field that review will
 	// not accept empty is still optional while the profile is a draft.
-	RequiredIf  *Condition       `json:"required_if,omitempty"`
+	RequiredIf *Condition `json:"required_if,omitempty"`
+	// DisabledIf greys the control out in the state where the answer is not
+	// the reader's to give. The field stays on the screen and says what it
+	// holds; it simply cannot be changed.
+	DisabledIf  *Condition       `json:"disabled_if,omitempty"`
 	ToneByValue []FieldValueTone `json:"tone_by_value,omitempty"`
 	// NoticeByValue tells the person, the moment they choose a value, what
 	// that choice brings with it.
@@ -1682,6 +1686,9 @@ type Badge struct {
 	LabelKey  string            `json:"label_key,omitempty"`
 	LabelMap  map[string]string `json:"label_map,omitempty"`
 	Icon      string            `json:"icon,omitempty"`
+	// IconOnly is a chip that is only its mark: a tick says "delivered" by
+	// itself, and the value behind it is not a word to print.
+	IconOnly  *bool             `json:"icon_only,omitempty"`
 	Size      SizeToken         `json:"size,omitempty"`
 	Tone      string            `json:"tone,omitempty"`
 	ToneMap   map[string]string `json:"tone_map,omitempty"`
