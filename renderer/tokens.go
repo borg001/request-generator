@@ -2,7 +2,7 @@ package renderer
 
 const (
 	Name    = "UniversalRenderer"
-	Version = "2.6.0"
+	Version = "2.7.0"
 )
 
 type Identity struct {
@@ -309,7 +309,7 @@ const (
 type ActionPlacement string
 
 const (
-	ActionPlacementFull         ActionPlacement = "full"
+	ActionPlacementFull ActionPlacement = "full"
 	// Half of a line: two such actions share one, and one of them alone leaves
 	// the other half empty - which is what a half-width control means.
 	ActionPlacementHalf         ActionPlacement = "half"
