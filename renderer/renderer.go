@@ -2881,6 +2881,7 @@ type Prompt struct {
 	Title       string     `json:"title,omitempty"`
 	Text        string     `json:"text,omitempty"`
 	Action      *Action    `json:"action,omitempty"`
+	CloseLabel  string     `json:"close_label,omitempty"`
 	VisibleIf   *Condition `json:"visible_if,omitempty"`
 	Dismissible bool       `json:"dismissible,omitempty"`
 }

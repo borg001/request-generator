@@ -310,7 +310,7 @@ func (localizer textLocalizer) localizePromptList(list *PromptList) {
 	}
 	for index := range list.Items {
 		prompt := &list.Items[index]
-		localizer.localizeTextFields(&prompt.Title, &prompt.Text)
+		localizer.localizeTextFields(&prompt.Title, &prompt.Text, &prompt.CloseLabel)
 		localizer.localizeRendererAction(prompt.Action)
 	}
 }
