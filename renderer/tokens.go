@@ -310,6 +310,9 @@ type ActionPlacement string
 
 const (
 	ActionPlacementFull         ActionPlacement = "full"
+	// Half of a line: two such actions share one, and one of them alone leaves
+	// the other half empty - which is what a half-width control means.
+	ActionPlacementHalf         ActionPlacement = "half"
 	ActionPlacementFilterFooter ActionPlacement = "filter_footer"
 	ActionPlacementBadge        ActionPlacement = "badge"
 	ActionPlacementHead         ActionPlacement = "head"
@@ -318,7 +321,7 @@ const (
 
 func (placement ActionPlacement) Valid() bool {
 	switch placement {
-	case "", ActionPlacementFull, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu:
+	case "", ActionPlacementFull, ActionPlacementHalf, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu:
 		return true
 	default:
 		return false
