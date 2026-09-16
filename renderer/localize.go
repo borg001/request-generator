@@ -38,6 +38,9 @@ func (localizer textLocalizer) localizeRendererAction(action *Action) {
 	if action.Confirm != nil {
 		localizer.localizeTextFields(&action.Confirm.Title, &action.Confirm.Message, &action.Confirm.CancelLabel, &action.Confirm.ConfirmLabel)
 	}
+	if action.AfterFailure != nil {
+		localizer.localizeTextFields(&action.AfterFailure.Title, &action.AfterFailure.CancelLabel, &action.AfterFailure.ConfirmLabel)
+	}
 	if action.AfterSuccess != nil {
 		localizer.localizeTextFields(&action.AfterSuccess.Toast)
 	}

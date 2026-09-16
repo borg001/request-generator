@@ -1459,6 +1459,9 @@ type Media struct {
 	GlowFallback string      `json:"glow_fallback,omitempty"`
 	GlowEnabled  *bool       `json:"glow_enabled,omitempty"`
 	StatusField  string      `json:"status_field,omitempty"`
+	// CountField names a number the picture carries on its rim - unread
+	// messages, say - opposite the status dot.
+	CountField string `json:"count_field,omitempty"`
 	// A picture can carry one small mark in its corner - pinned, locked, the
 	// state that belongs to the thing pictured rather than to a row of chips
 	// beside it. MarkerField names the truth, MarkerIcon what to draw.
@@ -2758,6 +2761,7 @@ type Action struct {
 	Modal          *ModalAction   `json:"modal,omitempty"`
 	Client         *ClientAction  `json:"client,omitempty"`
 	Confirm        *Confirm       `json:"confirm,omitempty"`
+	AfterFailure   *ActionFailure `json:"after_failure,omitempty"`
 	AfterSuccess   *ActionResult  `json:"after_success,omitempty"`
 	AfterError     *ActionResult  `json:"after_error,omitempty"`
 	AriaLabelKey   string         `json:"aria_label_key,omitempty"`
@@ -2914,6 +2918,15 @@ type Confirm struct {
 	Message      string `json:"message,omitempty"`
 	CancelLabel  string `json:"cancel_label,omitempty"`
 	ConfirmLabel string `json:"confirm_label,omitempty"`
+}
+
+// ActionFailure is what to offer when an operation is refused: the words of the
+// refusal come from the API, and the way out of it is declared here.
+type ActionFailure struct {
+	Title        string      `json:"title,omitempty"`
+	CancelLabel  string      `json:"cancel_label,omitempty"`
+	ConfirmLabel string      `json:"confirm_label,omitempty"`
+	Route        RouteAction `json:"route,omitempty"`
 }
 
 func (confirm Confirm) Validate() error {

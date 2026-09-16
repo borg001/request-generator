@@ -756,9 +756,22 @@ func cloneActionValue(v Action) Action {
 	v.Modal = cloneModalAction(v.Modal)
 	v.Client = cloneClientAction(v.Client)
 	v.Confirm = cloneConfirm(v.Confirm)
+	v.AfterFailure = cloneActionFailure(v.AfterFailure)
 	v.AfterSuccess = cloneActionResult(v.AfterSuccess)
 	v.AfterError = cloneActionResult(v.AfterError)
 	return v
+}
+
+// A refusal notice is copied with the action, or the localizer would translate
+// the one every request shares and the first language asked for would stick.
+func cloneActionFailure(v *ActionFailure) *ActionFailure {
+	if v == nil {
+		return nil
+	}
+	cp := *v
+	cp.Route.Params = cloneMap(v.Route.Params)
+	cp.Route.Query = cloneMap(v.Route.Query)
+	return &cp
 }
 
 func cloneClientAction(v *ClientAction) *ClientAction {
