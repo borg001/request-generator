@@ -115,7 +115,15 @@ func (generator *Generator) FeaturesMiddleware() gin.HandlerFunc {
 func (generator *Generator) Run() {
 
 	featuresGroup := generator.group.Group("/api")
-	featuresGroup.GET("/features", generator.FeaturesMiddleware())
+	// The feature map lists every module, action and the roles that reach it,
+	// and the OpenAPI document describes every endpoint and field. Both are a
+	// map of the service, so they answer to a signed-in caller only. They used
+	// to answer anyone.
+	describedGroup := featuresGroup.Group("")
+	if generator.AuthMiddleware != nil {
+		describedGroup.Use(generator.AuthMiddleware(actions.ListModuleAction{Auth: true}))
+	}
+	describedGroup.GET("/features", generator.FeaturesMiddleware())
 	generator.initRealtime()
 	if err := generator.validateRealtimeEvents(); err != nil {
 		panic(fmt.Sprintf("invalid realtime event config: %v", err))
@@ -336,7 +344,7 @@ func (generator *Generator) Run() {
 			panic(fmt.Sprintf("failed to marshal OpenAPI spec: %v", err))
 		}
 
-		featuresGroup.GET("/openapi.json", func(c *gin.Context) {
+		describedGroup.GET("/openapi.json", func(c *gin.Context) {
 			c.Data(http.StatusOK, "application/json; charset=utf-8", specJSON)
 		})
 	}
