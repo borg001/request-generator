@@ -3055,8 +3055,12 @@ target action убирается), разрешает `matrix.source` и лок�
 на это отвечает. Содержимое — `DisplayComponent.Prompts`
 (`components[].prompts`), тот же `PromptList`, что у секции формы
 (`title`, `text`, `icon`, `tone`, inline `action`, `visible_if`,
-`dismissible`). Компонент стоит там, где его поставил producer, например сразу
-под `identity`.
+`dismissible`, `attention`). Компонент стоит там, где его поставил producer,
+например сразу под `identity`.
+
+`Prompt.Attention` (`attention`, bool) — уведомление ждёт ответа читателя:
+по его краю бежит свет, пока на него не ответили или пока оно не ушло. Поле
+есть у любого prompt, в форме тоже, и сериализуется только при `true`.
 
 Generator отклоняет `prompts` без элементов, `prompts` у компонента другого
 типа и элемент без `title` и `text`. `title` и `text` локализуются так же, как
@@ -3071,7 +3075,8 @@ Generator отклоняет `prompts` без элементов, `prompts` у �
     "variant": "compact",
     "items": [{
       "id": "agency-invitation",
-      "tone": "cyan",
+      "tone": "info",
+      "attention": true,
       "icon": "users",
       "title": "New agency invitation",
       "text": "Velvet Circle invites you to join.",

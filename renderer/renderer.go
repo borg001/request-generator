@@ -2905,6 +2905,9 @@ type Prompt struct {
 	CloseLabel  string     `json:"close_label,omitempty"`
 	VisibleIf   *Condition `json:"visible_if,omitempty"`
 	Dismissible bool       `json:"dismissible,omitempty"`
+	// Attention marks a notice that waits for the reader's answer: a light
+	// runs around its edge until it is answered or goes away.
+	Attention bool `json:"attention,omitempty"`
 }
 
 func (list *PromptList) Validate() error {

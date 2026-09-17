@@ -9,6 +9,9 @@
   записи. Тот же `PromptList`, что у секции формы. JSON:
   `components[].prompts`.
 
+- **`Prompt.Attention`** — уведомление, которое ждёт ответа, отмечено бегущим
+  по краю светом. JSON: `attention`.
+
 - **Result fields atomic actions в action result contract** — скалярные
   `ResultFields` atomic `add`/`update` можно назвать в
   `selection.source.field`, а endpoint вида `/api/items/id/{id}` совпадает со

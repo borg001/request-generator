@@ -270,7 +270,13 @@ func TestDisplayPromptsComponent(t *testing.T) {
 	assert.Contains(t, string(encoded), `"type":"prompts"`)
 	assert.Contains(t, string(encoded), `"prompts":{"items":[{"id":"invitation"`)
 
+	prompt.Prompts.Items[0].Attention = true
+	encoded, err = json.Marshal(prompt)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"attention":true`)
+
 	cloned := cloneDisplayComponents([]DisplayComponent{prompt})[0]
+	require.True(t, cloned.Prompts.Items[0].Attention)
 	cloned.Prompts.Items[0].Title = "changed"
 	assert.Equal(t, "profile.invitation.title", prompt.Prompts.Items[0].Title)
 
