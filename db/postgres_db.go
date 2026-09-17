@@ -18,6 +18,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// sqlIdentifierPattern matches a bare SQL identifier: a table alias or column
+// name a producer declared, never an expression assembled from a request.
+var sqlIdentifierPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+// SafeSQLIdentifier reports whether name may be pasted into SQL as an
+// identifier. A dotted filter key's table part is the one place a caller can
+// steer that text, so it is checked here before it reaches a query.
+func SafeSQLIdentifier(name string) bool {
+	return sqlIdentifierPattern.MatchString(name)
+}
+
 type DB struct {
 	DBExecutor
 	sql   *sql.DB
@@ -369,6 +380,12 @@ func (db *DB) List(
 			colName := key
 			tblRef := tableRef
 			if len(parts) > 1 {
+				// A dotted filter key names a joined table before the column.
+				// That table reference is pasted into SQL, so it must be a
+				// plain identifier - never an expression a caller assembled.
+				if !SafeSQLIdentifier(parts[0]) {
+					continue
+				}
 				colName = parts[1]
 				tblRef = parts[0]
 			}
