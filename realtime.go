@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -304,7 +306,7 @@ func (generator *Generator) initRealtime() {
 	dummyAction := actions.ListModuleAction{Auth: true, Permission: []actions.Role{}}
 	if generator.AuthMiddleware != nil {
 		group.Use(func(c *gin.Context) {
-			if token := c.Query("token"); token != "" && c.GetHeader("Authorization") == "" {
+			if token := realtimeSocketToken(c); token != "" && c.GetHeader("Authorization") == "" {
 				c.Request.Header.Set("Authorization", "Bearer "+token)
 			}
 			generator.AuthMiddleware(dummyAction)(c)
@@ -328,9 +330,49 @@ func (generator *Generator) initRealtime() {
 	sseGroup.GET("", generator.handleRealtimeSSE())
 }
 
+// realtimeBearerSubprotocol lets a browser authorize a WebSocket without
+// putting the session in the address. A browser cannot set a header on a
+// WebSocket handshake, but it can name subprotocols, and those travel in
+// Sec-WebSocket-Protocol. The address is the least private place a session can
+// be: it lands in the proxy access log, in browser history and in a referrer.
+const realtimeBearerSubprotocol = "bearer"
+
+// realtimeSocketToken reads the session from the handshake subprotocols first
+// and falls back to the query, which older clients still use.
+func realtimeSocketToken(c *gin.Context) string {
+	for _, protocol := range websocket.Subprotocols(c.Request) {
+		protocol = strings.TrimSpace(protocol)
+		if protocol == "" || protocol == realtimeBearerSubprotocol {
+			continue
+		}
+		return protocol
+	}
+	return c.Query("token")
+}
+
+// realtimeSameOrigin accepts a handshake from the host that served the page and
+// from a client that sends no origin at all, such as a native application. A
+// handshake carries whatever cookies the browser holds for this host, so any
+// page on the internet must not be able to open one.
+func realtimeSameOrigin(r *http.Request) bool {
+	origin := strings.TrimSpace(r.Header.Get("Origin"))
+	if origin == "" {
+		return true
+	}
+	parsed, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(parsed.Host, r.Host)
+}
+
 func (generator *Generator) handleRealtimeWebSocket() gin.HandlerFunc {
 	upgrader := websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool { return true },
+		// The client offers "bearer" alongside its token so the token travels
+		// in a header instead of the address. Selecting the marker back is what
+		// makes the browser keep the connection.
+		Subprotocols: []string{realtimeBearerSubprotocol},
+		CheckOrigin:  realtimeSameOrigin,
 	}
 	return func(c *gin.Context) {
 		user, ok := icontext.GetUser(c.Request.Context())
