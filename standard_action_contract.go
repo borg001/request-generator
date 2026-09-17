@@ -33,13 +33,24 @@ func resolveStandardActionContract(module *BaseModule, action actions.ModuleActi
 	case actions.ModuleActionNameList:
 		return standardActionContract{Request: renderer.APIAction{Method: "GET", Endpoint: base}}, true
 	case actions.ModuleActionNameAdd:
-		return standardActionContract{
+		contract := standardActionContract{
 			Request: renderer.APIAction{Method: "PUT", Endpoint: base},
 			ResultFields: []standardActionResultField{
 				{Field: renderer.ActionResultFieldValue, Type: renderer.TypedValueNumber},
 				{Field: renderer.ActionResultFieldPrimaryKey, Type: renderer.TypedValueString},
 			},
-		}, true
+		}
+		switch value := action.(type) {
+		case actions.AddModuleAction:
+			if value.Mode == actions.AddModeAtomic && value.Atomic != nil {
+				contract.ResultFields = appendAtomicResultFields(contract.ResultFields, value.Atomic.ResultFields)
+			}
+		case *actions.AddModuleAction:
+			if value != nil && value.Mode == actions.AddModeAtomic && value.Atomic != nil {
+				contract.ResultFields = appendAtomicResultFields(contract.ResultFields, value.Atomic.ResultFields)
+			}
+		}
+		return contract, true
 	case actions.ModuleActionNameDefrec:
 		return standardActionContract{Request: renderer.APIAction{Method: "GET", Endpoint: base + "/defrec/"}}, true
 	case actions.ModuleActionNameView:
@@ -49,11 +60,11 @@ func resolveStandardActionContract(module *BaseModule, action actions.ModuleActi
 		switch value := action.(type) {
 		case actions.UpdateModuleAction:
 			if value.Mode == actions.UpdateModeAtomic {
-				contract.ResultFields = atomicUpdateActionResultFields()
+				contract.ResultFields = atomicUpdateActionResultFields(value.Atomic)
 			}
 		case *actions.UpdateModuleAction:
 			if value != nil && value.Mode == actions.UpdateModeAtomic {
-				contract.ResultFields = atomicUpdateActionResultFields()
+				contract.ResultFields = atomicUpdateActionResultFields(value.Atomic)
 			}
 		}
 		return contract, true
@@ -67,11 +78,33 @@ func resolveStandardActionContract(module *BaseModule, action actions.ModuleActi
 	}
 }
 
-func atomicUpdateActionResultFields() []standardActionResultField {
-	return []standardActionResultField{
+func atomicUpdateActionResultFields(config *actions.AtomicUpdateConfig) []standardActionResultField {
+	fields := []standardActionResultField{
 		{Field: renderer.ActionResultFieldValue, Type: renderer.TypedValueNumber},
 		{Field: renderer.ActionResultFieldPrimaryKey, Type: renderer.TypedValueString},
 	}
+	if config != nil {
+		fields = appendAtomicResultFields(fields, config.ResultFields)
+	}
+	return fields
+}
+
+// appendAtomicResultFields adds the scalar fields an atomic operation declares
+// it returns. The runtime refuses a result that lacks one of them, so an
+// action result may name them the same way it names the record value.
+func appendAtomicResultFields(fields []standardActionResultField, declared []actions.AtomicResultField) []standardActionResultField {
+	for _, result := range declared {
+		kind, ok := atomicKindTypedValueType(result.Kind)
+		if !ok {
+			continue
+		}
+		field := renderer.ActionResultField(result.Name)
+		if field == renderer.ActionResultFieldValue || field == renderer.ActionResultFieldPrimaryKey {
+			continue
+		}
+		fields = append(fields, standardActionResultField{Field: field, Type: kind})
+	}
+	return fields
 }
 
 func standardActionRouteQuery(module *BaseModule, action actions.ModuleAction) *RouteQuery {

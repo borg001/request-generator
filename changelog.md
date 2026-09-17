@@ -4,6 +4,16 @@
 
 ### Added
 
+- **`DisplayPrompts` (`prompts`) и `DisplayComponent.Prompts`** — уведомления
+  записи с шагом, который на них отвечает, в любом месте секции страницы
+  записи. Тот же `PromptList`, что у секции формы. JSON:
+  `components[].prompts`.
+
+- **Result fields atomic actions в action result contract** — скалярные
+  `ResultFields` atomic `add`/`update` можно назвать в
+  `selection.source.field`, а endpoint вида `/api/items/id/{id}` совпадает со
+  standard request `/api/items/:bykey/:value`.
+
 - **`AtomicExecutor.SelectMany`** — ограниченное и детерминированное typed
   чтение нескольких строк внутри generator-owned transaction. Контракт требует
   `ORDER BY` и положительный `LIMIT`; пустой результат не является ошибкой.

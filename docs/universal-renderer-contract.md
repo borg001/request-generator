@@ -26,8 +26,11 @@ mapping и error shape не менялись.
 - Новые значения закрытых enum: `placement: half|head|menu`, pill
   `presentation: menu`, `display_type: action_rows|flow_steps|card_rail`,
   `block.decoration.variant`, `ratio: natural`, `size: original`,
-  `main_ratio`/`thumb_ratio: tall`, `usage: cover` и тип компонента
-  `record_carousel`.
+  `main_ratio`/`thumb_ratio: tall`, `usage: cover` и типы компонентов
+  `record_carousel` и `prompts`.
+- Atomic `add`/`update` публикуют в result contract свои скалярные
+  `ResultFields`, а `selection.source` сверяет endpoint с параметрами пути
+  standard request (см. «Action result selection»).
 - Новые optional ключи ответов: `sort_active` в list response,
   `fields[field].min`/`max` в defrec response, `home`, `locked` и
   `lock_reason` в `/api/config`.
@@ -1866,10 +1869,18 @@ widget через `after_success.widget` или `after_error.widget`. Selection
 
 `selection.source.resource` использует тот же `ActionResource`, что master и
 detail. `renderer.Action` обязан быть `api` action, а его `method`/`endpoint`
-должны точно совпадать с request, определённым standard action contract.
-Этот же contract является источником route config и typed result fields.
+должны совпадать с request, определённым standard action contract. Параметр
+пути этого request (`:bykey`, `:value`) совпадает с любым одним непустым
+сегментом, поэтому `POST /api/items/id/{id}` — это request `update` модуля
+`items` (`/api/items/:bykey/:value`). Этот же contract является источником
+route config и typed result fields.
 `selection.source.field` использует закрытый `renderer.ActionResultField`; его
-доступность и тип определяет result contract исходного action. Generator
+доступность и тип определяет result contract исходного action. У atomic
+`add` и `update` в этот contract, кроме `value` и `primary_key`, входят
+скалярные поля `ResultFields` их atomic config: `int` и `float` как `number`,
+`string` как `string`, `bool` как `bool`. Runtime отклоняет результат без
+объявленного поля, поэтому action может открыть workspace на записи, которую
+operation вернула рядом со своей (`chat_id` у ответа на приглашение). Generator
 сопоставляет этот тип с `workspace.selection.field`. Target никогда не
 повторяется в action result. Возможные refresh targets: `summary`, `master`, `detail`.
 
@@ -2010,7 +2021,7 @@ request-generator.
 | `*.block.decoration.variant` | `corner-wide`, `corner-square`, `corner-floating`, `leading-banner`, `background`, `inline` |
 | `form_page.sections[].media_visibility_states[].value` | `public`, `private`, `paid`, `internal` |
 | `media.item.usage` | `gallery`, `avatar`, `poster`, `cover` |
-| `record_page.sections[].components[].type` | `media_gallery`, `actions`, `identity`, `data_list`, `badge_group_block`, `text`, `badge_list`, `accordion_groups`, `status_timeline`, `record_carousel` |
+| `record_page.sections[].components[].type` | `media_gallery`, `actions`, `identity`, `data_list`, `badge_group_block`, `text`, `badge_list`, `accordion_groups`, `status_timeline`, `record_carousel`, `prompts` |
 | `record_page.sections[].components[].display_type` | `key_value_grid`, `tile_grid` (только `data_list`); `action_rows` (только `actions`); `flow_steps` (только `status_timeline`); `card_rail` (только `record_carousel`) |
 | `record_page.sections[].components[].main_ratio`, `.thumb_ratio` | `square`, `portrait`, `tall` |
 | `action.variant` | `default`, `primary`, `secondary`, `success`, `warning`, `danger` |
@@ -3036,6 +3047,39 @@ target action убирается), разрешает `matrix.source` и лок�
 `components[].auto_scroll` (`DisplayComponent.AutoScroll`, bool) — полоса
 карточек медленно и циклично едет вбок и останавливается, пока на ней
 указатель. Поле сериализуется только при `true`.
+
+### Компонент prompts
+
+`renderer.DisplayPrompts` (`prompts`) — уведомления, которые относятся к
+записи и стоят среди её компонентов: что-то ждёт читателя, и рядом шаг, который
+на это отвечает. Содержимое — `DisplayComponent.Prompts`
+(`components[].prompts`), тот же `PromptList`, что у секции формы
+(`title`, `text`, `icon`, `tone`, inline `action`, `visible_if`,
+`dismissible`). Компонент стоит там, где его поставил producer, например сразу
+под `identity`.
+
+Generator отклоняет `prompts` без элементов, `prompts` у компонента другого
+типа и элемент без `title` и `text`. `title` и `text` локализуются так же, как
+у prompts формы. Действие prompt выполняется как действие страницы с текущей
+записью.
+
+```json
+{
+  "id": "agency-invitation",
+  "type": "prompts",
+  "prompts": {
+    "variant": "compact",
+    "items": [{
+      "id": "agency-invitation",
+      "tone": "cyan",
+      "icon": "users",
+      "title": "New agency invitation",
+      "text": "Velvet Circle invites you to join.",
+      "action": {"id": "open_agency_invitation", "type": "route", "label": "View", "route": {"path": "/settings", "query": {"section": "agency-access"}}}
+    }]
+  }
+}
+```
 
 ### Галерея рядом с профилем
 

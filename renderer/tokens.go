@@ -387,6 +387,9 @@ const (
 	// A set of records shown one at a time, or as a strip; the presentation is
 	// chosen by the display type.
 	DisplayRecordCarousel DisplayComponentType = "record_carousel"
+	// Notices that belong to the record where they stand - something waiting
+	// for the reader, with the step that answers it.
+	DisplayPrompts DisplayComponentType = "prompts"
 )
 
 type ComponentAction string

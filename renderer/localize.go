@@ -441,6 +441,7 @@ func (localizer textLocalizer) localizeRecordPage(page *RecordPage) {
 				localizer.localizeTextFields(&component.ItemSelection.CountLabel, &component.ItemSelection.TotalLabel, &component.ItemSelection.ClearLabel)
 			}
 			localizer.localizeMediaGalleryItems(component.MediaItems)
+			localizer.localizePromptList(component.Prompts)
 		}
 	}
 }

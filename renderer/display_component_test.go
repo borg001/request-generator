@@ -257,3 +257,29 @@ func TestDisplayComponentPreviewValidation(t *testing.T) {
 	wrongType.Record.Sections[0].Components[0].Type = DisplayDataList
 	require.Error(t, wrongType.Validate())
 }
+
+func TestDisplayPromptsComponent(t *testing.T) {
+	prompt := DisplayComponent{ID: "invitation", Type: DisplayPrompts, Prompts: &PromptList{Items: []Prompt{{
+		ID: "invitation", Title: "profile.invitation.title",
+		Action: &Action{ID: "open_invitation", Type: ActionRoute, Label: "ui.view", Route: RouteAction{Path: "/settings"}},
+	}}}}
+	require.NoError(t, prompt.Validate())
+
+	encoded, err := json.Marshal(prompt)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"type":"prompts"`)
+	assert.Contains(t, string(encoded), `"prompts":{"items":[{"id":"invitation"`)
+
+	cloned := cloneDisplayComponents([]DisplayComponent{prompt})[0]
+	cloned.Prompts.Items[0].Title = "changed"
+	assert.Equal(t, "profile.invitation.title", prompt.Prompts.Items[0].Title)
+
+	empty := DisplayComponent{ID: "invitation", Type: DisplayPrompts}
+	require.EqualError(t, empty.Validate(), `display component "invitation": prompts require at least one item`)
+
+	misplaced := DisplayComponent{ID: "stats", Type: DisplayBadgeList, Prompts: prompt.Prompts}
+	require.EqualError(t, misplaced.Validate(), `display component "stats": prompts require component type "prompts"`)
+
+	untitled := DisplayComponent{ID: "invitation", Type: DisplayPrompts, Prompts: &PromptList{Items: []Prompt{{ID: "invitation"}}}}
+	require.EqualError(t, untitled.Validate(), `display component "invitation": prompt "invitation" must define title or text`)
+}

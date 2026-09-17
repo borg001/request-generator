@@ -2,6 +2,7 @@ package module
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/darkrain/request-generator/actions"
 	"github.com/darkrain/request-generator/fields"
@@ -850,7 +851,7 @@ func (generator *Generator) validateWidgetTargetSelection(owner *BaseModule, act
 	if !ok {
 		return fmt.Errorf("module %q action target %q selection source resource %q action %q has no standard request", owner.Name, target.ID, source.Resource.Module, source.Resource.Action)
 	}
-	if action.API.Method != contract.Request.Method || action.API.Endpoint != contract.Request.Endpoint {
+	if action.API.Method != contract.Request.Method || !standardEndpointMatches(contract.Request.Endpoint, action.API.Endpoint) {
 		return fmt.Errorf("module %q action target %q selection source resource %q action %q does not match action request %s %s", owner.Name, target.ID, source.Resource.Module, source.Resource.Action, contract.Request.Method, contract.Request.Endpoint)
 	}
 	sourceType, exists := contract.resultFieldType(source.Field)
@@ -893,4 +894,31 @@ func validateRuntimeValueTypeCompatibility(source, target fields.ModuleField) er
 		return fmt.Errorf("type %q does not match target type %q", sourceType, targetType)
 	}
 	return nil
+}
+
+// standardEndpointMatches reports whether an action request addresses the
+// standard endpoint. A path parameter of the standard endpoint (":bykey",
+// ":value") stands for any one segment, so "/api/items/id/{id}" is the update
+// request of "/api/items/:bykey/:value".
+func standardEndpointMatches(standard, endpoint string) bool {
+	if standard == endpoint {
+		return true
+	}
+	standardSegments := strings.Split(standard, "/")
+	endpointSegments := strings.Split(endpoint, "/")
+	if len(standardSegments) != len(endpointSegments) {
+		return false
+	}
+	for index, segment := range standardSegments {
+		if strings.HasPrefix(segment, ":") && len(segment) > 1 {
+			if endpointSegments[index] == "" {
+				return false
+			}
+			continue
+		}
+		if segment != endpointSegments[index] {
+			return false
+		}
+	}
+	return true
 }

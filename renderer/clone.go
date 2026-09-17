@@ -669,6 +669,7 @@ func cloneDisplayComponents(values []DisplayComponent) []DisplayComponent {
 		out[i].CollectionGroups = cloneDisplayCollectionGroups(v.CollectionGroups)
 		out[i].Block = cloneBlock(v.Block)
 		out[i].Preview = cloneDisplayPreview(v.Preview)
+		out[i].Prompts = clonePromptList(v.Prompts)
 		if v.MediaLabels != nil {
 			labels := *v.MediaLabels
 			out[i].MediaLabels = &labels

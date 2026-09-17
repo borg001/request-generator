@@ -338,6 +338,17 @@ func (component DisplayComponent) Validate() error {
 	if component.Type == DisplayStatusTimeline && len(component.Fields) != 1 {
 		return fmt.Errorf("status timeline requires exactly one field")
 	}
+	if component.Type == DisplayPrompts && (component.Prompts == nil || len(component.Prompts.Items) == 0) {
+		return fmt.Errorf("display component %q: prompts require at least one item", component.ID)
+	}
+	if component.Prompts != nil {
+		if component.Type != DisplayPrompts {
+			return fmt.Errorf("display component %q: prompts require component type %q", component.ID, DisplayPrompts)
+		}
+		if err := component.Prompts.Validate(); err != nil {
+			return fmt.Errorf("display component %q: %w", component.ID, err)
+		}
+	}
 	if component.DisplayType != "" {
 		// A display type says how one kind of component reads, so each belongs
 		// to the type it was written for.
@@ -2541,14 +2552,17 @@ type DisplayComponent struct {
 	// Preview declares that this component's picture can be opened: it names
 	// the dialog and the page actions that belong to the picture rather than
 	// to the page. A long press is the gesture for it on a touch screen.
-	Preview          *DisplayPreview `json:"preview,omitempty"`
-	Title            string          `json:"title,omitempty"`
-	TitleFallback    string          `json:"title_fallback,omitempty"`
-	Subtitle         string          `json:"subtitle,omitempty"`
-	SubtitleFallback string          `json:"subtitle_fallback,omitempty"`
-	TitleLevel       int             `json:"title_level,omitempty"`
-	TitleTone        ToneToken       `json:"title_tone,omitempty"`
-	BodyClass        string          `json:"body_class,omitempty"`
+	Preview *DisplayPreview `json:"preview,omitempty"`
+	// Prompts are the notices of a prompts component, the same contract a
+	// form section carries.
+	Prompts          *PromptList `json:"prompts,omitempty"`
+	Title            string      `json:"title,omitempty"`
+	TitleFallback    string      `json:"title_fallback,omitempty"`
+	Subtitle         string      `json:"subtitle,omitempty"`
+	SubtitleFallback string      `json:"subtitle_fallback,omitempty"`
+	TitleLevel       int         `json:"title_level,omitempty"`
+	TitleTone        ToneToken   `json:"title_tone,omitempty"`
+	BodyClass        string      `json:"body_class,omitempty"`
 }
 
 // DisplayPreview is the picture of a component shown at full size, with the
