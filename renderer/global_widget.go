@@ -925,6 +925,13 @@ func cloneWorkspaceWidget(value *WorkspaceWidget) *WorkspaceWidget {
 	cloned.Master.Bindings = cloneRequestBindings(value.Master.Bindings)
 	cloned.Detail.Bindings = cloneRequestBindings(value.Detail.Bindings)
 	cloned.ComposerActions = cloneActions(value.ComposerActions)
+	// The badges were left sharing their slice, and with it the maps inside it.
+	// Localizing writes the resolved text back into LabelMap, so the first
+	// request after a restart replaced the keys in the module's own
+	// configuration with one language: every later request, in any language,
+	// then looked up text that is no longer a key and got that first language
+	// back.
+	cloned.ComposerBadges = cloneBadges(value.ComposerBadges)
 	cloned.Commands = cloneWorkspaceCommands(value.Commands)
 	cloned.FooterActions = cloneActions(value.FooterActions)
 	cloned.Subscriptions = cloneWorkspaceSubscriptions(value.Subscriptions)
