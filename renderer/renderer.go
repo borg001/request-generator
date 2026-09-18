@@ -2428,6 +2428,11 @@ type Block struct {
 	Overlays       []BlockOverlay  `json:"overlays,omitempty"`
 	// Icon is the glyph the panel head wears beside its title.
 	Icon string `json:"icon,omitempty"`
+	// Kicker is the short word over the title that says what kind of thing
+	// the panel is - the step to take, the state it is in - read before the
+	// title rather than instead of it. KickerTone colours it.
+	Kicker     string    `json:"kicker,omitempty"`
+	KickerTone ToneToken `json:"kicker_tone,omitempty"`
 	// Decoration is the one decorative picture a panel may carry. The server
 	// names the picture and the shape it takes; the client resolves the address
 	// and knows nothing about what it shows.
@@ -2457,6 +2462,10 @@ const (
 	// BlockDecorationInline stands the picture between the figures of the
 	// panel, level with them, rather than in a corner.
 	BlockDecorationInline BlockDecorationVariant = "inline"
+	// BlockDecorationCornerHero is the corner picture at the size it is the
+	// subject of the panel: a balance of what the picture shows reads as one
+	// object with its figures, not as a panel with a stamp in the corner.
+	BlockDecorationCornerHero BlockDecorationVariant = "corner-hero"
 )
 
 func (decoration BlockDecoration) Validate() error {
@@ -2464,7 +2473,7 @@ func (decoration BlockDecoration) Validate() error {
 		return fmt.Errorf("block decoration requires a source")
 	}
 	switch decoration.Variant {
-	case "", BlockDecorationCornerWide, BlockDecorationCornerSquare, BlockDecorationCornerFloating, BlockDecorationLeadingBanner, BlockDecorationBackground, BlockDecorationInline:
+	case "", BlockDecorationCornerWide, BlockDecorationCornerSquare, BlockDecorationCornerFloating, BlockDecorationLeadingBanner, BlockDecorationBackground, BlockDecorationInline, BlockDecorationCornerHero:
 		return nil
 	default:
 		return fmt.Errorf("unsupported block decoration variant %q", decoration.Variant)
