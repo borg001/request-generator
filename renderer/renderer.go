@@ -359,6 +359,7 @@ func (component DisplayComponent) Validate() error {
 			ComponentDisplayBalanceCard:   DisplayDataList,
 			ComponentDisplayActionRows:    DisplayActions,
 			ComponentDisplayFlowSteps:     DisplayStatusTimeline,
+			ComponentDisplayFlowCard:      DisplayStatusTimeline,
 			ComponentDisplayCardRail:      DisplayRecordCarousel,
 			ComponentDisplayReadinessRows: DisplayRecordCarousel,
 		}

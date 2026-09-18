@@ -427,6 +427,11 @@ const (
 	// one counts, and the light of the balance's colour in the corner. It
 	// draws its own head, so it stands in a section with no panel around it.
 	ComponentDisplayBalanceCard ComponentDisplayType = "balance_card"
+	// A run of steps can be a card of its own, beside a balance card: the
+	// numbered marks in a row, each step named and explained under its mark,
+	// and the light running behind them. Like a balance card it draws its own
+	// head and stands in a section with no panel around it.
+	ComponentDisplayFlowCard ComponentDisplayType = "flow_card"
 )
 
 type ComponentRatio string
