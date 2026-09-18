@@ -2741,9 +2741,13 @@ type ActionPresentation struct {
 	// Description is a line of explanation that belongs to the action itself.
 	// A presentation with room for it shows it under the label; a plain button
 	// ignores it, so the same action can stand in either place.
-	Description      string           `json:"description,omitempty"`
-	DescriptionKey   string           `json:"description_key,omitempty"`
-	IconOnly         *bool            `json:"icon_only,omitempty"`
+	Description    string `json:"description,omitempty"`
+	DescriptionKey string `json:"description_key,omitempty"`
+	IconOnly       *bool  `json:"icon_only,omitempty"`
+	// IconPosition puts the mark after the label instead of before it: an
+	// arrow that says where the button leads reads after the words, not in
+	// front of them.
+	IconPosition     string           `json:"icon_position,omitempty"`
 	Variant          ActionVariant    `json:"variant,omitempty"`
 	Appearance       ActionAppearance `json:"appearance,omitempty"`
 	Placement        ActionPlacement  `json:"placement,omitempty"`
