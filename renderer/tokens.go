@@ -422,6 +422,11 @@ const (
 	// now, and whether it is met. A timeline would say these happen one after
 	// another, and a table would say they are records.
 	ComponentDisplayReadinessRows ComponentDisplayType = "readiness_rows"
+	// A balance can be a card of its own: the mark and the name of the balance
+	// over a hairline, the figures under it beside the picture of what each
+	// one counts, and the light of the balance's colour in the corner. It
+	// draws its own head, so it stands in a section with no panel around it.
+	ComponentDisplayBalanceCard ComponentDisplayType = "balance_card"
 )
 
 type ComponentRatio string

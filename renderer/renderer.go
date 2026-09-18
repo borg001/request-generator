@@ -356,6 +356,7 @@ func (component DisplayComponent) Validate() error {
 			ComponentDisplayKeyValueGrid:  DisplayDataList,
 			ComponentDisplayTileGrid:      DisplayDataList,
 			ComponentDisplayMetricRow:     DisplayDataList,
+			ComponentDisplayBalanceCard:   DisplayDataList,
 			ComponentDisplayActionRows:    DisplayActions,
 			ComponentDisplayFlowSteps:     DisplayStatusTimeline,
 			ComponentDisplayCardRail:      DisplayRecordCarousel,
@@ -2574,6 +2575,12 @@ type DisplayComponent struct {
 	TitleLevel       int         `json:"title_level,omitempty"`
 	TitleTone        ToneToken   `json:"title_tone,omitempty"`
 	BodyClass        string      `json:"body_class,omitempty"`
+	// Icon is the mark the component wears beside its own title, for a
+	// component that draws its own head rather than sitting inside a panel.
+	Icon string `json:"icon,omitempty"`
+	// Art is the picture that belongs to the component itself - the thing its
+	// figures are figures of - resolved by the client like any other picture.
+	Art string `json:"art,omitempty"`
 }
 
 // DisplayPreview is the picture of a component shown at full size, with the
