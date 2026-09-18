@@ -215,13 +215,14 @@ const (
 	AtomicValueKindFloat          AtomicValueKind = "float"
 	AtomicValueKindBool           AtomicValueKind = "bool"
 	AtomicValueKindTime           AtomicValueKind = "time"
+	AtomicValueKindNullableTime   AtomicValueKind = "nullable_time"
 	AtomicValueKindStrings        AtomicValueKind = "strings"
 	AtomicValueKindInts           AtomicValueKind = "ints"
 )
 
 func (kind AtomicValueKind) valid() bool {
 	switch kind {
-	case AtomicValueKindString, AtomicValueKindNullableString, AtomicValueKindInt, AtomicValueKindNullableInt, AtomicValueKindFloat, AtomicValueKindBool, AtomicValueKindTime, AtomicValueKindStrings, AtomicValueKindInts:
+	case AtomicValueKindString, AtomicValueKindNullableString, AtomicValueKindInt, AtomicValueKindNullableInt, AtomicValueKindFloat, AtomicValueKindBool, AtomicValueKindTime, AtomicValueKindNullableTime, AtomicValueKindStrings, AtomicValueKindInts:
 		return true
 	default:
 		return false
@@ -441,6 +442,12 @@ type AtomicRealtimePublishConfig struct {
 // AtomicExecutor deliberately exposes only the operations needed by domain
 // creation logic, not a driver transaction or connection.
 type AtomicExecutor interface {
+	// SerializeOn holds a lock for the rest of the operation, so that two
+	// requests that count something before writing it cannot both read the
+	// count before either has written. The key names what is being serialized;
+	// operations that pass the same key wait for each other, and the lock is
+	// released when the transaction ends, whichever way it ends.
+	SerializeOn(context.Context, string) error
 	Insert(context.Context, AtomicInsert) (AtomicRecord, error)
 	Upsert(context.Context, AtomicUpsert) (AtomicUpsertResult, error)
 	SelectOne(context.Context, AtomicSelect) (AtomicRecord, error)

@@ -21,6 +21,18 @@ func NewAtomicExecutor(tx *sql.Tx) actions.AtomicExecutor {
 	return atomicExecutor{tx: tx}
 }
 
+// SerializeOn takes a transaction-scoped advisory lock named by key. Postgres
+// releases it at commit or rollback, so a caller cannot leave one held.
+func (executor atomicExecutor) SerializeOn(ctx context.Context, key string) error {
+	if strings.TrimSpace(key) == "" {
+		return fmt.Errorf("atomic serialize requires a key")
+	}
+	if _, err := executor.tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, key); err != nil {
+		return fmt.Errorf("atomic serialize on %q: %w", key, err)
+	}
+	return nil
+}
+
 func (executor atomicExecutor) Insert(ctx context.Context, insert actions.AtomicInsert) (actions.AtomicRecord, error) {
 	if insert.Table == nil || insert.PrimaryKey == nil {
 		return actions.AtomicRecord{}, fmt.Errorf("atomic insert requires table and primary key")
@@ -434,6 +446,16 @@ func atomicSelectScan(kind actions.AtomicValueKind) (interface{}, func() (action
 		return value, func() (actions.AtomicValue, error) {
 			if !value.Valid {
 				return actions.AtomicValue{}, fmt.Errorf("value is null")
+			}
+			return actions.AtomicTime(value.Time), nil
+		}, nil
+	case actions.AtomicValueKindNullableTime:
+		// A column that is allowed to be empty is read as empty, not as a
+		// failure: a caller asking for one has somewhere to put the absence.
+		value := &sql.NullTime{}
+		return value, func() (actions.AtomicValue, error) {
+			if !value.Valid {
+				return actions.AtomicValue{}, nil
 			}
 			return actions.AtomicTime(value.Time), nil
 		}, nil
