@@ -412,6 +412,16 @@ const (
 	// A set of records can read as a strip of narrow cards that scrolls
 	// sideways, where showing many at once matters more than showing one well.
 	ComponentDisplayCardRail ComponentDisplayType = "card_rail"
+	// A few figures that belong to one subject read as a line of them: a small
+	// caption over a large number, the numbers parted by a hairline rather
+	// than boxed one by one. A balance is read this way - the figures are the
+	// content, and a frame around each would be one frame too many.
+	ComponentDisplayMetricRow ComponentDisplayType = "metric_row"
+	// A set of conditions that have to hold before something can be done
+	// reads as a checklist: a mark, what the condition is, what it stands at
+	// now, and whether it is met. A timeline would say these happen one after
+	// another, and a table would say they are records.
+	ComponentDisplayReadinessRows ComponentDisplayType = "readiness_rows"
 )
 
 type ComponentRatio string

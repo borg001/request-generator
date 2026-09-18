@@ -165,6 +165,22 @@ func (input AtomicInput) Int(name string) (int64, bool) {
 	return *value.Int, true
 }
 
+// Float reads a figure that can hold a fraction - a sum of money, a rate -
+// and reads a whole number sent for it as that figure.
+func (input AtomicInput) Float(name string) (float64, bool) {
+	value, ok := input.Field(name)
+	if !ok {
+		return 0, false
+	}
+	if value.Float != nil {
+		return *value.Float, true
+	}
+	if value.Int != nil {
+		return float64(*value.Int), true
+	}
+	return 0, false
+}
+
 func (input AtomicInput) RequireString(name string) (string, error) {
 	value, ok := input.String(name)
 	if !ok {

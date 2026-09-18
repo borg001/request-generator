@@ -353,11 +353,13 @@ func (component DisplayComponent) Validate() error {
 		// A display type says how one kind of component reads, so each belongs
 		// to the type it was written for.
 		owner := map[ComponentDisplayType]DisplayComponentType{
-			ComponentDisplayKeyValueGrid: DisplayDataList,
-			ComponentDisplayTileGrid:     DisplayDataList,
-			ComponentDisplayActionRows:   DisplayActions,
-			ComponentDisplayFlowSteps:    DisplayStatusTimeline,
-			ComponentDisplayCardRail:     DisplayRecordCarousel,
+			ComponentDisplayKeyValueGrid:  DisplayDataList,
+			ComponentDisplayTileGrid:      DisplayDataList,
+			ComponentDisplayMetricRow:     DisplayDataList,
+			ComponentDisplayActionRows:    DisplayActions,
+			ComponentDisplayFlowSteps:     DisplayStatusTimeline,
+			ComponentDisplayCardRail:      DisplayRecordCarousel,
+			ComponentDisplayReadinessRows: DisplayRecordCarousel,
 		}
 		expected, known := owner[component.DisplayType]
 		if !known {
@@ -2600,6 +2602,21 @@ type DisplayFieldRef struct {
 	Field         string `json:"field"`
 	Label         string `json:"label,omitempty"`
 	LabelFallback string `json:"label_fallback,omitempty"`
+	// Tone colours one figure of a set. A balance of several figures reads
+	// each in its own colour - what is ready, what is money, what is waiting -
+	// and one tone for the whole set would say they are the same thing.
+	Tone string `json:"tone,omitempty"`
+	// Unit is the short word after a figure: the number is the figure and the
+	// unit is smaller beside it, not part of it.
+	Unit string `json:"unit,omitempty"`
+	// Art is a picture of the thing counted - the coin, the token - shown
+	// beside the figure instead of a glyph. A balance is read faster by what
+	// it is a balance of than by its caption.
+	Art string `json:"art,omitempty"`
+	// BadgeField names another field whose value rides beside this figure as
+	// a small word: a sum that is on its way says so next to the sum, not in
+	// a line of its own below the balance.
+	BadgeField string `json:"badge_field,omitempty"`
 }
 
 type DisplayCollectionGroup struct {
