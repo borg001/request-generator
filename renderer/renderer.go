@@ -131,6 +131,9 @@ func (r Universal) Validate() error {
 					return err
 				}
 			}
+			if err := validateSectionDisclosure(section); err != nil {
+				return err
+			}
 			if section.Renderer == RendererFieldMatrix && section.Matrix == nil {
 				return fmt.Errorf("renderer.Universal: field matrix section %q must define matrix", section.ID)
 			}
@@ -1744,6 +1747,24 @@ type FormNavigationPresentation string
 
 const FormNavigationPresentationTabs FormNavigationPresentation = "tabs"
 
+// validateSectionDisclosure checks the fold a section and its own blocks
+// declare. A block that folds is read by its head, so a head is required for
+// it: a fold with nothing to tap on could never be opened again.
+func validateSectionDisclosure(section FormSection) error {
+	for _, block := range append([]FormSection{section}, section.Sections...) {
+		if block.Block == nil || block.Block.Disclosure == "" {
+			continue
+		}
+		if err := block.Block.Disclosure.Validate(); err != nil {
+			return fmt.Errorf("renderer.Universal: form section %q: %w", block.ID, err)
+		}
+		if block.PanelTitle == "" && block.Title == "" {
+			return fmt.Errorf("renderer.Universal: form section %q folds away and needs a title to open it by", block.ID)
+		}
+	}
+	return nil
+}
+
 func validateFormNavigation(page *FormPage) error {
 	if page.Navigation == nil {
 		return nil
@@ -2439,6 +2460,31 @@ type Block struct {
 	// names the picture and the shape it takes; the client resolves the address
 	// and knows nothing about what it shows.
 	Decoration *BlockDecoration `json:"decoration,omitempty"`
+	// Disclosure folds the panel away behind its own head. A page that answers
+	// many questions at once is read one question at a time: the head says
+	// which question, and what belongs to it opens on a tap. A panel that
+	// declares none is always open, as every panel was before.
+	Disclosure DisclosureToken `json:"disclosure,omitempty"`
+}
+
+// DisclosureToken says whether a panel folds and, if it does, whether it
+// starts open or closed.
+type DisclosureToken string
+
+const (
+	// DisclosureOpen folds, and starts open.
+	DisclosureOpen DisclosureToken = "open"
+	// DisclosureClosed folds, and starts closed.
+	DisclosureClosed DisclosureToken = "closed"
+)
+
+func (token DisclosureToken) Validate() error {
+	switch token {
+	case "", DisclosureOpen, DisclosureClosed:
+		return nil
+	default:
+		return fmt.Errorf("unsupported block disclosure %q", token)
+	}
 }
 
 // BlockDecoration is a picture that belongs to a panel rather than to its

@@ -2057,7 +2057,8 @@ request-generator.
 | `form_page.layout` | `one_column`, `two_column`, `three_column` |
 | `form_page.sections[].block.type` | `none`, `panel`, `card` |
 | `form_page.sections[].block.variant` | `default`, `compact` |
-| `*.block.decoration.variant` | `corner-wide`, `corner-square`, `corner-floating`, `leading-banner`, `background`, `inline` |
+| `*.block.decoration.variant` | `corner-wide`, `corner-square`, `corner-floating`, `leading-banner`, `background`, `inline`, `corner-hero` |
+| `*.block.disclosure` | `open`, `closed` |
 | `form_page.sections[].media_visibility_states[].value` | `public`, `private`, `paid`, `internal` |
 | `media.item.usage` | `gallery`, `avatar`, `poster`, `cover` |
 | `record_page.sections[].components[].type` | `media_gallery`, `actions`, `identity`, `data_list`, `badge_group_block`, `text`, `badge_list`, `accordion_groups`, `status_timeline`, `record_carousel`, `prompts` |
@@ -2630,7 +2631,8 @@ Core renderer package owns only stable universal values:
 - media: `MediaRatioSquare`, `MediaRatioPortrait`, `MediaRatioLandscape`, `MediaRatioWide`, `MediaRatioNatural`; `MediaSizeThumb`, `MediaSizeCard`, `MediaSizeHero`, `MediaSizeOriginal`; `MediaUsageGallery`, `MediaUsageAvatar`, `MediaUsagePoster`, `MediaUsageCover`;
 - action placements: `ActionPlacementFull`, `ActionPlacementHalf`, `ActionPlacementFilterFooter`, `ActionPlacementBadge`, `ActionPlacementHead`, `ActionPlacementMenu`;
 - filter pill presentations: `FilterPillPresentationTabs`, `FilterPillPresentationToggle`, `FilterPillPresentationSummary`, `FilterPillPresentationMenu`;
-- block decoration variants: `BlockDecorationCornerWide`, `BlockDecorationCornerSquare`, `BlockDecorationCornerFloating`, `BlockDecorationLeadingBanner`, `BlockDecorationBackground`, `BlockDecorationInline`;
+- block decoration variants: `BlockDecorationCornerWide`, `BlockDecorationCornerSquare`, `BlockDecorationCornerFloating`, `BlockDecorationLeadingBanner`, `BlockDecorationBackground`, `BlockDecorationInline`, `BlockDecorationCornerHero`;
+- block disclosure: `DisclosureOpen`, `DisclosureClosed`;
 - generic tokens: spacing, inset, radius, alignment, semantic tones, separator appearance.
 
 Application-specific values, especially visual color names such as `cyan`, `violet`, `magenta`, shell variants, section IDs, business IDs and translation keys, must be declared by the application as typed constants when reused. The renderer package should not try to maintain every project's color or shell catalog.
@@ -3232,7 +3234,8 @@ Generator отклоняет `prompts` без элементов, `prompts` у �
 | `Block.Icon` | `block.icon` | string (icon key) | Иконка в заголовке панели рядом с title. |
 | `Block.Decoration` | `block.decoration` | `BlockDecoration` | Единственная декоративная картинка панели: не принимает тапов и не несёт смысла, на который нужно реагировать. Адрес разрешает consumer. |
 | `BlockDecoration.Source` | `block.decoration.source` | string | Адрес картинки. Обязателен и сериализуется всегда. |
-| `BlockDecoration.Variant` | `block.decoration.variant` | enum | `corner-wide` (в верхнем углу, обрезана краем панели), `corner-square` (квадрат глубже в углу, растворяется в панели), `corner-floating` (объект рядом с текстом под заголовком), `leading-banner` (баннер в начале ряда), `background` (узор на всю панель), `inline` (между цифрами панели, на их уровне). |
+| `BlockDecoration.Variant` | `block.decoration.variant` | enum | `corner-wide` (в верхнем углу, обрезана краем панели), `corner-square` (квадрат глубже в углу, растворяется в панели), `corner-floating` (объект рядом с текстом под заголовком), `leading-banner` (баннер в начале ряда), `background` (узор на всю панель), `inline` (между цифрами панели, на их уровне), `corner-hero` (картинка в размер предмета панели: баланс того, что на ней нарисовано, читается одним объектом со своими цифрами). |
+| `Block.Disclosure` | `block.disclosure` | enum | Панель складывается за собственной шапкой: `closed` — открывается по тапу, `open` — сложится по тапу, пусто — не складывается. Состояние после первого тапа принадлежит читателю и живёт в панели. Складывающейся панели нужен заголовок (`panel_title` или `title`) — иначе её нечем открыть. |
 
 ```json
 {
