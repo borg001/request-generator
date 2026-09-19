@@ -231,6 +231,35 @@ func displayComponentsUniversal() Universal {
 	}}}}
 }
 
+// A card that is its own surface carries its buttons itself, and the ids it
+// names are held to the same rule as every other action reference.
+func TestDisplayComponentFootActionsValidation(t *testing.T) {
+	valid := Universal{Record: &RecordPage{
+		Actions: []Action{{ID: "topup", Type: ActionAPI}, {ID: "plan", Type: ActionEmit}},
+		Sections: []RecordSection{{ID: "wallet-balance", Components: []DisplayComponent{{
+			ID:          "figures",
+			Type:        DisplayDataList,
+			DisplayType: ComponentDisplayBalanceCard,
+			Items:       []DisplayFieldRef{{Field: "balance"}},
+			FootActions: []string{"topup", "plan"},
+		}}}},
+	}}
+	require.NoError(t, valid.Validate())
+
+	cloned := valid.Clone()
+	cloned.Record.Sections[0].Components[0].FootActions[0] = "unknown"
+	require.EqualError(t, cloned.Validate(), `renderer.Universal: record section "wallet-balance" component "figures" foot action "unknown" is not declared in record page actions`)
+	require.Equal(t, "topup", valid.Record.Sections[0].Components[0].FootActions[0])
+
+	duplicated := valid.Clone()
+	duplicated.Record.Sections[0].Components[0].FootActions = []string{"topup", "topup"}
+	require.Error(t, duplicated.Validate())
+
+	blank := valid.Clone()
+	blank.Record.Sections[0].Components[0].FootActions = []string{""}
+	require.Error(t, blank.Validate())
+}
+
 // A preview borrows the actions the page already declares, so a name that is
 // not there has to fail where every other action reference does.
 func TestDisplayComponentPreviewValidation(t *testing.T) {

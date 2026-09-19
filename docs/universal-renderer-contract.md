@@ -75,6 +75,9 @@ mapping и error shape не менялись.
 - `badge_field` — имя другого поля, значение которого едет рядом с цифрой
   маленьким словом: сумма, которая уже в пути, говорит об этом возле себя, а
   не отдельной строкой под балансом. Пустое значение не рисует ничего.
+- `badge_below` — это слово стоит строкой под цифрой, а не рядом: у длинного
+  названия плана состояние рядом не читается, поэтому ячейка может попросить
+  поставить его под ним, по ширине самого названия.
 
 Оба поля читает вариант списка `metric_row`; остальные варианты их
 игнорируют.
@@ -3153,6 +3156,27 @@ Generator отклоняет `prompts` без элементов, `prompts` у �
   "thumb_limit_wide": 3,
   "media_labels": {"more": "More", "view_all": "View all", "close": "Close"},
   "preview": {"label": "Photo", "close_label": "Close", "actions": ["favorite", "share"]}
+}
+```
+
+### Кнопки на полу карточки
+
+| Go | JSON | Тип | Назначение |
+|---|---|---|---|
+| `DisplayComponent.FootActions` | `components[].foot_actions` | `[]string` | Id действий из `record_page.actions`, которые компонент рисует на своём полу — отдельной строкой под волоском. |
+
+Компонент, который сам является поверхностью (`display_type: balance_card`),
+стоит в секции без панели, поэтому положить кнопки рядом с ним некуда: панели
+нет. `foot_actions` говорит, что карточка несёт их сама, внизу и через волосок
+от содержимого. Каждый id непуст, не повторяется и объявлен в
+`record_page.actions`; generator отклоняет нарушения при `Universal.Validate()`.
+
+```json
+{
+  "id": "wallet-balance-figures",
+  "type": "data_list",
+  "display_type": "balance_card",
+  "foot_actions": ["wallet_balance_topup", "wallet_balance_plan"]
 }
 ```
 

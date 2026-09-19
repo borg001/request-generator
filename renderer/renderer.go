@@ -237,6 +237,14 @@ func validateRecordComponents(page *RecordPage) error {
 					return fmt.Errorf("renderer.Universal: record section %q component %q preview action %q is not declared in record page actions", section.ID, component.ID, actionID)
 				}
 			}
+			if err := component.validateFootActions(); err != nil {
+				return fmt.Errorf("renderer.Universal: record section %q component %q: %w", section.ID, component.ID, err)
+			}
+			for _, actionID := range component.FootActions {
+				if !recordPageHasAction(page, actionID) {
+					return fmt.Errorf("renderer.Universal: record section %q component %q foot action %q is not declared in record page actions", section.ID, component.ID, actionID)
+				}
+			}
 			if component.ActionID != "" && !recordPageHasAction(page, component.ActionID) {
 				return fmt.Errorf("renderer.Universal: record section %q component %q action_id %q is not declared in record page actions", section.ID, component.ID, component.ActionID)
 			}
@@ -2628,6 +2636,11 @@ type DisplayComponent struct {
 	// Art is the picture that belongs to the component itself - the thing its
 	// figures are figures of - resolved by the client like any other picture.
 	Art string `json:"art,omitempty"`
+	// FootActions are the actions a component draws on its own floor, parted
+	// from what it holds by a hairline: a card that is its own surface has no
+	// panel around it to put buttons in, so the card carries them. The ids
+	// name actions the page already declares.
+	FootActions []string `json:"foot_actions,omitempty"`
 }
 
 // DisplayPreview is the picture of a component shown at full size, with the
@@ -2645,6 +2658,22 @@ func (component DisplayComponent) previewActionIDs() []string {
 		return nil
 	}
 	return component.Preview.Actions
+}
+
+// validateFootActions holds a card's own row of buttons to the same rule as
+// any other set of action ids: each one named once, none of them blank.
+func (component DisplayComponent) validateFootActions() error {
+	seen := make(map[string]struct{}, len(component.FootActions))
+	for _, action := range component.FootActions {
+		if action == "" {
+			return fmt.Errorf("foot action id is required")
+		}
+		if _, exists := seen[action]; exists {
+			return fmt.Errorf("foot action %q is duplicated", action)
+		}
+		seen[action] = struct{}{}
+	}
+	return nil
 }
 
 func (preview DisplayPreview) Validate() error {
@@ -2680,6 +2709,10 @@ type DisplayFieldRef struct {
 	// a small word: a sum that is on its way says so next to the sum, not in
 	// a line of its own below the balance.
 	BadgeField string `json:"badge_field,omitempty"`
+	// BadgeBelow puts that word on the line under the figure instead of beside
+	// it, at the width of the figure rather than of the cell: the name of a
+	// plan is long, and its state after it would leave the pair unreadable.
+	BadgeBelow bool `json:"badge_below,omitempty"`
 }
 
 type DisplayCollectionGroup struct {
