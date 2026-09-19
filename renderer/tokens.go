@@ -236,7 +236,10 @@ const (
 type TitleDecorToken string
 
 const (
-	TitleDecorNone    TitleDecorToken = "none"
+	TitleDecorNone TitleDecorToken = "none"
+	// TitleDecorBar puts a bar in the accent colour beside the title.
+	TitleDecorBar TitleDecorToken = "bar"
+	// TitleDecorSection is the bar and a hairline under the title.
 	TitleDecorSection TitleDecorToken = "section"
 )
 
