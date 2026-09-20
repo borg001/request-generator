@@ -116,6 +116,7 @@ func cloneResourceGridPage(v *ResourceGridPage) *ResourceGridPage {
 	cp := *v
 	cp.List = cloneResourceGridListConfig(v.List)
 	cp.Create = cloneAction(v.Create)
+	cp.HeadActions = cloneActions(v.HeadActions)
 	cp.Delete = cloneAction(v.Delete)
 	cp.Update = cloneAction(v.Update)
 	cp.Card = cloneCardSchema(v.Card)
@@ -506,6 +507,7 @@ func CloneFieldPresentation(v *FieldPresentation) *FieldPresentation {
 	cp := *v
 	cp.VisibleIf = cloneCondition(v.VisibleIf)
 	cp.RequiredIf = cloneCondition(v.RequiredIf)
+	cp.DisabledIf = cloneCondition(v.DisabledIf)
 	cp.ToneByValue = cloneSlice(v.ToneByValue)
 	return &cp
 }
@@ -547,6 +549,7 @@ func cloneMediaGalleryItems(values []MediaGalleryItem) []MediaGalleryItem {
 		out[i] = values[i]
 		out[i].AccessGranted = clonePtr(values[i].AccessGranted)
 		out[i].Actions = cloneActions(values[i].Actions)
+		out[i].OpenAction = cloneAction(values[i].OpenAction)
 	}
 	return out
 }
@@ -558,6 +561,7 @@ func cloneMediaGalleryItem(v *MediaGalleryItem) *MediaGalleryItem {
 	cp := *v
 	cp.AccessGranted = clonePtr(v.AccessGranted)
 	cp.Actions = cloneActions(v.Actions)
+	cp.OpenAction = cloneAction(v.OpenAction)
 	return &cp
 }
 
@@ -661,9 +665,16 @@ func cloneDisplayComponents(values []DisplayComponent) []DisplayComponent {
 	for i, v := range values {
 		out[i] = v
 		out[i].Fields = cloneSlice(v.Fields)
+		out[i].FootActions = cloneSlice(v.FootActions)
 		out[i].Items = cloneSlice(v.Items)
 		out[i].CollectionGroups = cloneDisplayCollectionGroups(v.CollectionGroups)
 		out[i].Block = cloneBlock(v.Block)
+		out[i].Preview = cloneDisplayPreview(v.Preview)
+		out[i].Prompts = clonePromptList(v.Prompts)
+		if v.MediaLabels != nil {
+			labels := *v.MediaLabels
+			out[i].MediaLabels = &labels
+		}
 		if v.Visible != nil {
 			visible := *v.Visible
 			out[i].Visible = &visible
@@ -684,6 +695,15 @@ func cloneDisplayComponents(values []DisplayComponent) []DisplayComponent {
 		}
 	}
 	return out
+}
+
+func cloneDisplayPreview(value *DisplayPreview) *DisplayPreview {
+	if value == nil {
+		return nil
+	}
+	cp := *value
+	cp.Actions = cloneSlice(value.Actions)
+	return &cp
 }
 
 func cloneBlockOverlays(values []BlockOverlay) []BlockOverlay {
@@ -739,9 +759,22 @@ func cloneActionValue(v Action) Action {
 	v.Modal = cloneModalAction(v.Modal)
 	v.Client = cloneClientAction(v.Client)
 	v.Confirm = cloneConfirm(v.Confirm)
+	v.AfterFailure = cloneActionFailure(v.AfterFailure)
 	v.AfterSuccess = cloneActionResult(v.AfterSuccess)
 	v.AfterError = cloneActionResult(v.AfterError)
 	return v
+}
+
+// A refusal notice is copied with the action, or the localizer would translate
+// the one every request shares and the first language asked for would stick.
+func cloneActionFailure(v *ActionFailure) *ActionFailure {
+	if v == nil {
+		return nil
+	}
+	cp := *v
+	cp.Route.Params = cloneMap(v.Route.Params)
+	cp.Route.Query = cloneMap(v.Route.Query)
+	return &cp
 }
 
 func cloneClientAction(v *ClientAction) *ClientAction {

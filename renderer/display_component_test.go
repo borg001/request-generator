@@ -230,3 +230,91 @@ func displayComponentsUniversal() Universal {
 		},
 	}}}}
 }
+
+// A card that is its own surface carries its buttons itself, and the ids it
+// names are held to the same rule as every other action reference.
+func TestDisplayComponentFootActionsValidation(t *testing.T) {
+	valid := Universal{Record: &RecordPage{
+		Actions: []Action{{ID: "topup", Type: ActionAPI}, {ID: "plan", Type: ActionEmit}},
+		Sections: []RecordSection{{ID: "wallet-balance", Components: []DisplayComponent{{
+			ID:          "figures",
+			Type:        DisplayDataList,
+			DisplayType: ComponentDisplayBalanceCard,
+			Items:       []DisplayFieldRef{{Field: "balance"}},
+			FootActions: []string{"topup", "plan"},
+		}}}},
+	}}
+	require.NoError(t, valid.Validate())
+
+	cloned := valid.Clone()
+	cloned.Record.Sections[0].Components[0].FootActions[0] = "unknown"
+	require.EqualError(t, cloned.Validate(), `renderer.Universal: record section "wallet-balance" component "figures" foot action "unknown" is not declared in record page actions`)
+	require.Equal(t, "topup", valid.Record.Sections[0].Components[0].FootActions[0])
+
+	duplicated := valid.Clone()
+	duplicated.Record.Sections[0].Components[0].FootActions = []string{"topup", "topup"}
+	require.Error(t, duplicated.Validate())
+
+	blank := valid.Clone()
+	blank.Record.Sections[0].Components[0].FootActions = []string{""}
+	require.Error(t, blank.Validate())
+}
+
+// A preview borrows the actions the page already declares, so a name that is
+// not there has to fail where every other action reference does.
+func TestDisplayComponentPreviewValidation(t *testing.T) {
+	valid := Universal{Record: &RecordPage{
+		Actions: []Action{{ID: "favorite", Type: ActionAPI}, {ID: "share_profile", Type: ActionEmit}},
+		Sections: []RecordSection{{ID: "hero", Components: []DisplayComponent{{
+			ID:      "identity",
+			Type:    DisplayIdentity,
+			Preview: &DisplayPreview{Label: "Profile photo", CloseLabel: "Close", Actions: []string{"favorite", "share_profile"}},
+		}}}},
+	}}
+	require.NoError(t, valid.Validate())
+
+	cloned := valid.Clone()
+	cloned.Record.Sections[0].Components[0].Preview.Actions[0] = "unknown"
+	require.EqualError(t, cloned.Validate(), `renderer.Universal: record section "hero" component "identity" preview action "unknown" is not declared in record page actions`)
+	require.Equal(t, "favorite", valid.Record.Sections[0].Components[0].Preview.Actions[0])
+
+	duplicated := valid.Clone()
+	duplicated.Record.Sections[0].Components[0].Preview.Actions = []string{"favorite", "favorite"}
+	require.Error(t, duplicated.Validate())
+
+	wrongType := valid.Clone()
+	wrongType.Record.Sections[0].Components[0].Type = DisplayDataList
+	require.Error(t, wrongType.Validate())
+}
+
+func TestDisplayPromptsComponent(t *testing.T) {
+	prompt := DisplayComponent{ID: "invitation", Type: DisplayPrompts, Prompts: &PromptList{Items: []Prompt{{
+		ID: "invitation", Title: "profile.invitation.title",
+		Action: &Action{ID: "open_invitation", Type: ActionRoute, Label: "ui.view", Route: RouteAction{Path: "/settings"}},
+	}}}}
+	require.NoError(t, prompt.Validate())
+
+	encoded, err := json.Marshal(prompt)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"type":"prompts"`)
+	assert.Contains(t, string(encoded), `"prompts":{"items":[{"id":"invitation"`)
+
+	prompt.Prompts.Items[0].Attention = true
+	encoded, err = json.Marshal(prompt)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"attention":true`)
+
+	cloned := cloneDisplayComponents([]DisplayComponent{prompt})[0]
+	require.True(t, cloned.Prompts.Items[0].Attention)
+	cloned.Prompts.Items[0].Title = "changed"
+	assert.Equal(t, "profile.invitation.title", prompt.Prompts.Items[0].Title)
+
+	empty := DisplayComponent{ID: "invitation", Type: DisplayPrompts}
+	require.EqualError(t, empty.Validate(), `display component "invitation": prompts require at least one item`)
+
+	misplaced := DisplayComponent{ID: "stats", Type: DisplayBadgeList, Prompts: prompt.Prompts}
+	require.EqualError(t, misplaced.Validate(), `display component "stats": prompts require component type "prompts"`)
+
+	untitled := DisplayComponent{ID: "invitation", Type: DisplayPrompts, Prompts: &PromptList{Items: []Prompt{{ID: "invitation"}}}}
+	require.EqualError(t, untitled.Validate(), `display component "invitation": prompt "invitation" must define title or text`)
+}

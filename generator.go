@@ -45,7 +45,8 @@ type Generator struct {
 	realtimeHub          *realtimeHub
 	// AccessGate lets the application close a destination for the current
 	// actor without removing it from the configuration.
-	AccessGate AccessGate
+	AccessGate       AccessGate
+	NavigationHidden NavigationHidden
 }
 
 func NewGenerator(
@@ -114,7 +115,15 @@ func (generator *Generator) FeaturesMiddleware() gin.HandlerFunc {
 func (generator *Generator) Run() {
 
 	featuresGroup := generator.group.Group("/api")
-	featuresGroup.GET("/features", generator.FeaturesMiddleware())
+	// The feature map lists every module, action and the roles that reach it,
+	// and the OpenAPI document describes every endpoint and field. Both are a
+	// map of the service, so they answer to a signed-in caller only. They used
+	// to answer anyone.
+	describedGroup := featuresGroup.Group("")
+	if generator.AuthMiddleware != nil {
+		describedGroup.Use(generator.AuthMiddleware(actions.ListModuleAction{Auth: true}))
+	}
+	describedGroup.GET("/features", generator.FeaturesMiddleware())
 	generator.initRealtime()
 	if err := generator.validateRealtimeEvents(); err != nil {
 		panic(fmt.Sprintf("invalid realtime event config: %v", err))
@@ -335,7 +344,7 @@ func (generator *Generator) Run() {
 			panic(fmt.Sprintf("failed to marshal OpenAPI spec: %v", err))
 		}
 
-		featuresGroup.GET("/openapi.json", func(c *gin.Context) {
+		describedGroup.GET("/openapi.json", func(c *gin.Context) {
 			c.Data(http.StatusOK, "application/json; charset=utf-8", specJSON)
 		})
 	}
@@ -523,6 +532,9 @@ func (generator *Generator) fieldOptions(c *gin.Context, field fields.ModuleFiel
 	for i := range options {
 		options[i].Label = generator.Translate(lang, options[i].Label)
 		options[i].Description = generator.Translate(lang, options[i].Description)
+		options[i].Badge = generator.Translate(lang, options[i].Badge)
+		options[i].Note = generator.Translate(lang, options[i].Note)
+		options[i].TrailingNote = generator.Translate(lang, options[i].TrailingNote)
 	}
 	return options
 }

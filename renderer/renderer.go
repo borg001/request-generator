@@ -102,6 +102,9 @@ func (r Universal) Validate() error {
 		if err := validateFormWorkflow(r.Form); err != nil {
 			return err
 		}
+		if err := validateFormNextActions(r.Form); err != nil {
+			return err
+		}
 		for _, section := range r.Form.Sections {
 			if err := validateFormSectionActions(r.Form, section); err != nil {
 				return err
@@ -127,6 +130,9 @@ func (r Universal) Validate() error {
 				if err := validateListPage("form section list page", section.ListPage); err != nil {
 					return err
 				}
+			}
+			if err := validateSectionDisclosure(section); err != nil {
+				return err
 			}
 			if section.Renderer == RendererFieldMatrix && section.Matrix == nil {
 				return fmt.Errorf("renderer.Universal: field matrix section %q must define matrix", section.ID)
@@ -193,6 +199,9 @@ func (r Universal) Validate() error {
 		}
 	}
 	if r.ResourceGrid != nil {
+		if err := validateActions("resource grid head", r.ResourceGrid.HeadActions); err != nil {
+			return err
+		}
 		if err := validateAction("resource grid create", r.ResourceGrid.Create); err != nil {
 			return err
 		}
@@ -223,6 +232,19 @@ func validateRecordComponents(page *RecordPage) error {
 			if err := component.Validate(); err != nil {
 				return fmt.Errorf("renderer.Universal: record section %q component %q: %w", section.ID, component.ID, err)
 			}
+			for _, actionID := range component.previewActionIDs() {
+				if !recordPageHasAction(page, actionID) {
+					return fmt.Errorf("renderer.Universal: record section %q component %q preview action %q is not declared in record page actions", section.ID, component.ID, actionID)
+				}
+			}
+			if err := component.validateFootActions(); err != nil {
+				return fmt.Errorf("renderer.Universal: record section %q component %q: %w", section.ID, component.ID, err)
+			}
+			for _, actionID := range component.FootActions {
+				if !recordPageHasAction(page, actionID) {
+					return fmt.Errorf("renderer.Universal: record section %q component %q foot action %q is not declared in record page actions", section.ID, component.ID, actionID)
+				}
+			}
 			if component.ActionID != "" && !recordPageHasAction(page, component.ActionID) {
 				return fmt.Errorf("renderer.Universal: record section %q component %q action_id %q is not declared in record page actions", section.ID, component.ID, component.ActionID)
 			}
@@ -240,21 +262,124 @@ func recordPageHasAction(page *RecordPage, id string) bool {
 	return false
 }
 
+// ItemFilter declares how a component may narrow its own items.
+type ItemFilter struct {
+	// Field names the item property that holds the state being chosen.
+	Field string `json:"field,omitempty"`
+	// Search turns on a text search over the title and subtitle of an item.
+	Search bool `json:"search,omitempty"`
+	// SearchLabel and AllLabel are producer text, localized in /api/config.
+	SearchLabel string             `json:"search_label,omitempty"`
+	AllLabel    string             `json:"all_label,omitempty"`
+	Options     []ItemFilterOption `json:"options,omitempty"`
+}
+
+// ItemSelection declares which items of a set can be picked and what happens to
+// the picked ones: they are counted, their amounts are summed, and one page
+// action receives them together under the name the producer gives.
+type ItemSelection struct {
+	// Field and Value say which items can be picked: those whose Field holds
+	// Value.
+	Field string `json:"field,omitempty"`
+	Value string `json:"value,omitempty"`
+	// AmountField is the item property summed into the total.
+	AmountField string `json:"amount_field,omitempty"`
+	// IDsKey is the name the picked ids are sent under.
+	IDsKey string `json:"ids_key,omitempty"`
+	// ActionID names the page action that receives the picked items.
+	ActionID string `json:"action_id,omitempty"`
+	// Labels are producer text, localized in /api/config. CountLabel may
+	// carry {count}, TotalLabel {total}.
+	CountLabel string `json:"count_label,omitempty"`
+	TotalLabel string `json:"total_label,omitempty"`
+	ClearLabel string `json:"clear_label,omitempty"`
+}
+
+func (selection *ItemSelection) Validate() error {
+	if selection == nil {
+		return nil
+	}
+	if selection.Field == "" || selection.Value == "" {
+		return fmt.Errorf("item selection needs a field and the value that can be picked")
+	}
+	if selection.ActionID == "" || selection.IDsKey == "" {
+		return fmt.Errorf("item selection needs the action that receives the picked items and the name they are sent under")
+	}
+	return nil
+}
+
+type ItemFilterOption struct {
+	Value string `json:"value"`
+	Label string `json:"label,omitempty"`
+}
+
+func (filter *ItemFilter) Validate() error {
+	if filter == nil {
+		return nil
+	}
+	if !filter.Search && len(filter.Options) == 0 {
+		return fmt.Errorf("item filter needs a search or at least one option")
+	}
+	if len(filter.Options) > 0 && filter.Field == "" {
+		return fmt.Errorf("item filter options require a field")
+	}
+	seen := make(map[string]struct{}, len(filter.Options))
+	for _, option := range filter.Options {
+		if option.Value == "" {
+			return fmt.Errorf("item filter option value is required")
+		}
+		if _, exists := seen[option.Value]; exists {
+			return fmt.Errorf("item filter option %q is duplicated", option.Value)
+		}
+		seen[option.Value] = struct{}{}
+	}
+	return nil
+}
+
 func (component DisplayComponent) Validate() error {
+	if err := component.ItemFilter.Validate(); err != nil {
+		return fmt.Errorf("display component %q: %w", component.ID, err)
+	}
+	if err := component.ItemSelection.Validate(); err != nil {
+		return fmt.Errorf("display component %q: %w", component.ID, err)
+	}
 	if err := validateMediaGalleryItems(fmt.Sprintf("display component %q", component.ID), component.MediaItems); err != nil {
 		return err
 	}
 	if component.Type == DisplayStatusTimeline && len(component.Fields) != 1 {
 		return fmt.Errorf("status timeline requires exactly one field")
 	}
-	if component.DisplayType != "" {
-		if component.Type != DisplayDataList {
-			return fmt.Errorf("display type requires component type %q", DisplayDataList)
+	if component.Type == DisplayPrompts && (component.Prompts == nil || len(component.Prompts.Items) == 0) {
+		return fmt.Errorf("display component %q: prompts require at least one item", component.ID)
+	}
+	if component.Prompts != nil {
+		if component.Type != DisplayPrompts {
+			return fmt.Errorf("display component %q: prompts require component type %q", component.ID, DisplayPrompts)
 		}
-		switch component.DisplayType {
-		case ComponentDisplayKeyValueGrid, ComponentDisplayTileGrid:
-		default:
+		if err := component.Prompts.Validate(); err != nil {
+			return fmt.Errorf("display component %q: %w", component.ID, err)
+		}
+	}
+	if component.DisplayType != "" {
+		// A display type says how one kind of component reads, so each belongs
+		// to the type it was written for.
+		owner := map[ComponentDisplayType]DisplayComponentType{
+			ComponentDisplayKeyValueGrid:  DisplayDataList,
+			ComponentDisplayTileGrid:      DisplayDataList,
+			ComponentDisplayMetricRow:     DisplayDataList,
+			ComponentDisplayBalanceCard:   DisplayDataList,
+			ComponentDisplayActionRows:    DisplayActions,
+			ComponentDisplayFlowSteps:     DisplayStatusTimeline,
+			ComponentDisplayFlowCard:      DisplayStatusTimeline,
+			ComponentDisplayCardRail:      DisplayRecordCarousel,
+			ComponentDisplayReadinessRows: DisplayRecordCarousel,
+		}
+		expected, known := owner[component.DisplayType]
+		if !known {
 			return fmt.Errorf("unsupported display type %q", component.DisplayType)
+		}
+		if component.Type != expected {
+			return fmt.Errorf("display type %q requires component type %q", component.DisplayType, expected)
 		}
 	}
 	if len(component.Items) > 0 {
@@ -270,6 +395,26 @@ func (component DisplayComponent) Validate() error {
 				return fmt.Errorf("item field %q is duplicated", item.Field)
 			}
 			seen[item.Field] = struct{}{}
+		}
+	}
+	if component.ThumbLimit < 0 {
+		return fmt.Errorf("thumb limit cannot be negative")
+	}
+	if component.ThumbLimit > 0 && component.Type != DisplayMediaGallery {
+		return fmt.Errorf("thumb limit requires component type %q", DisplayMediaGallery)
+	}
+	if component.ThumbLimitWide < 0 {
+		return fmt.Errorf("wide thumb limit cannot be negative")
+	}
+	if component.ThumbLimitWide > 0 && component.Type != DisplayMediaGallery {
+		return fmt.Errorf("wide thumb limit requires component type %q", DisplayMediaGallery)
+	}
+	if component.Preview != nil {
+		if component.Type != DisplayIdentity && component.Type != DisplayMediaGallery {
+			return fmt.Errorf("preview requires component type %q or %q", DisplayIdentity, DisplayMediaGallery)
+		}
+		if err := component.Preview.Validate(); err != nil {
+			return err
 		}
 	}
 	if component.CollectionGroups != nil {
@@ -741,9 +886,25 @@ func validateMediaVisibilityStates(scope string, states []MediaVisibilityOption)
 	return nil
 }
 
+func validateMediaGalleryItemOpenAction(scope string, item MediaGalleryItem) error {
+	if item.OpenAction == nil {
+		return nil
+	}
+	if item.OpenAction.Type == "" {
+		return fmt.Errorf("%s: gallery item %q open action needs a type", scope, item.ID)
+	}
+	if err := item.OpenAction.Validate(); err != nil {
+		return fmt.Errorf("%s: gallery item %q open action: %w", scope, item.ID, err)
+	}
+	return nil
+}
+
 func validateMediaGalleryItems(scope string, items []MediaGalleryItem) error {
 	for index := range items {
 		if err := validateActions(fmt.Sprintf("%s media item %q", scope, items[index].ID), items[index].Actions); err != nil {
+			return err
+		}
+		if err := validateMediaGalleryItemOpenAction(scope, items[index]); err != nil {
 			return err
 		}
 	}
@@ -913,11 +1074,15 @@ const (
 	FilterPillPresentationTabs    FilterPillPresentation = "tabs"
 	FilterPillPresentationToggle  FilterPillPresentation = "toggle"
 	FilterPillPresentationSummary FilterPillPresentation = "summary"
+	// FilterPillPresentationMenu offers the pills of a row as one menu that
+	// names the choice it holds: one choice of a row at a time, the pill with
+	// no key standing for "any" of them.
+	FilterPillPresentationMenu FilterPillPresentation = "menu"
 )
 
 func (presentation FilterPillPresentation) Valid() bool {
 	switch presentation {
-	case "", FilterPillPresentationTabs, FilterPillPresentationToggle, FilterPillPresentationSummary:
+	case "", FilterPillPresentationTabs, FilterPillPresentationToggle, FilterPillPresentationSummary, FilterPillPresentationMenu:
 		return true
 	default:
 		return false
@@ -1320,6 +1485,9 @@ type Media struct {
 	GlowFallback string      `json:"glow_fallback,omitempty"`
 	GlowEnabled  *bool       `json:"glow_enabled,omitempty"`
 	StatusField  string      `json:"status_field,omitempty"`
+	// CountField names a number the picture carries on its rim - unread
+	// messages, say - opposite the status dot.
+	CountField string `json:"count_field,omitempty"`
 	// A picture can carry one small mark in its corner - pinned, locked, the
 	// state that belongs to the thing pictured rather than to a row of chips
 	// beside it. MarkerField names the truth, MarkerIcon what to draw.
@@ -1332,29 +1500,36 @@ type Media struct {
 }
 
 type FieldPresentation struct {
-	Renderer    RendererKey      `json:"renderer,omitempty"`
-	Variant     string           `json:"variant,omitempty"`
-	Style       string           `json:"style,omitempty"`
-	Icon        string           `json:"icon,omitempty"`
-	Size        MediaSize        `json:"size,omitempty"`
-	Ratio       MediaRatio       `json:"ratio,omitempty"`
-	Prefix      string           `json:"prefix,omitempty"`
-	Suffix      string           `json:"suffix,omitempty"`
-	Hint        string           `json:"hint,omitempty"`
+	Renderer RendererKey `json:"renderer,omitempty"`
+	Variant  string      `json:"variant,omitempty"`
+	Style    string      `json:"style,omitempty"`
+	Icon     string      `json:"icon,omitempty"`
+	Size     MediaSize   `json:"size,omitempty"`
+	Ratio    MediaRatio  `json:"ratio,omitempty"`
+	Prefix   string      `json:"prefix,omitempty"`
+	Suffix   string      `json:"suffix,omitempty"`
+	Hint     string      `json:"hint,omitempty"`
 	// Placeholder is the empty-state copy shown inside the control. A rule the
 	// control already enforces - an accepted range, an expected format - belongs
 	// here rather than on a line of its own under the field.
-	Placeholder string           `json:"placeholder,omitempty"`
-	Description string           `json:"description,omitempty"`
-	Rows        uint8            `json:"rows,omitempty"`
-	MaxItems    uint16           `json:"max_items,omitempty"`
-	InputMode   FieldInputMode   `json:"input_mode,omitempty"`
-	VisibleIf   *Condition       `json:"visible_if,omitempty"`
+	Placeholder string         `json:"placeholder,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Rows        uint8          `json:"rows,omitempty"`
+	MaxItems    uint16         `json:"max_items,omitempty"`
+	InputMode   FieldInputMode `json:"input_mode,omitempty"`
+	VisibleIf   *Condition     `json:"visible_if,omitempty"`
 	// RequiredIf marks the control as required only in the state that needs it.
 	// A profile is filled in over several sittings, so a field that review will
 	// not accept empty is still optional while the profile is a draft.
 	RequiredIf *Condition `json:"required_if,omitempty"`
+	// DisabledIf greys the control out in the state where the answer is not
+	// the reader's to give. The field stays on the screen and says what it
+	// holds; it simply cannot be changed.
+	DisabledIf  *Condition       `json:"disabled_if,omitempty"`
 	ToneByValue []FieldValueTone `json:"tone_by_value,omitempty"`
+	// NoticeByValue tells the person, the moment they choose a value, what
+	// that choice brings with it.
+	NoticeByValue []FieldValueNotice `json:"notice_by_value,omitempty"`
 }
 
 // FieldInputMode hints which virtual keyboard a text control should open.
@@ -1394,6 +1569,15 @@ func (presentation *FieldPresentation) Validate() error {
 type FieldValueTone struct {
 	Value TypedValue `json:"value"`
 	Tone  string     `json:"tone"`
+}
+
+// FieldValueNotice is said once a value is chosen: a title, what the choice
+// means, and the words that close it.
+type FieldValueNotice struct {
+	Value        TypedValue `json:"value"`
+	Title        string     `json:"title,omitempty"`
+	Message      string     `json:"message"`
+	ConfirmLabel string     `json:"confirm_label,omitempty"`
 }
 
 type FieldMediaConfig struct {
@@ -1528,6 +1712,9 @@ type Badge struct {
 	LabelKey  string            `json:"label_key,omitempty"`
 	LabelMap  map[string]string `json:"label_map,omitempty"`
 	Icon      string            `json:"icon,omitempty"`
+	// IconOnly is a chip that is only its mark: a tick says "delivered" by
+	// itself, and the value behind it is not a word to print.
+	IconOnly  *bool             `json:"icon_only,omitempty"`
 	Size      SizeToken         `json:"size,omitempty"`
 	Tone      string            `json:"tone,omitempty"`
 	ToneMap   map[string]string `json:"tone_map,omitempty"`
@@ -1567,6 +1754,24 @@ type FormNavigation struct {
 type FormNavigationPresentation string
 
 const FormNavigationPresentationTabs FormNavigationPresentation = "tabs"
+
+// validateSectionDisclosure checks the fold a section and its own blocks
+// declare. A block that folds is read by its head, so a head is required for
+// it: a fold with nothing to tap on could never be opened again.
+func validateSectionDisclosure(section FormSection) error {
+	for _, block := range append([]FormSection{section}, section.Sections...) {
+		if block.Block == nil || block.Block.Disclosure == "" {
+			continue
+		}
+		if err := block.Block.Disclosure.Validate(); err != nil {
+			return fmt.Errorf("renderer.Universal: form section %q: %w", block.ID, err)
+		}
+		if block.PanelTitle == "" && block.Title == "" {
+			return fmt.Errorf("renderer.Universal: form section %q folds away and needs a title to open it by", block.ID)
+		}
+	}
+	return nil
+}
 
 func validateFormNavigation(page *FormPage) error {
 	if page.Navigation == nil {
@@ -1642,6 +1847,28 @@ func validateFormWorkflow(page *FormPage) error {
 	return fmt.Errorf("renderer.FormWorkflow: summary submit action %q must reference a form submit action", page.Workflow.Summary.SubmitAction)
 }
 
+// validateFormNextActions keeps a follow-up step answerable: the action an
+// action hands over to must be one the same page declares, and not itself.
+func validateFormNextActions(page *FormPage) error {
+	declared := make(map[string]struct{}, len(page.Actions))
+	for _, action := range page.Actions {
+		declared[action.ID] = struct{}{}
+	}
+	for _, action := range page.Actions {
+		if action.AfterSuccess == nil || action.AfterSuccess.NextAction == "" {
+			continue
+		}
+		next := action.AfterSuccess.NextAction
+		if next == action.ID {
+			return fmt.Errorf("renderer.Universal: form action %q cannot hand over to itself", action.ID)
+		}
+		if _, exists := declared[next]; !exists {
+			return fmt.Errorf("renderer.Universal: form action %q hands over to undeclared action %q", action.ID, next)
+		}
+	}
+	return nil
+}
+
 func validateFormSectionActions(page *FormPage, section FormSection) error {
 	ids := append([]string{}, section.Action)
 	ids = append(ids, section.Actions...)
@@ -1696,9 +1923,12 @@ type FormSection struct {
 	// moved between. A gallery that declares none is read-only in that
 	// respect, as every gallery was before.
 	MediaVisibilityStates []MediaVisibilityOption `json:"media_visibility_states,omitempty"`
-	MediaPresets *MediaPresetsConfig    `json:"media_presets,omitempty"`
-	Prompts      *PromptList            `json:"prompts,omitempty"`
-	DateRange    *DateRangeConfig       `json:"date_range,omitempty"`
+	// MediaCropper is how a picture of this gallery is framed when it is given
+	// a role that has a shape of its own - a round avatar, most of all.
+	MediaCropper *MediaCropperConfig `json:"media_cropper,omitempty"`
+	MediaPresets *MediaPresetsConfig `json:"media_presets,omitempty"`
+	Prompts      *PromptList         `json:"prompts,omitempty"`
+	DateRange    *DateRangeConfig    `json:"date_range,omitempty"`
 	// Resource declares another standard module action rendered inside this
 	// section. It stays server-side: Generator resolves it to Load per request.
 	Resource *Resource `json:"-"`
@@ -1978,6 +2208,10 @@ type MediaUploadConfig struct {
 	LoadingTitle string `json:"loading_title,omitempty"`
 	Accept       string `json:"accept,omitempty"`
 	Multiple     bool   `json:"multiple"`
+	// MinDurationSeconds refuses a video shorter than this before it is
+	// uploaded; MinDurationError is what the person is told.
+	MinDurationSeconds int    `json:"min_duration_seconds,omitempty"`
+	MinDurationError   string `json:"min_duration_error,omitempty"`
 }
 
 // MediaPresetsConfig offers a gallery a set of ready-made pictures to start
@@ -2012,6 +2246,17 @@ type MediaGalleryItem struct {
 	// item, without making the browser infer state from a URL or local cache.
 	Badges  []Badge  `json:"badges,omitempty"`
 	Actions []Action `json:"actions,omitempty"`
+	// OpenAction is what opening this item does, when it is more than a
+	// picture: the publication it belongs to, the record it illustrates. An
+	// item without one is opened as what it is - a picture.
+	OpenAction *Action `json:"open_action,omitempty"`
+	// Cover marks the picture that stands for the whole set - a profile's
+	// cover. It is shown as the set's face and is not one of its items.
+	Cover bool `json:"cover,omitempty"`
+	// PostCount is how many publications this picture stands in. A picture
+	// that was published has a place of its own - the place its publication
+	// took - so it is not reordered by hand.
+	PostCount int `json:"post_count,omitempty"`
 }
 
 type MediaGalleryLabels struct {
@@ -2028,13 +2273,19 @@ type MediaGalleryLabels struct {
 	// A gallery large enough to be a page of its own is read in parts. These
 	// name the parts; a consumer that is given none of them shows the gallery
 	// whole, as before.
-	FilterAll     string `json:"filter_all,omitempty"`
-	FilterPublic  string `json:"filter_public,omitempty"`
-	FilterPrivate string `json:"filter_private,omitempty"`
-	FilterHidden  string `json:"filter_hidden,omitempty"`
-	FilterVideo   string `json:"filter_video,omitempty"`
-	Hidden        string `json:"hidden,omitempty"`
-	HiddenHint    string `json:"hidden_hint,omitempty"`
+	FilterAll         string `json:"filter_all,omitempty"`
+	FilterPublic      string `json:"filter_public,omitempty"`
+	FilterPrivate     string `json:"filter_private,omitempty"`
+	FilterHidden      string `json:"filter_hidden,omitempty"`
+	FilterVideo       string `json:"filter_video,omitempty"`
+	FilterUnpublished string `json:"filter_unpublished,omitempty"`
+	Hidden            string `json:"hidden,omitempty"`
+	HiddenHint        string `json:"hidden_hint,omitempty"`
+	// A gallery beside a profile shows the first few pictures and says how to
+	// see the rest. Without these it shows everything it was given.
+	More    string `json:"more,omitempty"`
+	ViewAll string `json:"view_all,omitempty"`
+	Close   string `json:"close,omitempty"`
 }
 
 // MediaVisibilityOption names one state a gallery item can be in and says who
@@ -2046,6 +2297,9 @@ type MediaVisibilityOption struct {
 	Label string          `json:"label,omitempty"`
 	Icon  string          `json:"icon,omitempty"`
 	Hint  string          `json:"hint,omitempty"`
+	// Confirmation is what the application says once the picture has changed
+	// hands: who can see it now, in the words of whoever owns the gallery.
+	Confirmation string `json:"confirmation,omitempty"`
 }
 
 type MediaGalleryActions struct {
@@ -2056,6 +2310,11 @@ type MediaGalleryActions struct {
 	Recenter *Action `json:"recenter,omitempty"`
 	Crop     *Action `json:"crop,omitempty"`
 	Remove   *Action `json:"remove,omitempty"`
+	// A picture a profile already has can become the face it shows or the
+	// cover its card carries. Which of the two is offered is the producer's
+	// decision: for some profiles the two are one and the same.
+	SetAvatar *Action `json:"set_avatar,omitempty"`
+	SetCover  *Action `json:"set_cover,omitempty"`
 }
 
 type CollectionConfig struct {
@@ -2198,6 +2457,83 @@ type Block struct {
 	HoverEnabled   *bool           `json:"hover_enabled,omitempty"`
 	Effect         string          `json:"effect,omitempty"`
 	Overlays       []BlockOverlay  `json:"overlays,omitempty"`
+	// Icon is the glyph the panel head wears beside its title.
+	Icon string `json:"icon,omitempty"`
+	// Kicker is the short word over the title that says what kind of thing
+	// the panel is - the step to take, the state it is in - read before the
+	// title rather than instead of it. KickerTone colours it.
+	Kicker     string    `json:"kicker,omitempty"`
+	KickerTone ToneToken `json:"kicker_tone,omitempty"`
+	// Decoration is the one decorative picture a panel may carry. The server
+	// names the picture and the shape it takes; the client resolves the address
+	// and knows nothing about what it shows.
+	Decoration *BlockDecoration `json:"decoration,omitempty"`
+	// Disclosure folds the panel away behind its own head. A page that answers
+	// many questions at once is read one question at a time: the head says
+	// which question, and what belongs to it opens on a tap. A panel that
+	// declares none is always open, as every panel was before.
+	Disclosure DisclosureToken `json:"disclosure,omitempty"`
+}
+
+// DisclosureToken says whether a panel folds and, if it does, whether it
+// starts open or closed.
+type DisclosureToken string
+
+const (
+	// DisclosureOpen folds, and starts open.
+	DisclosureOpen DisclosureToken = "open"
+	// DisclosureClosed folds, and starts closed.
+	DisclosureClosed DisclosureToken = "closed"
+)
+
+func (token DisclosureToken) Validate() error {
+	switch token {
+	case "", DisclosureOpen, DisclosureClosed:
+		return nil
+	default:
+		return fmt.Errorf("unsupported block disclosure %q", token)
+	}
+}
+
+// BlockDecoration is a picture that belongs to a panel rather than to its
+// content: it takes no tap and carries no meaning a reader has to act on.
+type BlockDecoration struct {
+	Source  string                 `json:"source"`
+	Variant BlockDecorationVariant `json:"variant,omitempty"`
+}
+
+type BlockDecorationVariant string
+
+const (
+	// The picture stands in the top corner and is cut by the panel edge.
+	BlockDecorationCornerWide BlockDecorationVariant = "corner-wide"
+	// A square picture sits deeper in the corner and fades into the panel.
+	BlockDecorationCornerSquare BlockDecorationVariant = "corner-square"
+	// A floating object hangs beside the text, below the panel head.
+	BlockDecorationCornerFloating BlockDecorationVariant = "corner-floating"
+	// A banner picture leads the row it belongs to.
+	BlockDecorationLeadingBanner BlockDecorationVariant = "leading-banner"
+	// A pattern fills the panel behind everything else.
+	BlockDecorationBackground BlockDecorationVariant = "background"
+	// BlockDecorationInline stands the picture between the figures of the
+	// panel, level with them, rather than in a corner.
+	BlockDecorationInline BlockDecorationVariant = "inline"
+	// BlockDecorationCornerHero is the corner picture at the size it is the
+	// subject of the panel: a balance of what the picture shows reads as one
+	// object with its figures, not as a panel with a stamp in the corner.
+	BlockDecorationCornerHero BlockDecorationVariant = "corner-hero"
+)
+
+func (decoration BlockDecoration) Validate() error {
+	if decoration.Source == "" {
+		return fmt.Errorf("block decoration requires a source")
+	}
+	switch decoration.Variant {
+	case "", BlockDecorationCornerWide, BlockDecorationCornerSquare, BlockDecorationCornerFloating, BlockDecorationLeadingBanner, BlockDecorationBackground, BlockDecorationInline, BlockDecorationCornerHero:
+		return nil
+	default:
+		return fmt.Errorf("unsupported block decoration variant %q", decoration.Variant)
+	}
 }
 
 // BlockOverlay places typed badge data over any visual block.
@@ -2220,37 +2556,56 @@ type Stack struct {
 }
 
 type DisplayComponent struct {
-	ID                  string                   `json:"id,omitempty"`
-	Type                DisplayComponentType     `json:"type,omitempty"`
-	ActionID            string                   `json:"action_id,omitempty"`
-	Fields              []string                 `json:"fields,omitempty"`
-	MediaItems          []MediaGalleryItem       `json:"media_items,omitempty"`
-	Value               interface{}              `json:"value,omitempty"`
-	Default             interface{}              `json:"default,omitempty"`
-	Visible             *bool                    `json:"visible,omitempty"`
-	UpdateAction        ComponentAction          `json:"update_action,omitempty"`
-	MainRatio           ComponentRatio           `json:"main_ratio,omitempty"`
-	MainRadius          ComponentRadiusToken     `json:"main_radius,omitempty"`
-	MainRadiusToken     ComponentRadiusToken     `json:"main_radius_token,omitempty"`
-	ThumbRatio          ComponentRatio           `json:"thumb_ratio,omitempty"`
-	ThumbsInset         InsetToken               `json:"thumbs_inset,omitempty"`
-	ThumbsInsetToken    SpacingToken             `json:"thumbs_inset_token,omitempty"`
-	VideoControls       *bool                    `json:"video_controls,omitempty"`
-	Size                SizeToken                `json:"size,omitempty"`
-	Wrap                *bool                    `json:"wrap,omitempty"`
-	Gap                 SpacingToken             `json:"gap,omitempty"`
-	Direction           DirectionToken           `json:"direction,omitempty"`
-	Justify             JustifyToken             `json:"justify,omitempty"`
-	Align               AlignToken               `json:"align,omitempty"`
-	Inset               InsetToken               `json:"inset,omitempty"`
-	Compact             bool                     `json:"compact,omitempty"`
+	ID              string               `json:"id,omitempty"`
+	Type            DisplayComponentType `json:"type,omitempty"`
+	ActionID        string               `json:"action_id,omitempty"`
+	Fields          []string             `json:"fields,omitempty"`
+	MediaItems      []MediaGalleryItem   `json:"media_items,omitempty"`
+	Value           interface{}          `json:"value,omitempty"`
+	Default         interface{}          `json:"default,omitempty"`
+	Visible         *bool                `json:"visible,omitempty"`
+	UpdateAction    ComponentAction      `json:"update_action,omitempty"`
+	MainRatio       ComponentRatio       `json:"main_ratio,omitempty"`
+	MainRadius      ComponentRadiusToken `json:"main_radius,omitempty"`
+	MainRadiusToken ComponentRadiusToken `json:"main_radius_token,omitempty"`
+	ThumbRatio      ComponentRatio       `json:"thumb_ratio,omitempty"`
+	// ThumbLimit is how many thumbnails stand beside the picture before the
+	// rest are offered together. Zero shows them all.
+	ThumbLimit int `json:"thumb_limit,omitempty"`
+	// ThumbLimitWide is the same count on a wide screen, where the strip stands
+	// in a column of its own and fewer, larger thumbnails read better. Zero
+	// keeps ThumbLimit.
+	ThumbLimitWide   int                 `json:"thumb_limit_wide,omitempty"`
+	MediaLabels      *MediaGalleryLabels `json:"media_labels,omitempty"`
+	ThumbsInset      InsetToken          `json:"thumbs_inset,omitempty"`
+	ThumbsInsetToken SpacingToken        `json:"thumbs_inset_token,omitempty"`
+	VideoControls    *bool               `json:"video_controls,omitempty"`
+	Size             SizeToken           `json:"size,omitempty"`
+	Wrap             *bool               `json:"wrap,omitempty"`
+	// AutoScroll keeps a strip of cards moving slowly sideways in a loop: it
+	// stops while a pointer rests on it and goes on when the pointer leaves.
+	AutoScroll bool           `json:"auto_scroll,omitempty"`
+	Gap        SpacingToken   `json:"gap,omitempty"`
+	Direction  DirectionToken `json:"direction,omitempty"`
+	Justify    JustifyToken   `json:"justify,omitempty"`
+	Align      AlignToken     `json:"align,omitempty"`
+	Inset      InsetToken     `json:"inset,omitempty"`
+	Compact    bool           `json:"compact,omitempty"`
 	// ShowEmpty keeps a block's declared fields on screen even when the record
 	// has no value for them yet. A page meant to be filled in reads as a frame
 	// with blanks rather than as whatever happens to be filled already.
-	ShowEmpty           bool                     `json:"show_empty,omitempty"`
-	Columns             int                      `json:"columns,omitempty"`
-	ReadonlyColumns     int                      `json:"readonly_columns,omitempty"`
-	DisplayType         ComponentDisplayType     `json:"display_type,omitempty"`
+	ShowEmpty       bool                 `json:"show_empty,omitempty"`
+	Columns         int                  `json:"columns,omitempty"`
+	ReadonlyColumns int                  `json:"readonly_columns,omitempty"`
+	DisplayType     ComponentDisplayType `json:"display_type,omitempty"`
+	// ItemFilter narrows a set of items inside the component that shows them:
+	// a search over what they are called, and a choice among the states they
+	// declare. It is the producer that says which field holds the state and
+	// what the choices are called.
+	ItemFilter *ItemFilter `json:"item_filter,omitempty"`
+	// ItemSelection lets a reader pick several items of the set and act on
+	// them together, with the running total of what they amount to.
+	ItemSelection       *ItemSelection           `json:"item_selection,omitempty"`
 	Items               []DisplayFieldRef        `json:"items,omitempty"`
 	CollectionGroups    *DisplayCollectionGroups `json:"collection_groups,omitempty"`
 	SeparatorVariant    ToneToken                `json:"separator_variant,omitempty"`
@@ -2261,19 +2616,103 @@ type DisplayComponent struct {
 	MatrixLabel         string                   `json:"matrix_label,omitempty"`
 	MatrixLabelIcon     string                   `json:"matrix_label_icon,omitempty"`
 	Block               *Block                   `json:"block,omitempty"`
-	Title               string                   `json:"title,omitempty"`
-	TitleFallback       string                   `json:"title_fallback,omitempty"`
-	Subtitle            string                   `json:"subtitle,omitempty"`
-	SubtitleFallback    string                   `json:"subtitle_fallback,omitempty"`
-	TitleLevel          int                      `json:"title_level,omitempty"`
-	TitleTone           ToneToken                `json:"title_tone,omitempty"`
-	BodyClass           string                   `json:"body_class,omitempty"`
+	// Preview declares that this component's picture can be opened: it names
+	// the dialog and the page actions that belong to the picture rather than
+	// to the page. A long press is the gesture for it on a touch screen.
+	Preview *DisplayPreview `json:"preview,omitempty"`
+	// Prompts are the notices of a prompts component, the same contract a
+	// form section carries.
+	Prompts          *PromptList `json:"prompts,omitempty"`
+	Title            string      `json:"title,omitempty"`
+	TitleFallback    string      `json:"title_fallback,omitempty"`
+	Subtitle         string      `json:"subtitle,omitempty"`
+	SubtitleFallback string      `json:"subtitle_fallback,omitempty"`
+	TitleLevel       int         `json:"title_level,omitempty"`
+	TitleTone        ToneToken   `json:"title_tone,omitempty"`
+	BodyClass        string      `json:"body_class,omitempty"`
+	// Icon is the mark the component wears beside its own title, for a
+	// component that draws its own head rather than sitting inside a panel.
+	Icon string `json:"icon,omitempty"`
+	// Art is the picture that belongs to the component itself - the thing its
+	// figures are figures of - resolved by the client like any other picture.
+	Art string `json:"art,omitempty"`
+	// FootActions are the actions a component draws on its own floor, parted
+	// from what it holds by a hairline: a card that is its own surface has no
+	// panel around it to put buttons in, so the card carries them. The ids
+	// name actions the page already declares.
+	FootActions []string `json:"foot_actions,omitempty"`
+}
+
+// DisplayPreview is the picture of a component shown at full size, with the
+// actions that belong to it underneath. The action ids name actions the page
+// already declares, so a preview adds nothing to the contract but a place to
+// put them.
+type DisplayPreview struct {
+	Label      string   `json:"label,omitempty"`
+	CloseLabel string   `json:"close_label,omitempty"`
+	Actions    []string `json:"actions,omitempty"`
+}
+
+func (component DisplayComponent) previewActionIDs() []string {
+	if component.Preview == nil {
+		return nil
+	}
+	return component.Preview.Actions
+}
+
+// validateFootActions holds a card's own row of buttons to the same rule as
+// any other set of action ids: each one named once, none of them blank.
+func (component DisplayComponent) validateFootActions() error {
+	seen := make(map[string]struct{}, len(component.FootActions))
+	for _, action := range component.FootActions {
+		if action == "" {
+			return fmt.Errorf("foot action id is required")
+		}
+		if _, exists := seen[action]; exists {
+			return fmt.Errorf("foot action %q is duplicated", action)
+		}
+		seen[action] = struct{}{}
+	}
+	return nil
+}
+
+func (preview DisplayPreview) Validate() error {
+	seen := make(map[string]struct{}, len(preview.Actions))
+	for _, action := range preview.Actions {
+		if action == "" {
+			return fmt.Errorf("preview action id is required")
+		}
+		if _, exists := seen[action]; exists {
+			return fmt.Errorf("preview action %q is duplicated", action)
+		}
+		seen[action] = struct{}{}
+	}
+	return nil
 }
 
 type DisplayFieldRef struct {
 	Field         string `json:"field"`
 	Label         string `json:"label,omitempty"`
 	LabelFallback string `json:"label_fallback,omitempty"`
+	// Tone colours one figure of a set. A balance of several figures reads
+	// each in its own colour - what is ready, what is money, what is waiting -
+	// and one tone for the whole set would say they are the same thing.
+	Tone string `json:"tone,omitempty"`
+	// Unit is the short word after a figure: the number is the figure and the
+	// unit is smaller beside it, not part of it.
+	Unit string `json:"unit,omitempty"`
+	// Art is a picture of the thing counted - the coin, the token - shown
+	// beside the figure instead of a glyph. A balance is read faster by what
+	// it is a balance of than by its caption.
+	Art string `json:"art,omitempty"`
+	// BadgeField names another field whose value rides beside this figure as
+	// a small word: a sum that is on its way says so next to the sum, not in
+	// a line of its own below the balance.
+	BadgeField string `json:"badge_field,omitempty"`
+	// BadgeBelow puts that word on the line under the figure instead of beside
+	// it, at the width of the figure rather than of the cell: the name of a
+	// plan is long, and its state after it would leave the pair unreadable.
+	BadgeBelow bool `json:"badge_below,omitempty"`
 }
 
 type DisplayCollectionGroup struct {
@@ -2320,35 +2759,41 @@ type RecordTheme struct {
 
 type RecordSection struct {
 	// Resource is server-only; Load is resolved with the requesting role's permissions.
-	Resource      *Resource             `json:"-"`
-	Load          *ResourceLoad         `json:"load,omitempty"`
-	LoadingLabel  string                `json:"loading_label,omitempty"`
-	RetryLabel    string                `json:"retry_label,omitempty"`
-	ID            string                `json:"id,omitempty"`
-	Title         string                `json:"title,omitempty"`
-	TitleFallback string                `json:"title_fallback,omitempty"`
-	TitleLevel    int                   `json:"title_level,omitempty"`
-	TitleTone     ToneToken             `json:"title_tone,omitempty"`
-	Renderer      RecordSectionRenderer `json:"renderer,omitempty"`
-	LayoutSlot    LayoutSlotToken       `json:"layout_slot,omitempty"`
-	Order         int                   `json:"order,omitempty"`
-	MobileOrder   int                   `json:"mobile_order,omitempty"`
-	Block         *Block                `json:"block,omitempty"`
-	Stack         *Stack                `json:"stack,omitempty"`
-	Components    []DisplayComponent    `json:"components,omitempty"`
+	Resource      *Resource     `json:"-"`
+	Load          *ResourceLoad `json:"load,omitempty"`
+	LoadingLabel  string        `json:"loading_label,omitempty"`
+	RetryLabel    string        `json:"retry_label,omitempty"`
+	ID            string        `json:"id,omitempty"`
+	Title         string        `json:"title,omitempty"`
+	TitleFallback string        `json:"title_fallback,omitempty"`
+	// Subtitle is the line a panel head reads under its title. The client
+	// already renders it; a page had no way to say it.
+	Subtitle    string                `json:"subtitle,omitempty"`
+	TitleLevel  int                   `json:"title_level,omitempty"`
+	TitleTone   ToneToken             `json:"title_tone,omitempty"`
+	Renderer    RecordSectionRenderer `json:"renderer,omitempty"`
+	LayoutSlot  LayoutSlotToken       `json:"layout_slot,omitempty"`
+	Order       int                   `json:"order,omitempty"`
+	MobileOrder int                   `json:"mobile_order,omitempty"`
+	Block       *Block                `json:"block,omitempty"`
+	Stack       *Stack                `json:"stack,omitempty"`
+	Components  []DisplayComponent    `json:"components,omitempty"`
 }
 
 type ResourceGridPage struct {
-	Endpoint string                     `json:"endpoint,omitempty"`
-	List     *ResourceGridListConfig    `json:"list,omitempty"`
-	Create   *Action                    `json:"create,omitempty"`
-	Delete   *Action                    `json:"delete,omitempty"`
-	Update   *Action                    `json:"update,omitempty"`
-	Card     *CardSchema                `json:"card,omitempty"`
-	Status   *ResourceGridStatusConfig  `json:"status,omitempty"`
-	Actions  *ResourceGridActionsConfig `json:"actions,omitempty"`
-	Text     map[string]string          `json:"text,omitempty"`
-	Context  map[string]interface{}     `json:"context,omitempty"`
+	Endpoint string                  `json:"endpoint,omitempty"`
+	List     *ResourceGridListConfig `json:"list,omitempty"`
+	Create   *Action                 `json:"create,omitempty"`
+	// HeadActions stand beside Create at the head of the grid: other ways to
+	// add to the set, or places that belong to it, each as a card of its own.
+	HeadActions []Action                   `json:"head_actions,omitempty"`
+	Delete      *Action                    `json:"delete,omitempty"`
+	Update      *Action                    `json:"update,omitempty"`
+	Card        *CardSchema                `json:"card,omitempty"`
+	Status      *ResourceGridStatusConfig  `json:"status,omitempty"`
+	Actions     *ResourceGridActionsConfig `json:"actions,omitempty"`
+	Text        map[string]string          `json:"text,omitempty"`
+	Context     map[string]interface{}     `json:"context,omitempty"`
 }
 
 type ResourceGridListConfig struct {
@@ -2379,8 +2824,17 @@ type ResourceGridActionsConfig struct {
 // uses it as a nested value because its request is resolved separately from a
 // standard generator action.
 type ActionPresentation struct {
-	Icon             string           `json:"icon,omitempty"`
-	IconOnly         *bool            `json:"icon_only,omitempty"`
+	Icon string `json:"icon,omitempty"`
+	// Description is a line of explanation that belongs to the action itself.
+	// A presentation with room for it shows it under the label; a plain button
+	// ignores it, so the same action can stand in either place.
+	Description    string `json:"description,omitempty"`
+	DescriptionKey string `json:"description_key,omitempty"`
+	IconOnly       *bool  `json:"icon_only,omitempty"`
+	// IconPosition puts the mark after the label instead of before it: an
+	// arrow that says where the button leads reads after the words, not in
+	// front of them.
+	IconPosition     string           `json:"icon_position,omitempty"`
 	Variant          ActionVariant    `json:"variant,omitempty"`
 	Appearance       ActionAppearance `json:"appearance,omitempty"`
 	Placement        ActionPlacement  `json:"placement,omitempty"`
@@ -2390,10 +2844,19 @@ type ActionPresentation struct {
 	// field, which cannot express "this option equals the record's value", so a
 	// set of mutually exclusive actions states the match as a condition.
 	ActiveIf *Condition `json:"active_if,omitempty"`
-	Block            *bool            `json:"block,omitempty"`
-	VisibleIf        *Condition       `json:"visible_if,omitempty"`
-	HiddenIf         *Condition       `json:"hidden_if,omitempty"`
-	DisabledIf       *Condition       `json:"disabled_if,omitempty"`
+	// ValueField names a record field whose value the action carries beside
+	// its label, the way a menu row shows the figure it leads to. ValueIcon is
+	// the mark in front of that figure.
+	ValueField string     `json:"value_field,omitempty"`
+	ValueIcon  string     `json:"value_icon,omitempty"`
+	Block      *bool      `json:"block,omitempty"`
+	VisibleIf  *Condition `json:"visible_if,omitempty"`
+	HiddenIf   *Condition `json:"hidden_if,omitempty"`
+	DisabledIf *Condition `json:"disabled_if,omitempty"`
+	// AttentionKey asks for the action to stand out until it is used once.
+	// The renderer remembers under this key that it was used, so the same key
+	// keeps quiet an action that already did its job.
+	AttentionKey string `json:"attention_key,omitempty"`
 }
 
 func (presentation ActionPresentation) Validate() error {
@@ -2436,6 +2899,7 @@ type Action struct {
 	Modal          *ModalAction   `json:"modal,omitempty"`
 	Client         *ClientAction  `json:"client,omitempty"`
 	Confirm        *Confirm       `json:"confirm,omitempty"`
+	AfterFailure   *ActionFailure `json:"after_failure,omitempty"`
 	AfterSuccess   *ActionResult  `json:"after_success,omitempty"`
 	AfterError     *ActionResult  `json:"after_error,omitempty"`
 	AriaLabelKey   string         `json:"aria_label_key,omitempty"`
@@ -2555,8 +3019,12 @@ type Prompt struct {
 	Title       string     `json:"title,omitempty"`
 	Text        string     `json:"text,omitempty"`
 	Action      *Action    `json:"action,omitempty"`
+	CloseLabel  string     `json:"close_label,omitempty"`
 	VisibleIf   *Condition `json:"visible_if,omitempty"`
 	Dismissible bool       `json:"dismissible,omitempty"`
+	// Attention marks a notice that waits for the reader's answer: a light
+	// runs around its edge until it is answered or goes away.
+	Attention bool `json:"attention,omitempty"`
 }
 
 func (list *PromptList) Validate() error {
@@ -2594,6 +3062,15 @@ type Confirm struct {
 	ConfirmLabel string `json:"confirm_label,omitempty"`
 }
 
+// ActionFailure is what to offer when an operation is refused: the words of the
+// refusal come from the API, and the way out of it is declared here.
+type ActionFailure struct {
+	Title        string      `json:"title,omitempty"`
+	CancelLabel  string      `json:"cancel_label,omitempty"`
+	ConfirmLabel string      `json:"confirm_label,omitempty"`
+	Route        RouteAction `json:"route,omitempty"`
+}
+
 func (confirm Confirm) Validate() error {
 	if confirm.Title == "" {
 		return fmt.Errorf("title is required")
@@ -2616,9 +3093,16 @@ type ActionResult struct {
 	Route  string        `json:"route,omitempty"`
 	Emit   string        `json:"emit,omitempty"`
 	Widget *WidgetTarget `json:"widget,omitempty"`
+	// NextAction names another action of the same page to run once this one
+	// has succeeded, with the record as it stands after it: a step that is
+	// offered only after the first one went through.
+	NextAction string `json:"next_action,omitempty"`
 }
 
 func (result ActionResult) Validate() error {
+	if strings.TrimSpace(result.NextAction) != result.NextAction {
+		return fmt.Errorf("next_action must not carry surrounding spaces")
+	}
 	if result.Widget == nil {
 		return nil
 	}

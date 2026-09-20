@@ -21,6 +21,18 @@ func NewAtomicExecutor(tx *sql.Tx) actions.AtomicExecutor {
 	return atomicExecutor{tx: tx}
 }
 
+// SerializeOn takes a transaction-scoped advisory lock named by key. Postgres
+// releases it at commit or rollback, so a caller cannot leave one held.
+func (executor atomicExecutor) SerializeOn(ctx context.Context, key string) error {
+	if strings.TrimSpace(key) == "" {
+		return fmt.Errorf("atomic serialize requires a key")
+	}
+	if _, err := executor.tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, key); err != nil {
+		return fmt.Errorf("atomic serialize on %q: %w", key, err)
+	}
+	return nil
+}
+
 func (executor atomicExecutor) Insert(ctx context.Context, insert actions.AtomicInsert) (actions.AtomicRecord, error) {
 	if insert.Table == nil || insert.PrimaryKey == nil {
 		return actions.AtomicRecord{}, fmt.Errorf("atomic insert requires table and primary key")
@@ -216,9 +228,39 @@ func (executor atomicExecutor) Update(ctx context.Context, update actions.Atomic
 	return result.RowsAffected()
 }
 
+func (executor atomicExecutor) Delete(ctx context.Context, request actions.AtomicDelete) (int64, error) {
+	if request.Table == nil || request.Where == nil {
+		return 0, fmt.Errorf("atomic delete requires table and where")
+	}
+	statement, args := request.Table.DELETE().WHERE(request.Where).Sql()
+	result, err := executor.tx.ExecContext(ctx, statement, args...)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 func atomicUpdateAssignment(field actions.AtomicUpdateField) (pg.ColumnAssigment, error) {
 	if field.Column == nil {
 		return nil, fmt.Errorf("column is required")
+	}
+	if field.Operation == actions.AtomicUpdateClear {
+		switch column := field.Column.(type) {
+		case pg.ColumnTimestampz:
+			return column.SET(pg.TimestampzExp(pg.NULL)), nil
+		case pg.ColumnTimestamp:
+			return column.SET(pg.TimestampExp(pg.NULL)), nil
+		case pg.ColumnDate:
+			return column.SET(pg.DateExp(pg.NULL)), nil
+		case pg.ColumnString:
+			return column.SET(pg.StringExp(pg.NULL)), nil
+		case pg.ColumnInteger:
+			return column.SET(pg.IntExp(pg.NULL)), nil
+		case pg.ColumnFloat:
+			return column.SET(pg.FloatExp(pg.NULL)), nil
+		default:
+			return nil, fmt.Errorf("column %q cannot be cleared", field.Column.Name())
+		}
 	}
 	if err := field.Value.Validate(); err != nil {
 		return nil, err
@@ -245,6 +287,18 @@ func atomicUpdateAssignment(field actions.AtomicUpdateField) (pg.ColumnAssigment
 			return column.SET(column.ADD(pg.Float(*field.Value.Float))), nil
 		}
 	case pg.ColumnString:
+		if field.Value.JSON != nil && field.Operation == actions.AtomicUpdateSet {
+			// A document is sent the way an insert sends it: as an untyped
+			// parameter the column's own type reads, jsonb included. A text
+			// literal would be refused by a jsonb column.
+			return column.SET(pg.StringExp(pg.Raw("#atomic_json", pg.RawArgs{"#atomic_json": string(field.Value.JSON)}))), nil
+		}
+		if field.Value.Strings != nil && field.Operation == actions.AtomicUpdateSet {
+			// A text[] column is set the way an insert sets it: the array goes
+			// as an untyped parameter the column reads in its own type. A text
+			// literal would be cast to text and refused.
+			return column.SET(pg.StringExp(pg.Raw("#atomic_array", pg.RawArgs{"#atomic_array": pq.Array(field.Value.Strings)}))), nil
+		}
 		if field.Value.String == nil {
 			return nil, fmt.Errorf("string column %q requires string value", column.Name())
 		}
@@ -392,6 +446,16 @@ func atomicSelectScan(kind actions.AtomicValueKind) (interface{}, func() (action
 		return value, func() (actions.AtomicValue, error) {
 			if !value.Valid {
 				return actions.AtomicValue{}, fmt.Errorf("value is null")
+			}
+			return actions.AtomicTime(value.Time), nil
+		}, nil
+	case actions.AtomicValueKindNullableTime:
+		// A column that is allowed to be empty is read as empty, not as a
+		// failure: a caller asking for one has somewhere to put the absence.
+		value := &sql.NullTime{}
+		return value, func() (actions.AtomicValue, error) {
+			if !value.Valid {
+				return actions.AtomicValue{}, nil
 			}
 			return actions.AtomicTime(value.Time), nil
 		}, nil

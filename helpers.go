@@ -72,7 +72,7 @@ parentLoop:
 
 	for key, value := range data {
 		result := strings.Split(key, ".")
-		if len(result) > 1 {
+		if len(result) > 1 && db.SafeSQLIdentifier(result[0]) {
 			resultFilterMap[key] = value
 		}
 	}

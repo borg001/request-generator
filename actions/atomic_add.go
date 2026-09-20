@@ -165,6 +165,22 @@ func (input AtomicInput) Int(name string) (int64, bool) {
 	return *value.Int, true
 }
 
+// Float reads a figure that can hold a fraction - a sum of money, a rate -
+// and reads a whole number sent for it as that figure.
+func (input AtomicInput) Float(name string) (float64, bool) {
+	value, ok := input.Field(name)
+	if !ok {
+		return 0, false
+	}
+	if value.Float != nil {
+		return *value.Float, true
+	}
+	if value.Int != nil {
+		return float64(*value.Int), true
+	}
+	return 0, false
+}
+
 func (input AtomicInput) RequireString(name string) (string, error) {
 	value, ok := input.String(name)
 	if !ok {
@@ -215,13 +231,14 @@ const (
 	AtomicValueKindFloat          AtomicValueKind = "float"
 	AtomicValueKindBool           AtomicValueKind = "bool"
 	AtomicValueKindTime           AtomicValueKind = "time"
+	AtomicValueKindNullableTime   AtomicValueKind = "nullable_time"
 	AtomicValueKindStrings        AtomicValueKind = "strings"
 	AtomicValueKindInts           AtomicValueKind = "ints"
 )
 
 func (kind AtomicValueKind) valid() bool {
 	switch kind {
-	case AtomicValueKindString, AtomicValueKindNullableString, AtomicValueKindInt, AtomicValueKindNullableInt, AtomicValueKindFloat, AtomicValueKindBool, AtomicValueKindTime, AtomicValueKindStrings, AtomicValueKindInts:
+	case AtomicValueKindString, AtomicValueKindNullableString, AtomicValueKindInt, AtomicValueKindNullableInt, AtomicValueKindFloat, AtomicValueKindBool, AtomicValueKindTime, AtomicValueKindNullableTime, AtomicValueKindStrings, AtomicValueKindInts:
 		return true
 	default:
 		return false
@@ -255,6 +272,9 @@ type AtomicUpdateOperation string
 const (
 	AtomicUpdateSet       AtomicUpdateOperation = "set"
 	AtomicUpdateIncrement AtomicUpdateOperation = "increment"
+	// AtomicUpdateClear empties a nullable column. Saying "no value" needs an
+	// operation of its own: a value union always carries exactly one value.
+	AtomicUpdateClear AtomicUpdateOperation = "clear"
 )
 
 // AtomicUpdateField is a closed assignment used by AtomicUpdate. Increment is
@@ -271,6 +291,14 @@ type AtomicUpdate struct {
 	Table  pg.Table            `json:"-"`
 	Fields []AtomicUpdateField `json:"-"`
 	Where  pg.BoolExpression   `json:"-"`
+}
+
+// AtomicDelete removes the rows selected by a mandatory Jet predicate. It runs
+// inside the same transaction as the other atomic writes, so what an operation
+// consumes is gone only if everything else it did is kept.
+type AtomicDelete struct {
+	Table pg.Table          `json:"-"`
+	Where pg.BoolExpression `json:"-"`
 }
 
 // AtomicRecord is both the atomic add response and the source for route
@@ -430,11 +458,18 @@ type AtomicRealtimePublishConfig struct {
 // AtomicExecutor deliberately exposes only the operations needed by domain
 // creation logic, not a driver transaction or connection.
 type AtomicExecutor interface {
+	// SerializeOn holds a lock for the rest of the operation, so that two
+	// requests that count something before writing it cannot both read the
+	// count before either has written. The key names what is being serialized;
+	// operations that pass the same key wait for each other, and the lock is
+	// released when the transaction ends, whichever way it ends.
+	SerializeOn(context.Context, string) error
 	Insert(context.Context, AtomicInsert) (AtomicRecord, error)
 	Upsert(context.Context, AtomicUpsert) (AtomicUpsertResult, error)
 	SelectOne(context.Context, AtomicSelect) (AtomicRecord, error)
 	SelectMany(context.Context, AtomicSelectMany) ([]AtomicRecord, error)
 	Update(context.Context, AtomicUpdate) (int64, error)
+	Delete(context.Context, AtomicDelete) (int64, error)
 }
 
 type AtomicAddOperation func(context.Context, AtomicExecutor, AtomicInput) (AtomicRecord, error)

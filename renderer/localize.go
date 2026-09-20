@@ -29,12 +29,17 @@ func (localizer textLocalizer) localizeRendererAction(action *Action) {
 	action.AriaLabelKey = ""
 	action.Title = localizer.localizeRendererText(action.Title, action.TitleKey)
 	action.TitleKey = ""
+	action.Description = localizer.localizeRendererText(action.Description, action.DescriptionKey)
+	action.DescriptionKey = ""
 	localizer.localizeTextFields(&action.SavingLabel, &action.SavedLabel)
 	if action.Modal != nil {
 		localizer.localizeTextFields(&action.Modal.Title)
 	}
 	if action.Confirm != nil {
 		localizer.localizeTextFields(&action.Confirm.Title, &action.Confirm.Message, &action.Confirm.CancelLabel, &action.Confirm.ConfirmLabel)
+	}
+	if action.AfterFailure != nil {
+		localizer.localizeTextFields(&action.AfterFailure.Title, &action.AfterFailure.CancelLabel, &action.AfterFailure.ConfirmLabel)
 	}
 	if action.AfterSuccess != nil {
 		localizer.localizeTextFields(&action.AfterSuccess.Toast)
@@ -305,7 +310,7 @@ func (localizer textLocalizer) localizePromptList(list *PromptList) {
 	}
 	for index := range list.Items {
 		prompt := &list.Items[index]
-		localizer.localizeTextFields(&prompt.Title, &prompt.Text)
+		localizer.localizeTextFields(&prompt.Title, &prompt.Text, &prompt.CloseLabel)
 		localizer.localizeRendererAction(prompt.Action)
 	}
 }
@@ -328,14 +333,14 @@ func (localizer textLocalizer) localizeFieldMatrix(matrix *FieldMatrix) {
 
 func (localizer textLocalizer) localizeMediaUpload(upload *MediaUploadConfig) *MediaUploadConfig {
 	if upload != nil {
-		localizer.localizeTextFields(&upload.Title, &upload.Subtitle, &upload.LoadingTitle)
+		localizer.localizeTextFields(&upload.Title, &upload.Subtitle, &upload.LoadingTitle, &upload.MinDurationError)
 	}
 	return upload
 }
 
 func (localizer textLocalizer) localizeMediaLabels(labels *MediaGalleryLabels) *MediaGalleryLabels {
 	if labels != nil {
-		localizer.localizeTextFields(&labels.Public, &labels.Private, &labels.Empty, &labels.CoverBadge, &labels.Remove, &labels.Reorder, &labels.FirstIsCover, &labels.PrivateHint, &labels.HideFace, &labels.HideFaceHint, &labels.FilterAll, &labels.FilterPublic, &labels.FilterPrivate, &labels.FilterHidden, &labels.FilterVideo, &labels.Hidden, &labels.HiddenHint)
+		localizer.localizeTextFields(&labels.Public, &labels.Private, &labels.Empty, &labels.CoverBadge, &labels.Remove, &labels.Reorder, &labels.FirstIsCover, &labels.PrivateHint, &labels.HideFace, &labels.HideFaceHint, &labels.FilterAll, &labels.FilterPublic, &labels.FilterPrivate, &labels.FilterHidden, &labels.FilterVideo, &labels.FilterUnpublished, &labels.Hidden, &labels.HiddenHint)
 	}
 	return labels
 }
@@ -408,7 +413,7 @@ func (localizer textLocalizer) localizeRecordPage(page *RecordPage) {
 	}
 	for i := range page.Sections {
 		section := &page.Sections[i]
-		localizer.localizeTextFields(&section.Title, &section.TitleFallback, &section.LoadingLabel, &section.RetryLabel)
+		localizer.localizeTextFields(&section.Title, &section.TitleFallback, &section.Subtitle, &section.LoadingLabel, &section.RetryLabel)
 		localizer.localizeBlock(section.Block)
 		for j := range section.Components {
 			component := &section.Components[j]
@@ -425,7 +430,18 @@ func (localizer textLocalizer) localizeRecordPage(page *RecordPage) {
 					group.LabelFallback = ""
 				}
 			}
+			if component.ItemFilter != nil {
+				localizer.localizeTextFields(&component.ItemFilter.SearchLabel, &component.ItemFilter.AllLabel)
+				for index := range component.ItemFilter.Options {
+					option := &component.ItemFilter.Options[index]
+					option.Label = localizer.localizeRendererText(option.Label, "")
+				}
+			}
+			if component.ItemSelection != nil {
+				localizer.localizeTextFields(&component.ItemSelection.CountLabel, &component.ItemSelection.TotalLabel, &component.ItemSelection.ClearLabel)
+			}
 			localizer.localizeMediaGalleryItems(component.MediaItems)
+			localizer.localizePromptList(component.Prompts)
 		}
 	}
 }
@@ -451,6 +467,9 @@ func (localizer textLocalizer) localizeWithFallback(value string, fallback strin
 
 func (localizer textLocalizer) localizeResourceGridPage(page *ResourceGridPage) {
 	localizer.localizeRendererAction(page.Create)
+	for i := range page.HeadActions {
+		localizer.localizeRendererAction(&page.HeadActions[i])
+	}
 	localizer.localizeRendererAction(page.Delete)
 	localizer.localizeRendererAction(page.Update)
 	if page.Card != nil {

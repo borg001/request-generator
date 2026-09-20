@@ -2,7 +2,7 @@ package renderer
 
 const (
 	Name    = "UniversalRenderer"
-	Version = "2.6.0"
+	Version = "2.7.0"
 )
 
 type Identity struct {
@@ -202,6 +202,9 @@ const (
 	MediaRatioPortrait  MediaRatio = "portrait"
 	MediaRatioLandscape MediaRatio = "landscape"
 	MediaRatioWide      MediaRatio = "wide"
+	// MediaRatioNatural keeps the shape the picture was taken in: a photo sent
+	// across is shown whole, upright or wide, not cut to a frame.
+	MediaRatioNatural MediaRatio = "natural"
 )
 
 type MediaSize string
@@ -210,6 +213,9 @@ const (
 	MediaSizeThumb MediaSize = "thumb"
 	MediaSizeCard  MediaSize = "card"
 	MediaSizeHero  MediaSize = "hero"
+	// MediaSizeOriginal asks for the file as it was uploaded. Every sized
+	// rendition is cut to its box, so a picture that must stay whole uses this.
+	MediaSizeOriginal MediaSize = "original"
 )
 
 type BlockType string
@@ -230,7 +236,10 @@ const (
 type TitleDecorToken string
 
 const (
-	TitleDecorNone    TitleDecorToken = "none"
+	TitleDecorNone TitleDecorToken = "none"
+	// TitleDecorBar puts a bar in the accent colour beside the title.
+	TitleDecorBar TitleDecorToken = "bar"
+	// TitleDecorSection is the bar and a hairline under the title.
 	TitleDecorSection TitleDecorToken = "section"
 )
 
@@ -303,7 +312,10 @@ const (
 type ActionPlacement string
 
 const (
-	ActionPlacementFull         ActionPlacement = "full"
+	ActionPlacementFull ActionPlacement = "full"
+	// Half of a line: two such actions share one, and one of them alone leaves
+	// the other half empty - which is what a half-width control means.
+	ActionPlacementHalf         ActionPlacement = "half"
 	ActionPlacementFilterFooter ActionPlacement = "filter_footer"
 	ActionPlacementBadge        ActionPlacement = "badge"
 	ActionPlacementHead         ActionPlacement = "head"
@@ -312,7 +324,7 @@ const (
 
 func (placement ActionPlacement) Valid() bool {
 	switch placement {
-	case "", ActionPlacementFull, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu:
+	case "", ActionPlacementFull, ActionPlacementHalf, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu:
 		return true
 	default:
 		return false
@@ -342,6 +354,9 @@ const (
 	MediaUsageGallery MediaUsage = "gallery"
 	MediaUsageAvatar  MediaUsage = "avatar"
 	MediaUsagePoster  MediaUsage = "poster"
+	// A cover is the picture a card carries. A profile whose face is not the
+	// point - an agency, a manager - keeps one of its own.
+	MediaUsageCover MediaUsage = "cover"
 )
 
 type MediaCropperViewportShape string
@@ -372,6 +387,12 @@ const (
 	DisplayBadgeList       DisplayComponentType = "badge_list"
 	DisplayAccordionGroups DisplayComponentType = "accordion_groups"
 	DisplayStatusTimeline  DisplayComponentType = "status_timeline"
+	// A set of records shown one at a time, or as a strip; the presentation is
+	// chosen by the display type.
+	DisplayRecordCarousel DisplayComponentType = "record_carousel"
+	// Notices that belong to the record where they stand - something waiting
+	// for the reader, with the step that answers it.
+	DisplayPrompts DisplayComponentType = "prompts"
 )
 
 type ComponentAction string
@@ -385,6 +406,35 @@ type ComponentDisplayType string
 const (
 	ComponentDisplayKeyValueGrid ComponentDisplayType = "key_value_grid"
 	ComponentDisplayTileGrid     ComponentDisplayType = "tile_grid"
+	// Actions can read as a list of rows - a glyph, a label, its explanation
+	// and a chevron - where a row of buttons would say less.
+	ComponentDisplayActionRows ComponentDisplayType = "action_rows"
+	// A run of steps can be numbered and joined by arrows, which reads as an
+	// order to follow rather than a history that happened.
+	ComponentDisplayFlowSteps ComponentDisplayType = "flow_steps"
+	// A set of records can read as a strip of narrow cards that scrolls
+	// sideways, where showing many at once matters more than showing one well.
+	ComponentDisplayCardRail ComponentDisplayType = "card_rail"
+	// A few figures that belong to one subject read as a line of them: a small
+	// caption over a large number, the numbers parted by a hairline rather
+	// than boxed one by one. A balance is read this way - the figures are the
+	// content, and a frame around each would be one frame too many.
+	ComponentDisplayMetricRow ComponentDisplayType = "metric_row"
+	// A set of conditions that have to hold before something can be done
+	// reads as a checklist: a mark, what the condition is, what it stands at
+	// now, and whether it is met. A timeline would say these happen one after
+	// another, and a table would say they are records.
+	ComponentDisplayReadinessRows ComponentDisplayType = "readiness_rows"
+	// A balance can be a card of its own: the mark and the name of the balance
+	// over a hairline, the figures under it beside the picture of what each
+	// one counts, and the light of the balance's colour in the corner. It
+	// draws its own head, so it stands in a section with no panel around it.
+	ComponentDisplayBalanceCard ComponentDisplayType = "balance_card"
+	// A run of steps can be a card of its own, beside a balance card: the
+	// numbered marks in a row, each step named and explained under its mark,
+	// and the light running behind them. Like a balance card it draws its own
+	// head and stands in a section with no panel around it.
+	ComponentDisplayFlowCard ComponentDisplayType = "flow_card"
 )
 
 type ComponentRatio string
@@ -392,6 +442,9 @@ type ComponentRatio string
 const (
 	ComponentRatioSquare   ComponentRatio = "square"
 	ComponentRatioPortrait ComponentRatio = "portrait"
+	// A grid of pictures is read as columns of tall tiles, whatever shape the
+	// pictures inside them were published in.
+	ComponentRatioTall ComponentRatio = "tall"
 )
 
 type MediaOverlayPosition string
