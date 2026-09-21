@@ -2721,6 +2721,10 @@ type DisplayFieldRef struct {
 	// it, at the width of the figure rather than of the cell: the name of a
 	// plan is long, and its state after it would leave the pair unreadable.
 	BadgeBelow bool `json:"badge_below,omitempty"`
+	// BadgeCorner puts it in the corner of the card instead, on the line of
+	// the captions: the state of a plan belongs to the card rather than to one
+	// figure of it, and beside the name it took room the name needed.
+	BadgeCorner bool `json:"badge_corner,omitempty"`
 }
 
 type DisplayCollectionGroup struct {
