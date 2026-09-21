@@ -31,8 +31,9 @@ func SafeSQLIdentifier(name string) bool {
 
 type DB struct {
 	DBExecutor
-	sql   *sql.DB
-	Debug bool
+	sql           *sql.DB
+	Debug         bool
+	preparedViews *preparedViewCache
 }
 type Tx struct {
 	sql *sql.Tx
@@ -784,13 +785,7 @@ func (db *DB) View(
 	query, args := stmt.Sql()
 	db.debugLog(log, "[DEBUG] VIEW QUERY: ", interpolateQuery(query, args))
 
-	var rows *sql.Rows
-	var err error
-	if len(args) > 0 {
-		rows, err = db.sql.Query(query, args...)
-	} else {
-		rows, err = db.sql.Query(query)
-	}
+	rows, err := db.queryView(query, args...)
 	if err != nil {
 		log.Errorln("VIEW ERR: ", err)
 		return nil, err
