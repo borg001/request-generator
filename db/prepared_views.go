@@ -10,6 +10,7 @@ type preparedViewCache struct {
 	mu         sync.Mutex
 	limit      int
 	statements map[string]*sql.Stmt
+	pending    map[string]chan struct{}
 }
 
 // NewDBWithPreparedViews opts this executor into reusing prepared View queries.
@@ -22,9 +23,30 @@ type preparedViewCache struct {
 func NewDBWithPreparedViews(pool *sql.DB, maxStatements int) *DB {
 	db := NewDB(pool)
 	if maxStatements > 0 {
-		db.preparedViews = &preparedViewCache{limit: maxStatements, statements: make(map[string]*sql.Stmt)}
+		db.preparedViews = &preparedViewCache{limit: maxStatements, statements: make(map[string]*sql.Stmt), pending: make(map[string]chan struct{})}
 	}
 	return db
+}
+
+// NewDBWithPreparedSelects reuses View, List and List COUNT statements. It does
+// not cache data, affect mutations or prepare arbitrary SQL passed to Query.
+// Keep the executor alive across requests and call ClosePreparedViews after
+// draining requests. The same bounded cache is shared by all generated reads.
+func NewDBWithPreparedSelects(pool *sql.DB, maxStatements int) *DB {
+	db := NewDBWithPreparedViews(pool, maxStatements)
+	db.prepareLists = true
+	return db
+}
+
+func (db *DB) queryList(query string, args ...interface{}) (selectRows, error) {
+	return db.queryCachedList(query, args...)
+}
+
+func (db *DB) queryListSQL(query string, args ...interface{}) (*sql.Rows, error) {
+	if db.prepareLists {
+		return db.queryView(query, args...)
+	}
+	return db.sql.Query(query, args...)
 }
 
 func (db *DB) queryView(query string, args ...interface{}) (*sql.Rows, error) {
@@ -44,22 +66,36 @@ func (db *DB) queryView(query string, args ...interface{}) (*sql.Rows, error) {
 }
 
 func (cache *preparedViewCache) statement(pool *sql.DB, query string) (*sql.Stmt, error) {
-	cache.mu.Lock()
-	defer cache.mu.Unlock()
-	if stmt := cache.statements[query]; stmt != nil {
-		return stmt, nil
+	for {
+		cache.mu.Lock()
+		if stmt := cache.statements[query]; stmt != nil {
+			cache.mu.Unlock()
+			return stmt, nil
+		}
+		if ready := cache.pending[query]; ready != nil {
+			cache.mu.Unlock()
+			<-ready
+			continue
+		}
+		if len(cache.statements)+len(cache.pending) >= cache.limit {
+			cache.mu.Unlock()
+			return nil, nil
+		}
+		ready := make(chan struct{})
+		cache.pending[query] = ready
+		cache.mu.Unlock()
+		// A cold SQL shape must not hold the cache mutex while acquiring a pool
+		// connection. Only requests for the same shape wait for its preparation.
+		stmt, err := pool.Prepare(query)
+		cache.mu.Lock()
+		delete(cache.pending, query)
+		if err == nil {
+			cache.statements[query] = stmt
+		}
+		close(ready)
+		cache.mu.Unlock()
+		return stmt, err
 	}
-	if len(cache.statements) >= cache.limit {
-		return nil, nil
-	}
-	// Serialize initial preparation so simultaneous cold requests cannot create
-	// duplicate retained statements. Failed preparations are not cached.
-	stmt, err := pool.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	cache.statements[query] = stmt
-	return stmt, nil
 }
 
 // ClosePreparedViews releases retained statements and disables further caching.
