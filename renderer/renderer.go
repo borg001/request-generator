@@ -1677,7 +1677,7 @@ func (binding *TextBinding) Validate() error {
 		return nil
 	}
 	switch binding.Format {
-	case "", TextFormatRelativeTime:
+	case "", TextFormatRelativeTime, TextFormatHandle:
 		return nil
 	default:
 		return fmt.Errorf("renderer.TextBinding: unsupported format %q", binding.Format)
@@ -2044,6 +2044,14 @@ type FieldMatrix struct {
 type FieldMatrixList struct {
 	Fields  []string               `json:"fields,omitempty"`
 	Columns FieldMatrixColumnCount `json:"columns,omitempty"`
+	// DisplayType is how the list is read: rows of label and value
+	// (key_value_grid, the default) or a tile for each figure (tile_grid), the
+	// way a page of figures reads them. The client already draws both; the
+	// contract simply had no word for the choice.
+	DisplayType ComponentDisplayType `json:"display_type,omitempty"`
+	// Align sets a tile to be read from its start - the caption over the
+	// figure - rather than centred.
+	Align AlignToken `json:"align,omitempty"`
 }
 
 type FieldMatrixTable struct {

@@ -177,6 +177,10 @@ type TextFormat string
 
 const (
 	TextFormatRelativeTime TextFormat = "relative_time"
+	// TextFormatHandle says the text is a handle - the @name of an account -
+	// so the client reads it as one: in the colour a handle is read in, and
+	// copied by a tap, the way a profile page reads it.
+	TextFormatHandle TextFormat = "handle"
 )
 
 type SurfaceVariant string
