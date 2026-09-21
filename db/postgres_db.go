@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
@@ -30,6 +31,7 @@ func SafeSQLIdentifier(name string) bool {
 }
 
 type DB struct {
+	readContext context.Context
 	DBExecutor
 	sql             *sql.DB
 	Debug           bool
@@ -667,13 +669,16 @@ func (db *DB) List(
 		results = append(results, currentResult)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
 	result = append(result, results...)
 
 	// Execute count query
 	countResult, err := db.queryList(countQuery, countArgs...)
 	if err != nil {
 		log.Errorln("COUNT ERR: ", err)
-		return result, 0, nil
+		return nil, 0, err
 	}
 	defer countResult.Close()
 
@@ -686,6 +691,9 @@ func (db *DB) List(
 		}
 	}
 
+	if err := countResult.Err(); err != nil {
+		return nil, 0, err
+	}
 	return result, count, nil
 }
 
@@ -886,6 +894,9 @@ func (db *DB) View(
 		results = append(results, currentResult)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	if len(results) > 0 {
 		return results[0], nil
 	}

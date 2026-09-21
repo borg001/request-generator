@@ -72,6 +72,7 @@ func (db *DB) ListSelectCacheStats() SelectCacheStats {
 }
 
 type selectRows interface {
+	Err() error
 	Next() bool
 	Scan(...interface{}) error
 	Close() error
@@ -84,6 +85,7 @@ type bufferedSelectRows struct {
 	index int
 }
 
+func (r *bufferedSelectRows) Err() error   { return nil }
 func (r *bufferedSelectRows) Next() bool   { r.index++; return r.index <= len(r.rows) }
 func (r *bufferedSelectRows) Close() error { r.rows = nil; return nil }
 func (r *bufferedSelectRows) Scan(dest ...interface{}) error {
@@ -251,6 +253,7 @@ func (r *prefixedSelectRows) Scan(dest ...interface{}) error {
 	}
 	return r.tail.Scan(dest...)
 }
+func (r *prefixedSelectRows) Err() error   { return r.tail.Err() }
 func (r *prefixedSelectRows) Close() error { r.prefix.Close(); return r.tail.Close() }
 
 func (db *DB) captureListSQL(limit int64, query string, args ...interface{}) (*cachedSelect, selectRows, error) {

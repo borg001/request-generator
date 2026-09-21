@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"sync"
@@ -39,34 +40,44 @@ func NewDBWithPreparedSelects(pool *sql.DB, maxStatements int) *DB {
 }
 
 func (db *DB) queryList(query string, args ...interface{}) (selectRows, error) {
-	return db.queryCachedList(query, args...)
+	// Cached List queries are shared across requests. Keep their existing
+	// lifetime independent of the first HTTP caller; never cache its cancellation.
+	if db.listSelectCache != nil {
+		shared := *db
+		shared.readContext = nil
+		return shared.queryCachedList(query, args...)
+	}
+	return db.queryListSQL(query, args...)
 }
 
 func (db *DB) queryListSQL(query string, args ...interface{}) (*sql.Rows, error) {
 	if db.prepareLists {
 		return db.queryView(query, args...)
 	}
-	return db.sql.Query(query, args...)
+	return db.sql.QueryContext(db.queryContext(), query, args...)
 }
 
 func (db *DB) queryView(query string, args ...interface{}) (*sql.Rows, error) {
 	if db.preparedViews == nil {
-		return db.sql.Query(query, args...)
+		return db.sql.QueryContext(db.queryContext(), query, args...)
 	}
-	stmt, err := db.preparedViews.statement(db.sql, query)
+	stmt, err := db.preparedViews.statement(db.queryContext(), db.sql, query)
 	if err != nil {
 		return nil, err
 	}
 	if stmt == nil {
-		return db.sql.Query(query, args...)
+		return db.sql.QueryContext(db.queryContext(), query, args...)
 	}
 	// sql.Stmt prepared on sql.DB handles concurrent use and preparation on
 	// additional/replacement pool connections. Never bind it to one sql.Conn.
-	return stmt.Query(args...)
+	return stmt.QueryContext(db.queryContext(), args...)
 }
 
-func (cache *preparedViewCache) statement(pool *sql.DB, query string) (*sql.Stmt, error) {
+func (cache *preparedViewCache) statement(ctx context.Context, pool *sql.DB, query string) (*sql.Stmt, error) {
 	for {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		cache.mu.Lock()
 		if stmt := cache.statements[query]; stmt != nil {
 			cache.mu.Unlock()
@@ -74,7 +85,11 @@ func (cache *preparedViewCache) statement(pool *sql.DB, query string) (*sql.Stmt
 		}
 		if ready := cache.pending[query]; ready != nil {
 			cache.mu.Unlock()
-			<-ready
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-ready:
+			}
 			continue
 		}
 		if len(cache.statements)+len(cache.pending) >= cache.limit {
@@ -86,7 +101,7 @@ func (cache *preparedViewCache) statement(pool *sql.DB, query string) (*sql.Stmt
 		cache.mu.Unlock()
 		// A cold SQL shape must not hold the cache mutex while acquiring a pool
 		// connection. Only requests for the same shape wait for its preparation.
-		stmt, err := pool.Prepare(query)
+		stmt, err := pool.PrepareContext(ctx, query)
 		cache.mu.Lock()
 		delete(cache.pending, query)
 		if err == nil {
@@ -114,4 +129,20 @@ func (db *DB) ClosePreparedViews() error {
 	}
 	cache.limit = 0
 	return result
+}
+
+// WithContext returns an immutable request-scoped copy sharing the pool and
+// statement cache. Generated View and uncached List/COUNT honor cancellation.
+// Cached List execution keeps its shared lifetime; writes are unchanged.
+func (db *DB) WithContext(ctx context.Context) DBExecutor {
+	scoped := *db
+	scoped.readContext = ctx
+	return &scoped
+}
+
+func (db *DB) queryContext() context.Context {
+	if db.readContext != nil {
+		return db.readContext
+	}
+	return context.Background()
 }
