@@ -178,6 +178,55 @@ RenderFunc: func(c *gin.Context, base renderer.Universal) (renderer.Universal, e
 `renderer.LocalizeOwned` предназначен только для уже изолированного результата.
 Custom objects внутри `interface{}` по-прежнему требуют явного владения producer-а.
 
+### Сборка только запрошенной страницы
+
+Полный `RenderFunc(c, Universal)` строит все ветки, даже когда response
+использует только одну. Для модуля с независимо собираемыми list/form/record
+страницами это приводит к лишним копиям и загрузке runtime metadata.
+Опциональный `PageRenderFunc(c, *renderer.Draft) error` выбирает нужную ветку:
+
+```go
+PageRenderFunc: func(c *gin.Context, draft *renderer.Draft) error {
+    if draft.PageType() == renderer.PageTypeList {
+        // Fresh request-owned page: базовая ветка не копируется.
+        return draft.Replace(renderer.Universal{List: buildListPage(c)})
+    }
+    page, err := draft.Edit() // lazy deep clone только выбранной ветки
+    if err != nil { return err }
+    if page.Form != nil { page.Form.Title = "edit.title" }
+    return nil
+},
+```
+
+При `Generator.Run` базовый `Render` валидируется и копируется в закрытый
+`renderer.Template`. После запуска declaration и hooks изменять нельзя.
+Template не содержит user/role/language state и не отдаёт свои pointers.
+`Template.Draft` создаёт request-local объект: `Edit()` копирует выбранную
+ветку максимум один раз, `Replace(Universal)` передаёт владение свежей веткой
+без копирования. Изменение корневого pointer после `Edit` требует `Replace`.
+`Build()` завершает draft и валидирует результат; повторное использование
+возвращает ошибку. Нельзя сохранять draft или его pointers после callback,
+передавать их другому запросу или подключать изменяемые shared objects.
+Custom values внутри `interface{}` имеют те же ограничения, что `Clone`.
+
+List endpoint запрашивает `PageTypeList` (результат содержит `List` **или**
+`ResourceGrid`), defrec — `PageTypeForm`, view — результат `PageTypeFunc`
+либо объявленный `PageType`. Unrelated ветки в `Replace` отклоняются;
+`Universal{}` явно удаляет страницу. Dynamic metadata и ссылки field matrix
+валидируются; resource resolution, access gates и localization выбранной
+страницы выполняются в обычном response pipeline. Неиспользуемые ветки
+не строятся и не разрешают свои ресурсы. Producer должен сохранять все
+зависимости и проверки, необходимые именно запрошенной странице.
+
+Без `PageRenderFunc` используется прежний полный `RenderFor`, включая
+cross-page зависимости callbacks. Сам `RenderFor`, discovery и внутренние
+проверки связанных ресурсов сохраняют прежнюю семантику: для мигрирующего
+модуля нужно оставить полный callback и согласованный `DiscoveryFunc`.
+Прямой `RenderPageFor` до `Run` компилирует временный template, не изменяя
+shared state. Go API расширен аддитивно; JSON shape, identity/version и
+frontend protocol не меняются. Это copy-on-write на уровне страницы,
+а не автоматическое копирование отдельных узлов при записи.
+
 `DiscoveryFunc` описывает доступные типы страниц без полного renderer:
 
 ```go
@@ -198,8 +247,9 @@ DiscoveryFunc: func(c *gin.Context, base renderer.Discovery) (renderer.Discovery
 В `/api/config` приоритет: `DiscoveryFunc`, затем `ConfigRenderFunc`, затем
 `RenderFunc`. Если hooks нет, достаточно возможностей статического `Render`.
 Компактное описание сохраняется только на время одного config-запроса.
-List/view/defrec и разрешение ресурсов внутри ответов страниц сохраняют полный
-runtime render и его validation. Переход на `DiscoveryFunc` явно выполняет
+List/view/defrec используют `PageRenderFunc`, если он задан; иначе сохраняют
+полный runtime render и его validation. Проверки связанных ресурсов сохраняют
+полный runtime render. Переход на `DiscoveryFunc` явно выполняет
 producer; автоматически считать динамический renderer статическим нельзя.
 Go API расширен аддитивно, JSON и renderer version не меняются.
 
@@ -215,8 +265,8 @@ request context. Права действий, `AccessGate`, `NavigationHidden`, 
 При отсутствии обоих discovery hooks явно сохраняется обычная семантика `RenderFunc`,
 включая динамические типы страниц и ошибки validation. При сборке одного конфига
 каждый модуль вычисляется один раз; результат не разделяется между HTTP-запросами,
-пользователями или языками. List, view, defrec и resource resolution внутри ответов
-страниц продолжают использовать полный `RenderFunc`. JSON-контракт и renderer
+пользователями или языками. List, view и defrec без `PageRenderFunc`, а также проверки связанных ресурсов
+продолжают использовать полный `RenderFunc`. JSON-контракт и renderer
 version не меняются; новый hook относится только к producer Go API.
 
 Closed enums должны использовать typed constants из package `renderer`. `map[string]interface{}` допустим только в явно typed runtime/transport полях (`Context`, `Payload`, `Query`, route query и т.п.), где содержимое является данными запроса или состоянием выполнения, а не схемой UI. Если producer-у нужен новый UI metadata block, он должен быть добавлен в typed renderer contract, а не передан через ad-hoc map.

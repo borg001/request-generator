@@ -66,7 +66,7 @@ func (fakeRendererDB) RawDB() *sql.DB {
 	return nil
 }
 
-func setupUniversalRendererRouter(t *testing.T) *gin.Engine {
+func setupUniversalRendererRouter(t *testing.T, pageHooks ...module.PageRenderFunc) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 
@@ -177,6 +177,9 @@ func setupUniversalRendererRouter(t *testing.T) *gin.Engine {
 		},
 	}
 
+	if len(pageHooks) > 0 {
+		testModule.PageRenderFunc = pageHooks[0]
+	}
 	engine := gin.New()
 	group := engine.Group("")
 	generator := module.NewGenerator(
@@ -1216,4 +1219,21 @@ func TestUniversalRendererMetadata_RenderFuncDoesNotMutateBaseRender(t *testing.
 	assert.NotContains(t, testModule.Render.Form.Context["items"].([]interface{})[0].(map[string]interface{}), "agency")
 	assert.Equal(t, "base", testModule.Render.Form.Context["labels"].([]string)[0])
 	assert.Len(t, testModule.Render.Form.Sections, 1)
+}
+
+func TestPageRenderEndpointsPreserveCompleteResponses(t *testing.T) {
+	legacy := setupUniversalRendererRouter(t)
+	selected := []renderer.PageType{}
+	pages := setupUniversalRendererRouter(t, func(c *gin.Context, draft *renderer.Draft) error {
+		selected = append(selected, draft.PageType())
+		return nil
+	})
+	for _, path := range []string{"/admin/renderer-items", "/admin/renderer-items/defrec/", "/admin/renderer-items/view/id/1"} {
+		before := executeRequest(legacy, http.MethodGet, path, nil)
+		after := executeRequest(pages, http.MethodGet, path, nil)
+		require.Equal(t, http.StatusOK, before.Code, before.Body.String())
+		require.Equal(t, before.Code, after.Code, after.Body.String())
+		require.JSONEq(t, before.Body.String(), after.Body.String(), path)
+	}
+	require.Equal(t, []renderer.PageType{renderer.PageTypeList, renderer.PageTypeForm, renderer.PageTypeRecord}, selected)
 }

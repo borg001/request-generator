@@ -52,6 +52,11 @@ type RoutablePage struct {
 // The generator validates, resolves and localizes this tree in place.
 type RenderFunc func(c *gin.Context, base renderer.Universal) (renderer.Universal, error)
 
+// PageRenderFunc builds only the requested response branch. Edit lazily clones
+// that branch; Replace accepts freshly constructed request-owned metadata.
+// RenderFunc remains the full-render path for discovery and resource checks.
+type PageRenderFunc func(c *gin.Context, draft *renderer.Draft) error
+
 // DiscoveryFunc describes route capabilities without constructing page data.
 // It receives a value derived from the validated base renderer. Access gates
 // and navigation visibility are still evaluated separately on every request.
@@ -89,6 +94,8 @@ type BaseModule struct {
 	Routes         []RoutablePage             `json:"routes,omitempty"`
 	Render         renderer.Universal         `json:"-"`
 	RenderFunc     RenderFunc                 `json:"-"`
+	PageRenderFunc PageRenderFunc             `json:"-"`
+	renderTemplate *renderer.Template
 	// ConfigRenderFunc describes the page types used by discovery without
 	// loading page content. When nil, discovery uses RenderFunc. Both hooks
 	// receive an isolated clone and their results undergo the same validation.
@@ -101,6 +108,36 @@ type BaseModule struct {
 
 func (module *BaseModule) RenderFor(c *gin.Context) (renderer.Universal, error) {
 	return module.renderWith(c, module.RenderFunc)
+}
+
+func (module *BaseModule) RenderPageFor(c *gin.Context, pageType renderer.PageType) (renderer.Universal, error) {
+	if module.PageRenderFunc == nil {
+		return module.RenderFor(c)
+	}
+	template := module.renderTemplate
+	if template == nil {
+		// Direct calls before Run are supported without writing shared state.
+		var err error
+		template, err = renderer.Compile(module.Render)
+		if err != nil {
+			return renderer.Universal{}, err
+		}
+	}
+	draft, err := template.Draft(pageType)
+	if err != nil {
+		return renderer.Universal{}, err
+	}
+	if err := module.PageRenderFunc(c, draft); err != nil {
+		return renderer.Universal{}, err
+	}
+	render, err := draft.Build()
+	if err != nil {
+		return renderer.Universal{}, err
+	}
+	if err := module.validateFieldMatrices(render); err != nil {
+		return renderer.Universal{}, err
+	}
+	return render, nil
 }
 
 func (module *BaseModule) renderWith(c *gin.Context, renderFunc RenderFunc) (renderer.Universal, error) {

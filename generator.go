@@ -148,6 +148,13 @@ func (generator *Generator) Run() {
 		if err := module.validateFieldMatrices(module.Render); err != nil {
 			panic(fmt.Sprintf("invalid field matrix config in module %s: %v", module.Name, err))
 		}
+		if module.PageRenderFunc != nil {
+			template, err := renderer.Compile(module.Render)
+			if err != nil {
+				panic(fmt.Sprintf("invalid renderer template in module %s: %v", module.Name, err))
+			}
+			module.renderTemplate = template
+		}
 		if err := validateModuleFieldMedia(module); err != nil {
 			panic(fmt.Sprintf("invalid field media config in module %s: %v", module.Name, err))
 		}
@@ -768,7 +775,7 @@ func (generator *Generator) actionList(module *BaseModule, action actions.ListMo
 			results = make([]interface{}, 0, 10)
 		}
 
-		render, err := module.RenderFor(c)
+		render, err := module.RenderPageFor(c, renderer.PageTypeList)
 		if err != nil {
 			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
 			return
@@ -1157,7 +1164,7 @@ func (generator *Generator) actionDefrec(module *BaseModule) func(c *gin.Context
 			output = append(output, field)
 		}
 
-		render, err := module.RenderFor(c)
+		render, err := module.RenderPageFor(c, renderer.PageTypeForm)
 		if err != nil {
 			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
 			return
@@ -1318,7 +1325,7 @@ func (generator *Generator) actionView(module *BaseModule, action actions.ViewMo
 			item[fieldKey] = fieldItem
 		}
 
-		render, err := module.RenderFor(c)
+		render, err := module.RenderPageFor(c, pageType)
 		if err != nil {
 			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
 			return
