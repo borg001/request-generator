@@ -1757,3 +1757,18 @@ scope). Только после этого вызывается `Operation`. Е�
 ```
 
 Навигация строится из `Navigation` каждого `BaseModule`. Пункты сортируются по `Group`, затем по `Order`. Для `target.type=page` frontend route хранится в `path`, а renderer/query/children находятся прямо в `target`. Для popup/client_action route не требуется. Глобальные виджеты строятся из типизированного `WidgetConfig` на действиях модулей и возвращаются в `widgets`.
+
+### Владение renderer и компактный discovery
+
+`RenderFunc` возвращает дерево, принадлежащее одному запросу. Генератор
+локализует его без повторной глубокой копии; новые указатели, карты и срезы,
+подключаемые callback-ом, также должны быть изолированы от других запросов.
+Публичный `renderer.Localize` по-прежнему возвращает копию.
+
+Для `/api/config` модуль может задать `DiscoveryFunc`, принимающий и возвращающий
+`renderer.Discovery{List: renderer.PageTypeList, Form: true, Record: true}`.
+Этот value type описывает наличие страниц без построения их содержимого.
+Hook получает возможности базового `Render`, его результат валидируется,
+а permissions и динамические проверки доступа выполняются как прежде.
+Старые `ConfigRenderFunc` и `RenderFunc` остаются рабочими. Полный контракт и
+порядок выбора hooks описаны в `docs/universal-renderer-contract.md`.

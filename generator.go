@@ -781,7 +781,7 @@ func (generator *Generator) actionList(module *BaseModule, action actions.ListMo
 			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
 			return
 		}
-		render = generator.localizeRenderer(lang, render)
+		render = generator.localizeOwnedRenderer(lang, render)
 		if err := validateListFilterAvailability(render.List, filter); err != nil {
 			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
 			return
@@ -1166,7 +1166,7 @@ func (generator *Generator) actionDefrec(module *BaseModule) func(c *gin.Context
 			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
 			return
 		}
-		render = generator.localizeRenderer(lang, render)
+		render = generator.localizeOwnedRenderer(lang, render)
 		defrecResponse := response.NewDefrecResponse(output)
 		defrecResponse.AttachRender(render)
 		response.Response(l, c, defrecResponse)
@@ -1327,7 +1327,7 @@ func (generator *Generator) actionView(module *BaseModule, action actions.ViewMo
 			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
 			return
 		}
-		render = generator.localizeRenderer(lang, render)
+		render = generator.localizeOwnedRenderer(lang, render)
 
 		output := struct {
 			Renderer   *renderer.Identity     `json:"renderer,omitempty"`

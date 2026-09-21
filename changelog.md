@@ -4,6 +4,15 @@
 
 ### Added
 
+- Compact `renderer.Discovery` and `BaseModule.DiscoveryFunc` for config route
+  capabilities without cloning page contents. Existing discovery/runtime hooks,
+  validation and per-request access gates remain supported; wire format unchanged.
+- `renderer.LocalizeOwned` for request-owned renderer graphs. Page responses no
+  longer deep-clone the whole renderer again for localization; aliased text is
+  visited once. `renderer.Localize` retains its copying contract. Producers must
+  keep newly attached mutable callback results request-owned.
+- Field media localization makes one copy instead of two.
+
 - **`DisplayPrompts` (`prompts`) и `DisplayComponent.Prompts`** — уведомления
   записи с шагом, который на них отвечает, в любом месте секции страницы
   записи. Тот же `PromptList`, что у секции формы. JSON:

@@ -125,7 +125,7 @@ func (generator *Generator) actionConfigEndpoint() gin.HandlerFunc {
 
 		// Discovery shares one validated descriptor per module within this
 		// request only. Page responses still build their full runtime render.
-		c.Set(configRenderCacheKey, make(map[*BaseModule]renderer.Universal))
+		c.Set(configRenderCacheKey, make(map[*BaseModule]renderer.Discovery))
 		defer c.Set(configRenderCacheKey, nil)
 
 		navigation, err := generator.buildNavigation(c, role, lang)
@@ -158,27 +158,52 @@ func (generator *Generator) actionConfigEndpoint() gin.HandlerFunc {
 
 const configRenderCacheKey = "request-generator.config-renders"
 
-// Outside config, resource resolution must keep using the full renderer: a
-// page can use a referenced resource's form fields and runtime sections.
-func renderForDiscovery(c *gin.Context, module *BaseModule) (renderer.Universal, error) {
+// routeRenderer is deliberately limited to route capabilities. Both full page
+// responses and compact discovery values provide the same identity semantics.
+type routeRenderer interface {
+	ListIdentity() *renderer.Identity
+	FormIdentity() *renderer.Identity
+	RecordIdentity() *renderer.Identity
+	ListRoutePageType() renderer.PageType
+	FormRoutePageType() renderer.PageType
+	RecordRoutePageType() renderer.PageType
+}
+
+// Outside config retain full runtime validation, including dynamic form fields
+// used by resource sections. Only explicit discovery hooks bypass page building.
+func renderForDiscovery(c *gin.Context, module *BaseModule) (renderer.Discovery, error) {
 	value, _ := c.Get(configRenderCacheKey)
-	cache, inConfig := value.(map[*BaseModule]renderer.Universal)
+	cache, inConfig := value.(map[*BaseModule]renderer.Discovery)
 	if !inConfig {
-		return module.RenderFor(c)
+		render, err := module.RenderFor(c)
+		return render.Discovery(), err
 	}
-	if render, ok := cache[module]; ok {
-		return render, nil
+	if description, ok := cache[module]; ok {
+		return description, nil
 	}
-	hook := module.ConfigRenderFunc
-	if hook == nil {
-		hook = module.RenderFunc
+	description := module.Render.Discovery()
+	if module.DiscoveryFunc != nil {
+		var err error
+		description, err = module.DiscoveryFunc(c, description)
+		if err != nil {
+			return renderer.Discovery{}, err
+		}
+		if err := description.Validate(); err != nil {
+			return renderer.Discovery{}, err
+		}
+	} else if module.ConfigRenderFunc != nil || module.RenderFunc != nil {
+		hook := module.ConfigRenderFunc
+		if hook == nil {
+			hook = module.RenderFunc
+		}
+		render, err := module.renderWith(c, hook)
+		if err != nil {
+			return renderer.Discovery{}, err
+		}
+		description = render.Discovery()
 	}
-	render, err := module.renderWith(c, hook)
-	if err != nil {
-		return renderer.Universal{}, err
-	}
-	cache[module] = render
-	return render, nil
+	cache[module] = description
+	return description, nil
 }
 
 // hasPermission проверяет, есть ли у роли доступ к действию
@@ -425,7 +450,7 @@ func findModuleAction(module *BaseModule, actionName string) (actions.ModuleActi
 	return nil, false
 }
 
-func (generator *Generator) buildRouteForAction(module *BaseModule, render renderer.Universal, action actions.ModuleAction, role string) RouteConfig {
+func (generator *Generator) buildRouteForAction(module *BaseModule, render routeRenderer, action actions.ModuleAction, role string) RouteConfig {
 	switch a := action.(type) {
 	case actions.ListModuleAction:
 		return generator.buildListRoute(module, render, a, role)
@@ -917,7 +942,7 @@ func actionWidget(action actions.ModuleAction) *actions.WidgetConfig {
 	}
 }
 
-func (generator *Generator) buildListRoute(module *BaseModule, render renderer.Universal, action actions.ListModuleAction, role string) RouteConfig {
+func (generator *Generator) buildListRoute(module *BaseModule, render routeRenderer, action actions.ListModuleAction, role string) RouteConfig {
 	route := RouteConfig{
 		Title:     action.Label,
 		MenuTitle: action.Label,
@@ -931,7 +956,7 @@ func (generator *Generator) buildListRoute(module *BaseModule, render renderer.U
 	return route
 }
 
-func (generator *Generator) buildViewRoute(module *BaseModule, render renderer.Universal, action actions.ViewModuleAction) RouteConfig {
+func (generator *Generator) buildViewRoute(module *BaseModule, render routeRenderer, action actions.ViewModuleAction) RouteConfig {
 	pageType := viewActionPageType(action)
 
 	return RouteConfig{
@@ -958,7 +983,7 @@ func viewActionPageTypeForContext(action actions.ViewModuleAction, c *gin.Contex
 	return viewActionPageType(action)
 }
 
-func viewRouteIdentity(render renderer.Universal, pageType renderer.PageType) *renderer.Identity {
+func viewRouteIdentity(render routeRenderer, pageType renderer.PageType) *renderer.Identity {
 	switch pageType {
 	case renderer.PageTypeForm:
 		return render.FormIdentity()
@@ -969,7 +994,7 @@ func viewRouteIdentity(render renderer.Universal, pageType renderer.PageType) *r
 	}
 }
 
-func viewRoutePageType(render renderer.Universal, pageType renderer.PageType) renderer.PageType {
+func viewRoutePageType(render routeRenderer, pageType renderer.PageType) renderer.PageType {
 	switch pageType {
 	case renderer.PageTypeForm:
 		return render.FormRoutePageType()
@@ -980,7 +1005,7 @@ func viewRoutePageType(render renderer.Universal, pageType renderer.PageType) re
 	}
 }
 
-func (generator *Generator) buildAddRoute(module *BaseModule, render renderer.Universal, action actions.AddModuleAction) RouteConfig {
+func (generator *Generator) buildAddRoute(module *BaseModule, render routeRenderer, action actions.AddModuleAction) RouteConfig {
 	return RouteConfig{
 		Title:    action.Label,
 		Renderer: render.FormIdentity(),
@@ -989,7 +1014,7 @@ func (generator *Generator) buildAddRoute(module *BaseModule, render renderer.Un
 	}
 }
 
-func (generator *Generator) buildDefrecRoute(module *BaseModule, render renderer.Universal, action actions.DefrecModuleAction) RouteConfig {
+func (generator *Generator) buildDefrecRoute(module *BaseModule, render routeRenderer, action actions.DefrecModuleAction) RouteConfig {
 	return RouteConfig{
 		Title:    action.Label,
 		Renderer: render.FormIdentity(),
@@ -1006,7 +1031,7 @@ func apiQueryURL(path string) string {
 }
 
 // buildRouteChildren формирует children маршруты (view, edit, add)
-func (generator *Generator) buildRouteChildren(module *BaseModule, render renderer.Universal, role string) map[string]RouteConfig {
+func (generator *Generator) buildRouteChildren(module *BaseModule, render routeRenderer, role string) map[string]RouteConfig {
 	children := make(map[string]RouteConfig)
 
 	for _, action := range module.Actions {
@@ -1041,7 +1066,7 @@ func (generator *Generator) buildRouteChildren(module *BaseModule, render render
 	return children
 }
 
-func (generator *Generator) buildViewChild(module *BaseModule, render renderer.Universal, a actions.ViewModuleAction, role string) (RouteConfig, bool) {
+func (generator *Generator) buildViewChild(module *BaseModule, render routeRenderer, a actions.ViewModuleAction, role string) (RouteConfig, bool) {
 	if !hasPermission(a, role) {
 		return RouteConfig{}, false
 	}
@@ -1054,7 +1079,7 @@ func (generator *Generator) buildViewChild(module *BaseModule, render renderer.U
 	}, true
 }
 
-func (generator *Generator) buildUpdateChild(module *BaseModule, render renderer.Universal, a actions.UpdateModuleAction, role string) (RouteConfig, bool) {
+func (generator *Generator) buildUpdateChild(module *BaseModule, render routeRenderer, a actions.UpdateModuleAction, role string) (RouteConfig, bool) {
 	if !hasPermission(a, role) {
 		return RouteConfig{}, false
 	}
@@ -1092,7 +1117,7 @@ func standardRecordActionRouteQuery(module *BaseModule, action actions.ModuleAct
 	return query
 }
 
-func (generator *Generator) buildAddChild(module *BaseModule, render renderer.Universal, a actions.AddModuleAction, role string) (RouteConfig, bool) {
+func (generator *Generator) buildAddChild(module *BaseModule, render routeRenderer, a actions.AddModuleAction, role string) (RouteConfig, bool) {
 	if !hasPermission(a, role) {
 		return RouteConfig{}, false
 	}

@@ -170,6 +170,39 @@ RenderFunc: func(c *gin.Context, base renderer.Universal) (renderer.Universal, e
 
 `Render` задает базовую статическую схему. `RenderFunc` является optional typed runtime override/merge и вызывается request-generator через `RenderFor(c)` перед построением `/api/config`, list, defrec и view responses. В `RenderFunc` передается deep clone базового `Render`, поэтому producer module может безопасно менять pointer structs, slices, maps и стандартные JSON-like значения внутри `interface{}` (`map[string]interface{}`, `[]interface{}`, `map[string]string`, `[]string` и т.п.) без протекания state в следующие запросы. Произвольные custom objects внутри `interface{}` не клонируются и остаются ответственностью producer module. Результат `RenderFunc` остается `renderer.Universal` и валидируется через `Validate()` уже после runtime изменений.
 
+Возвращаемое `RenderFunc` дерево принадлежит запросу: callback не должен
+подключать изменяемые глобальные структуры или сохранять результат для других
+запросов. Разрешение ресурсов и локализация выполняются на этом экземпляре.
+Общие внутри одного результата текстовые объекты локализуются один раз.
+Публичный `renderer.Localize` сохраняет поведение с копированием;
+`renderer.LocalizeOwned` предназначен только для уже изолированного результата.
+Custom objects внутри `interface{}` по-прежнему требуют явного владения producer-а.
+
+`DiscoveryFunc` описывает доступные типы страниц без полного renderer:
+
+```go
+DiscoveryFunc: func(c *gin.Context, base renderer.Discovery) (renderer.Discovery, error) {
+    base.Form = true // форма строится runtime callback-ом
+    return base, nil
+},
+```
+
+`renderer.Discovery` содержит только значения: `List` (`""`, `PageTypeList`
+или `PageTypeResourceGrid`), `Form` и `Record` (bool). Базовое значение берётся
+из `BaseModule.Render`, валидируемого при запуске. Hook может менять наличие
+страниц для текущего запроса; результат всегда проверяется через `Validate()`.
+В этом типе нет page contents, идентичность и версия renderer задаются библиотекой.
+Описания страниц не являются проверками доступа: `AccessGate`, permissions и
+`NavigationHidden` продолжают выполняться для текущего пользователя.
+
+В `/api/config` приоритет: `DiscoveryFunc`, затем `ConfigRenderFunc`, затем
+`RenderFunc`. Если hooks нет, достаточно возможностей статического `Render`.
+Компактное описание сохраняется только на время одного config-запроса.
+List/view/defrec и разрешение ресурсов внутри ответов страниц сохраняют полный
+runtime render и его validation. Переход на `DiscoveryFunc` явно выполняет
+producer; автоматически считать динамический renderer статическим нельзя.
+Go API расширен аддитивно, JSON и renderer version не меняются.
+
 `ConfigRenderFunc` — optional отдельный hook для `/api/config`. Он использует ту же
 сигнатуру и validation, что и `RenderFunc`, но описывает только наличие и типы
 страниц для discovery. Producer не должен загружать в нём содержимое страниц.
@@ -179,7 +212,7 @@ RenderFunc: func(c *gin.Context, base renderer.Universal) (renderer.Universal, e
 request context. Права действий, `AccessGate`, `NavigationHidden`, widget bindings
 и локализация по-прежнему применяются generator-ом отдельно.
 
-При отсутствии `ConfigRenderFunc` явно сохраняется обычная семантика `RenderFunc`,
+При отсутствии обоих discovery hooks явно сохраняется обычная семантика `RenderFunc`,
 включая динамические типы страниц и ошибки validation. При сборке одного конфига
 каждый модуль вычисляется один раз; результат не разделяется между HTTP-запросами,
 пользователями или языками. List, view, defrec и resource resolution внутри ответов
