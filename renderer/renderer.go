@@ -370,6 +370,7 @@ func (component DisplayComponent) Validate() error {
 			ComponentDisplayBalanceCard:   DisplayDataList,
 			ComponentDisplayActionRows:    DisplayActions,
 			ComponentDisplayFlowSteps:     DisplayStatusTimeline,
+			ComponentDisplayCheckList:     DisplayStatusTimeline,
 			ComponentDisplayFlowCard:      DisplayStatusTimeline,
 			ComponentDisplayCardRail:      DisplayRecordCarousel,
 			ComponentDisplayReadinessRows: DisplayRecordCarousel,

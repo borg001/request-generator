@@ -416,6 +416,10 @@ const (
 	// A run of steps can be numbered and joined by arrows, which reads as an
 	// order to follow rather than a history that happened.
 	ComponentDisplayFlowSteps ComponentDisplayType = "flow_steps"
+	// The same set can read as a list of what is and is not included - a mark
+	// and a line each, one under the other - where nothing happens in order
+	// and the rail between the marks would say there is a sequence.
+	ComponentDisplayCheckList ComponentDisplayType = "check_list"
 	// A set of records can read as a strip of narrow cards that scrolls
 	// sideways, where showing many at once matters more than showing one well.
 	ComponentDisplayCardRail ComponentDisplayType = "card_rail"
