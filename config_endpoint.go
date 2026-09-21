@@ -123,6 +123,11 @@ func (generator *Generator) actionConfigEndpoint() gin.HandlerFunc {
 		lang := generator.getLang(c)
 		generator.setTranslationContext(c, lang)
 
+		// Discovery shares one validated descriptor per module within this
+		// request only. Page responses still build their full runtime render.
+		c.Set(configRenderCacheKey, make(map[*BaseModule]renderer.Universal))
+		defer c.Set(configRenderCacheKey, nil)
+
 		navigation, err := generator.buildNavigation(c, role, lang)
 		if err != nil {
 			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
@@ -149,6 +154,31 @@ func (generator *Generator) actionConfigEndpoint() gin.HandlerFunc {
 
 		response.Response(l, c, config)
 	}
+}
+
+const configRenderCacheKey = "request-generator.config-renders"
+
+// Outside config, resource resolution must keep using the full renderer: a
+// page can use a referenced resource's form fields and runtime sections.
+func renderForDiscovery(c *gin.Context, module *BaseModule) (renderer.Universal, error) {
+	value, _ := c.Get(configRenderCacheKey)
+	cache, inConfig := value.(map[*BaseModule]renderer.Universal)
+	if !inConfig {
+		return module.RenderFor(c)
+	}
+	if render, ok := cache[module]; ok {
+		return render, nil
+	}
+	hook := module.ConfigRenderFunc
+	if hook == nil {
+		hook = module.RenderFunc
+	}
+	render, err := module.renderWith(c, hook)
+	if err != nil {
+		return renderer.Universal{}, err
+	}
+	cache[module] = render
+	return render, nil
 }
 
 // hasPermission проверяет, есть ли у роли доступ к действию
@@ -340,7 +370,7 @@ func (generator *Generator) buildPageTarget(c *gin.Context, module *BaseModule, 
 	if target.Type != "page" {
 		return target, nil
 	}
-	render, err := module.RenderFor(c)
+	render, err := renderForDiscovery(c, module)
 	if err != nil {
 		return NavigationPageTarget{}, err
 	}
@@ -640,7 +670,7 @@ func (generator *Generator) buildResourceLoad(c *gin.Context, module *BaseModule
 	if err != nil || !available {
 		return renderer.ResourceLoad{}, available, err
 	}
-	if _, err := module.RenderFor(c); err != nil {
+	if _, err := renderForDiscovery(c, module); err != nil {
 		return renderer.ResourceLoad{}, false, err
 	}
 	contract, ok := resolveStandardActionContract(module, action)

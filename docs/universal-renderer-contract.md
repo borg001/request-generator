@@ -170,6 +170,22 @@ RenderFunc: func(c *gin.Context, base renderer.Universal) (renderer.Universal, e
 
 `Render` задает базовую статическую схему. `RenderFunc` является optional typed runtime override/merge и вызывается request-generator через `RenderFor(c)` перед построением `/api/config`, list, defrec и view responses. В `RenderFunc` передается deep clone базового `Render`, поэтому producer module может безопасно менять pointer structs, slices, maps и стандартные JSON-like значения внутри `interface{}` (`map[string]interface{}`, `[]interface{}`, `map[string]string`, `[]string` и т.п.) без протекания state в следующие запросы. Произвольные custom objects внутри `interface{}` не клонируются и остаются ответственностью producer module. Результат `RenderFunc` остается `renderer.Universal` и валидируется через `Validate()` уже после runtime изменений.
 
+`ConfigRenderFunc` — optional отдельный hook для `/api/config`. Он использует ту же
+сигнатуру и validation, что и `RenderFunc`, но описывает только наличие и типы
+страниц для discovery. Producer не должен загружать в нём содержимое страниц.
+Например, модуль, у которого динамически наполняется существующий `Record`,
+может вернуть переданный `base` без чтения записей. Если `List` или `Form`
+создаются динамически, discovery hook должен объявить их для соответствующего
+request context. Права действий, `AccessGate`, `NavigationHidden`, widget bindings
+и локализация по-прежнему применяются generator-ом отдельно.
+
+При отсутствии `ConfigRenderFunc` явно сохраняется обычная семантика `RenderFunc`,
+включая динамические типы страниц и ошибки validation. При сборке одного конфига
+каждый модуль вычисляется один раз; результат не разделяется между HTTP-запросами,
+пользователями или языками. List, view, defrec и resource resolution внутри ответов
+страниц продолжают использовать полный `RenderFunc`. JSON-контракт и renderer
+version не меняются; новый hook относится только к producer Go API.
+
 Closed enums должны использовать typed constants из package `renderer`. `map[string]interface{}` допустим только в явно typed runtime/transport полях (`Context`, `Payload`, `Query`, route query и т.п.), где содержимое является данными запроса или состоянием выполнения, а не схемой UI. Если producer-у нужен новый UI metadata block, он должен быть добавлен в typed renderer contract, а не передан через ad-hoc map.
 
 ### List Response

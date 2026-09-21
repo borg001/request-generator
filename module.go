@@ -80,16 +80,24 @@ type BaseModule struct {
 	Routes         []RoutablePage             `json:"routes,omitempty"`
 	Render         renderer.Universal         `json:"-"`
 	RenderFunc     RenderFunc                 `json:"-"`
-	Relations      []ModuleRelation           `json:"-"`
+	// ConfigRenderFunc describes the page types used by discovery without
+	// loading page content. When nil, discovery uses RenderFunc. Both hooks
+	// receive an isolated clone and their results undergo the same validation.
+	ConfigRenderFunc RenderFunc       `json:"-"`
+	Relations        []ModuleRelation `json:"-"`
 }
 
 func (module *BaseModule) RenderFor(c *gin.Context) (renderer.Universal, error) {
+	return module.renderWith(c, module.RenderFunc)
+}
+
+func (module *BaseModule) renderWith(c *gin.Context, renderFunc RenderFunc) (renderer.Universal, error) {
 	render := module.Render.Clone()
-	if module.RenderFunc == nil {
+	if renderFunc == nil {
 		return render, nil
 	}
 	var err error
-	render, err = module.RenderFunc(c, render)
+	render, err = renderFunc(c, render)
 	if err != nil {
 		return renderer.Universal{}, err
 	}
