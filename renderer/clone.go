@@ -467,7 +467,9 @@ func cloneFieldMatrix(v *FieldMatrix) *FieldMatrix {
 	}
 	cp := *v
 	if v.List != nil {
-		cp.List = &FieldMatrixList{Fields: cloneSlice(v.List.Fields), Columns: v.List.Columns}
+		list := *v.List
+		list.Fields = cloneSlice(v.List.Fields)
+		cp.List = &list
 	}
 	if v.Table != nil {
 		cp.Table = &FieldMatrixTable{Heads: cloneSlice(v.Table.Heads), Rows: make([]FieldMatrixRow, len(v.Table.Rows)), Presentation: v.Table.Presentation, Source: cloneFieldMatrixDataSource(v.Table.Source)}
