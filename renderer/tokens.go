@@ -420,6 +420,11 @@ const (
 	// and a line each, one under the other - where nothing happens in order
 	// and the rail between the marks would say there is a sequence.
 	ComponentDisplayCheckList ComponentDisplayType = "check_list"
+	// A plan is read as a card of its own: the kind it is, its name, the price
+	// as one large figure with what it buys beside it, the line that says how
+	// it is paid, what it includes and leaves out, and the one step across the
+	// foot. The card is the surface, so it stands in a section with no panel.
+	ComponentDisplayPlanCard ComponentDisplayType = "plan_card"
 	// A set of records can read as a strip of narrow cards that scrolls
 	// sideways, where showing many at once matters more than showing one well.
 	ComponentDisplayCardRail ComponentDisplayType = "card_rail"

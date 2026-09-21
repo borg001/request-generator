@@ -668,6 +668,7 @@ func cloneDisplayComponents(values []DisplayComponent) []DisplayComponent {
 		out[i] = v
 		out[i].Fields = cloneSlice(v.Fields)
 		out[i].FootActions = cloneSlice(v.FootActions)
+		out[i].HeadActions = cloneSlice(v.HeadActions)
 		out[i].Items = cloneSlice(v.Items)
 		out[i].CollectionGroups = cloneDisplayCollectionGroups(v.CollectionGroups)
 		out[i].Block = cloneBlock(v.Block)

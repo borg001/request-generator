@@ -245,6 +245,11 @@ func validateRecordComponents(page *RecordPage) error {
 					return fmt.Errorf("renderer.Universal: record section %q component %q foot action %q is not declared in record page actions", section.ID, component.ID, actionID)
 				}
 			}
+			for _, actionID := range component.HeadActions {
+				if !recordPageHasAction(page, actionID) {
+					return fmt.Errorf("renderer.Universal: record section %q component %q head action %q is not declared in record page actions", section.ID, component.ID, actionID)
+				}
+			}
 			if component.ActionID != "" && !recordPageHasAction(page, component.ActionID) {
 				return fmt.Errorf("renderer.Universal: record section %q component %q action_id %q is not declared in record page actions", section.ID, component.ID, component.ActionID)
 			}
@@ -371,6 +376,7 @@ func (component DisplayComponent) Validate() error {
 			ComponentDisplayActionRows:    DisplayActions,
 			ComponentDisplayFlowSteps:     DisplayStatusTimeline,
 			ComponentDisplayCheckList:     DisplayStatusTimeline,
+			ComponentDisplayPlanCard:      DisplayDataList,
 			ComponentDisplayFlowCard:      DisplayStatusTimeline,
 			ComponentDisplayCardRail:      DisplayRecordCarousel,
 			ComponentDisplayReadinessRows: DisplayRecordCarousel,
@@ -2650,6 +2656,16 @@ type DisplayComponent struct {
 	// panel around it to put buttons in, so the card carries them. The ids
 	// name actions the page already declares.
 	FootActions []string `json:"foot_actions,omitempty"`
+	// HeadActions are the actions such a card draws in its own head, as the
+	// one choice the card is about: the period a plan is paid for, read as a
+	// switch beside the kind of plan it is.
+	HeadActions []string `json:"head_actions,omitempty"`
+	// Kicker is the short word over the name of what the component shows - the
+	// kind of a plan, the state of a set - read before the name.
+	Kicker string `json:"kicker,omitempty"`
+	// Highlight is the one line the component says louder than the rest: what
+	// a year of the plan saves, said where the period is chosen.
+	Highlight string `json:"highlight,omitempty"`
 }
 
 // DisplayPreview is the picture of a component shown at full size, with the
