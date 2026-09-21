@@ -16,6 +16,35 @@ func testListCache(db *DB, ttl time.Duration, limit int64) {
 	db.EnableListSelectCache(ListSelectCacheOptions{TTL: ttl, MaxEntries: 4, MaxBytes: 4096, MaxResultBytes: limit})
 }
 
+func TestListSelectCacheTTLStartsAfterSlowResult(t *testing.T) {
+	pool, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer pool.Close()
+	db := NewDB(pool)
+	testListCache(db, 200*time.Millisecond, 1024)
+	read := func() int64 {
+		rows, err := db.queryList("SELECT slow_result")
+		require.NoError(t, err)
+		defer rows.Close()
+		require.True(t, rows.Next())
+		var value int64
+		require.NoError(t, rows.Scan(&value))
+		return value
+	}
+	// The query itself takes longer than TTL; its result must still be cached.
+	mock.ExpectQuery("SELECT slow_result").WillDelayFor(250 * time.Millisecond).
+		WillReturnRows(sqlmock.NewRows([]string{"n"}).AddRow(1)).RowsWillBeClosed()
+	require.EqualValues(t, 1, read())
+	require.EqualValues(t, 1, read())
+	require.EqualValues(t, 1, db.ListSelectCacheStats().Hits)
+	// Reuse must stop after TTL from completion, without extending on a hit.
+	time.Sleep(210 * time.Millisecond)
+	mock.ExpectQuery("SELECT slow_result").
+		WillReturnRows(sqlmock.NewRows([]string{"n"}).AddRow(2)).RowsWillBeClosed()
+	require.EqualValues(t, 2, read())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestListSelectCacheParametersTTLAndCopies(t *testing.T) {
 	pool, mock, err := sqlmock.New()
 	require.NoError(t, err)

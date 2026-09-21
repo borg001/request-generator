@@ -16,6 +16,7 @@ import (
 // and policies tolerate TTL staleness, and database session state is invariant.
 // There is no cross-process invalidation or read-after-write guarantee.
 type ListSelectCacheOptions struct {
+	// TTL starts once the complete successful SQL result has been read.
 	TTL            time.Duration
 	MaxEntries     int
 	MaxBytes       int64
@@ -207,14 +208,14 @@ func (db *DB) queryCachedList(query string, args ...interface{}) (selectRows, er
 	c.stats.Misses++
 	c.mu.Unlock()
 	result, rows, err := db.captureListSQL(c.options.MaxResultBytes, query, args...)
+	completedAt := time.Now()
 	c.mu.Lock()
 	delete(c.flights, key)
 	flight.err = err
 	flight.result = result
 	if err == nil && result != nil {
-		// TTL begins at query start. Slow queries do not receive an additional
-		// full TTL after already reading an old database snapshot.
-		result.expires = now.Add(c.options.TTL)
+		// Give even a slow query a full reuse window after receiving its result.
+		result.expires = completedAt.Add(c.options.TTL)
 		if time.Now().Before(result.expires) && len(c.entries) < c.options.MaxEntries && c.stats.Bytes+result.bytes <= c.options.MaxBytes {
 			c.entries[key] = result
 			c.stats.Bytes += result.bytes
