@@ -27,7 +27,7 @@ func (generator *Generator) localizeFieldPresentation(lang locale.Lang, value *r
 }
 
 func (generator *Generator) localizeFieldMedia(lang locale.Lang, value *renderer.FieldMediaConfig, fieldValue interface{}) *renderer.FieldMediaConfig {
-	localized := renderer.CloneFieldMediaConfig(value)
+	localized := renderer.LocalizeFieldMedia(value, generator.rendererTextResolver(lang))
 	if localized == nil {
 		return nil
 	}
@@ -36,11 +36,15 @@ func (generator *Generator) localizeFieldMedia(lang locale.Lang, value *renderer
 			localized.Item.Src = src
 		}
 	}
-	return renderer.LocalizeFieldMedia(localized, generator.rendererTextResolver(lang))
+	return localized
 }
 
 func (generator *Generator) localizeRenderer(lang locale.Lang, value renderer.Universal) renderer.Universal {
 	return renderer.Localize(value, generator.rendererTextResolver(lang))
+}
+
+func (generator *Generator) localizeOwnedRenderer(lang locale.Lang, value renderer.Universal) renderer.Universal {
+	return renderer.LocalizeOwned(value, generator.rendererTextResolver(lang))
 }
 
 func (generator *Generator) rendererTextResolver(lang locale.Lang) renderer.TextResolver {

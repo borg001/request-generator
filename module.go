@@ -46,7 +46,16 @@ type RoutablePage struct {
 	Roles      []actions.Role   `json:"roles,omitempty"`
 }
 
+// RenderFunc receives a deep clone owned by this request. The returned tree
+// must also be request-owned: newly attached maps, slices and pointers must not
+// refer to shared mutable declarations or be retained for another request.
+// The generator validates, resolves and localizes this tree in place.
 type RenderFunc func(c *gin.Context, base renderer.Universal) (renderer.Universal, error)
+
+// DiscoveryFunc describes route capabilities without constructing page data.
+// It receives a value derived from the validated base renderer. Access gates
+// and navigation visibility are still evaluated separately on every request.
+type DiscoveryFunc func(c *gin.Context, base renderer.Discovery) (renderer.Discovery, error)
 
 type RelationScope struct {
 	Relation string
@@ -83,8 +92,11 @@ type BaseModule struct {
 	// ConfigRenderFunc describes the page types used by discovery without
 	// loading page content. When nil, discovery uses RenderFunc. Both hooks
 	// receive an isolated clone and their results undergo the same validation.
-	ConfigRenderFunc RenderFunc       `json:"-"`
-	Relations        []ModuleRelation `json:"-"`
+	ConfigRenderFunc RenderFunc `json:"-"`
+	// DiscoveryFunc takes precedence over ConfigRenderFunc for /api/config.
+	// Modules without either discovery hook retain their runtime RenderFunc.
+	DiscoveryFunc DiscoveryFunc    `json:"-"`
+	Relations     []ModuleRelation `json:"-"`
 }
 
 func (module *BaseModule) RenderFor(c *gin.Context) (renderer.Universal, error) {

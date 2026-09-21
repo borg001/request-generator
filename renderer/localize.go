@@ -4,6 +4,10 @@ type TextResolver func(value string, key string) string
 
 type textLocalizer struct {
 	resolve TextResolver
+	// Non-nil only for an owned graph, which may contain aliases introduced by
+	// the producer. A deep clone is a tree and does not need this tracking.
+	texts map[*string]struct{}
+	maps  map[*map[string]string]struct{}
 }
 
 func (localizer textLocalizer) localizeRendererText(value, key string) string {
@@ -13,9 +17,52 @@ func (localizer textLocalizer) localizeRendererText(value, key string) string {
 	return localizer.resolve(value, "")
 }
 
+func (localizer textLocalizer) localizeTextField(field *string, key string) {
+	// Most optional text fields are empty. If resolving one leaves it empty,
+	// no mutation occurred and aliases need no tracking. Keep resolver semantics
+	// for callers that deliberately translate an empty value.
+	if localizer.texts != nil && *field == "" && key == "" {
+		value := localizer.localizeRendererText("", "")
+		if value == "" {
+			return
+		}
+		if _, done := localizer.texts[field]; done {
+			return
+		}
+		localizer.texts[field] = struct{}{}
+		*field = value
+		return
+	}
+	if localizer.texts != nil {
+		if _, done := localizer.texts[field]; done {
+			return
+		}
+		localizer.texts[field] = struct{}{}
+	}
+	*field = localizer.localizeRendererText(*field, key)
+}
+
+func (localizer textLocalizer) localizeTextMap(field *map[string]string) {
+	if *field == nil {
+		return
+	}
+	if localizer.maps != nil {
+		if _, done := localizer.maps[field]; done {
+			return
+		}
+		localizer.maps[field] = struct{}{}
+		// Detach only this text map. Another field may refer to the same original
+		// map, and must see untranslated values when its own pass reaches it.
+		*field = cloneMap(*field)
+	}
+	for key, value := range *field {
+		(*field)[key] = localizer.localizeRendererText(value, "")
+	}
+}
+
 func (localizer textLocalizer) localizeTextFields(fields ...*string) {
 	for _, field := range fields {
-		*field = localizer.localizeRendererText(*field, "")
+		localizer.localizeTextField(field, "")
 	}
 }
 
@@ -23,13 +70,13 @@ func (localizer textLocalizer) localizeRendererAction(action *Action) {
 	if action == nil {
 		return
 	}
-	action.Label = localizer.localizeRendererText(action.Label, action.LabelKey)
+	localizer.localizeTextField(&action.Label, action.LabelKey)
 	action.LabelKey = ""
-	action.AriaLabel = localizer.localizeRendererText(action.AriaLabel, action.AriaLabelKey)
+	localizer.localizeTextField(&action.AriaLabel, action.AriaLabelKey)
 	action.AriaLabelKey = ""
-	action.Title = localizer.localizeRendererText(action.Title, action.TitleKey)
+	localizer.localizeTextField(&action.Title, action.TitleKey)
 	action.TitleKey = ""
-	action.Description = localizer.localizeRendererText(action.Description, action.DescriptionKey)
+	localizer.localizeTextField(&action.Description, action.DescriptionKey)
 	action.DescriptionKey = ""
 	localizer.localizeTextFields(&action.SavingLabel, &action.SavedLabel)
 	if action.Modal != nil {
@@ -50,11 +97,21 @@ func (localizer textLocalizer) localizeRendererAction(action *Action) {
 }
 
 func Localize(render Universal, resolve TextResolver) Universal {
-	if resolve == nil {
-		return render.Clone()
-	}
 	localized := render.Clone()
+	if resolve == nil {
+		return localized
+	}
 	return (textLocalizer{resolve: resolve}).localizeRenderer(localized)
+}
+
+// LocalizeOwned consumes a request-owned renderer without making a second
+// deep copy. Every reachable mutable value must belong to this request;
+// callers with a shared declaration must use Localize instead.
+func LocalizeOwned(render Universal, resolve TextResolver) Universal {
+	if resolve == nil {
+		return render
+	}
+	return (textLocalizer{resolve: resolve, texts: make(map[*string]struct{}), maps: make(map[*map[string]string]struct{})}).localizeRenderer(render)
 }
 
 func LocalizeFieldMedia(value *FieldMediaConfig, resolve TextResolver) *FieldMediaConfig {
@@ -102,20 +159,20 @@ func (localizer textLocalizer) localizeListPage(page *ListPage) {
 	if page.Summary != nil {
 		localizer.localizeTextFields(&page.Summary.Title, &page.Summary.TitleFallback)
 		for i := range page.Summary.Items {
-			page.Summary.Items[i].Label = localizer.localizeRendererText(page.Summary.Items[i].Label, page.Summary.Items[i].LabelKey)
+			localizer.localizeTextField(&page.Summary.Items[i].Label, page.Summary.Items[i].LabelKey)
 			page.Summary.Items[i].LabelKey = ""
 		}
 		if page.Summary.Trend != nil {
 			trend := page.Summary.Trend
 			localizer.localizeTextFields(&trend.Title, &trend.Subtitle)
-			trend.AriaLabel = localizer.localizeRendererText(trend.AriaLabel, trend.AriaLabelKey)
+			localizer.localizeTextField(&trend.AriaLabel, trend.AriaLabelKey)
 			trend.AriaLabelKey = ""
-			trend.EmptyLabel = localizer.localizeRendererText(trend.EmptyLabel, trend.EmptyLabelKey)
+			localizer.localizeTextField(&trend.EmptyLabel, trend.EmptyLabelKey)
 			trend.EmptyLabelKey = ""
-			trend.LoadingLabel = localizer.localizeRendererText(trend.LoadingLabel, trend.LoadingLabelKey)
+			localizer.localizeTextField(&trend.LoadingLabel, trend.LoadingLabelKey)
 			trend.LoadingLabelKey = ""
 			for i := range trend.Series {
-				trend.Series[i].Label = localizer.localizeRendererText(trend.Series[i].Label, trend.Series[i].LabelKey)
+				localizer.localizeTextField(&trend.Series[i].Label, trend.Series[i].LabelKey)
 				trend.Series[i].LabelKey = ""
 			}
 			localizer.localizeDateRangeToolbar(trend.DateRange)
@@ -143,17 +200,17 @@ func (localizer textLocalizer) localizeDateRangeToolbar(toolbar *DateRangeToolba
 	}
 	localizer.localizeTextFields(&toolbar.Placeholder, &toolbar.ApplyLabel, &toolbar.CancelLabel, &toolbar.StartLabel, &toolbar.EndLabel, &toolbar.EmptyLabel, &toolbar.DialogLabel, &toolbar.PreviousLabel, &toolbar.NextLabel)
 	for i := range toolbar.Presets {
-		toolbar.Presets[i].Label = localizer.localizeRendererText(toolbar.Presets[i].Label, toolbar.Presets[i].LabelKey)
+		localizer.localizeTextField(&toolbar.Presets[i].Label, toolbar.Presets[i].LabelKey)
 		toolbar.Presets[i].LabelKey = ""
 	}
 	for i := range toolbar.Months {
-		toolbar.Months[i] = localizer.localizeRendererText(toolbar.Months[i], "")
+		localizer.localizeTextField(&toolbar.Months[i], "")
 	}
 	for i := range toolbar.FormatMonths {
-		toolbar.FormatMonths[i] = localizer.localizeRendererText(toolbar.FormatMonths[i], "")
+		localizer.localizeTextField(&toolbar.FormatMonths[i], "")
 	}
 	for i := range toolbar.Weekdays {
-		toolbar.Weekdays[i] = localizer.localizeRendererText(toolbar.Weekdays[i], "")
+		localizer.localizeTextField(&toolbar.Weekdays[i], "")
 	}
 }
 
@@ -164,10 +221,10 @@ func (localizer textLocalizer) localizeFilterGroups(groups []FilterGroup) {
 }
 
 func (localizer textLocalizer) localizeFilterGroup(group *FilterGroup) {
-	group.Label = localizer.localizeRendererText(group.Label, group.LabelKey)
+	localizer.localizeTextField(&group.Label, group.LabelKey)
 	group.LabelKey = ""
 	for j := range group.Sections {
-		group.Sections[j].Label = localizer.localizeRendererText(group.Sections[j].Label, group.Sections[j].LabelKey)
+		localizer.localizeTextField(&group.Sections[j].Label, group.Sections[j].LabelKey)
 		group.Sections[j].LabelKey = ""
 	}
 	for j := range group.Items {
@@ -180,7 +237,7 @@ func (localizer textLocalizer) localizeFilterGroup(group *FilterGroup) {
 func (localizer textLocalizer) localizeFilterRangePresets(groups []FilterRangePresets) {
 	for i := range groups {
 		for j := range groups[i].Presets {
-			groups[i].Presets[j].Label = localizer.localizeRendererText(groups[i].Presets[j].Label, "")
+			localizer.localizeTextField(&groups[i].Presets[j].Label, "")
 		}
 	}
 }
@@ -195,16 +252,16 @@ func (localizer textLocalizer) localizeFilterPills(rows [][]FilterPill) {
 	for i := range rows {
 		for j := range rows[i] {
 			pill := &rows[i][j]
-			pill.Label = localizer.localizeRendererText(pill.Label, pill.LabelKey)
+			localizer.localizeTextField(&pill.Label, pill.LabelKey)
 			pill.LabelKey = ""
-			pill.GroupLabel = localizer.localizeRendererText(pill.GroupLabel, pill.GroupLabelKey)
+			localizer.localizeTextField(&pill.GroupLabel, pill.GroupLabelKey)
 			pill.GroupLabelKey = ""
 		}
 	}
 }
 
 func (localizer textLocalizer) localizeCardSchema(schema *CardSchema) {
-	schema.ActionMenuLabel = localizer.localizeRendererText(schema.ActionMenuLabel, "")
+	localizer.localizeTextField(&schema.ActionMenuLabel, "")
 	for i := range schema.Badges {
 		localizer.localizeBadge(&schema.Badges[i])
 	}
@@ -223,26 +280,22 @@ func (localizer textLocalizer) localizeStatusBinding(status *StatusBinding) {
 	if status == nil {
 		return
 	}
-	for value, label := range status.LabelMap {
-		status.LabelMap[value] = localizer.localizeRendererText(label, "")
-	}
+	localizer.localizeTextMap(&status.LabelMap)
 }
 
 func (localizer textLocalizer) localizeBadge(badge *Badge) {
 	if badge == nil {
 		return
 	}
-	badge.Label = localizer.localizeRendererText(badge.Label, badge.LabelKey)
+	localizer.localizeTextField(&badge.Label, badge.LabelKey)
 	badge.LabelKey = ""
-	for value, label := range badge.LabelMap {
-		badge.LabelMap[value] = localizer.localizeRendererText(label, "")
-	}
+	localizer.localizeTextMap(&badge.LabelMap)
 	if badge.Then != nil {
-		badge.Then.Label = localizer.localizeRendererText(badge.Then.Label, badge.Then.LabelKey)
+		localizer.localizeTextField(&badge.Then.Label, badge.Then.LabelKey)
 		badge.Then.LabelKey = ""
 	}
 	if badge.Else != nil {
-		badge.Else.Label = localizer.localizeRendererText(badge.Else.Label, badge.Else.LabelKey)
+		localizer.localizeTextField(&badge.Else.Label, badge.Else.LabelKey)
 		badge.Else.LabelKey = ""
 	}
 }
@@ -294,13 +347,13 @@ func (localizer textLocalizer) localizeDateRange(config *DateRangeConfig) {
 	}
 	localizer.localizeTextFields(&config.Placeholder, &config.ApplyLabel, &config.CancelLabel, &config.StartLabel, &config.EndLabel, &config.EmptyLabel, &config.DialogLabel, &config.PreviousLabel, &config.NextLabel, &config.MinDaysLabel)
 	for index := range config.Months {
-		config.Months[index] = localizer.localizeRendererText(config.Months[index], "")
+		localizer.localizeTextField(&config.Months[index], "")
 	}
 	for index := range config.FormatMonths {
-		config.FormatMonths[index] = localizer.localizeRendererText(config.FormatMonths[index], "")
+		localizer.localizeTextField(&config.FormatMonths[index], "")
 	}
 	for index := range config.Weekdays {
-		config.Weekdays[index] = localizer.localizeRendererText(config.Weekdays[index], "")
+		localizer.localizeTextField(&config.Weekdays[index], "")
 	}
 }
 
@@ -320,7 +373,7 @@ func (localizer textLocalizer) localizeFieldMatrix(matrix *FieldMatrix) {
 		return
 	}
 	for i := range matrix.Table.Heads {
-		matrix.Table.Heads[i] = localizer.localizeRendererText(matrix.Table.Heads[i], "")
+		localizer.localizeTextField(&matrix.Table.Heads[i], "")
 	}
 	for i := range matrix.Table.Rows {
 		row := &matrix.Table.Rows[i]
@@ -420,13 +473,13 @@ func (localizer textLocalizer) localizeRecordPage(page *RecordPage) {
 			localizer.localizeTextFields(&component.ValueLabel, &component.ValueFallback, &component.MatrixLabel, &component.Title, &component.TitleFallback, &component.Subtitle, &component.SubtitleFallback)
 			for index := range component.Items {
 				item := &component.Items[index]
-				item.Label = localizer.localizeWithFallback(item.Label, item.LabelFallback)
+				localizer.localizeFallbackField(&item.Label, item.LabelFallback)
 				item.LabelFallback = ""
 			}
 			if component.CollectionGroups != nil {
 				for index := range component.CollectionGroups.Groups {
 					group := &component.CollectionGroups.Groups[index]
-					group.Label = localizer.localizeWithFallback(group.Label, group.LabelFallback)
+					localizer.localizeFallbackField(&group.Label, group.LabelFallback)
 					group.LabelFallback = ""
 				}
 			}
@@ -434,7 +487,7 @@ func (localizer textLocalizer) localizeRecordPage(page *RecordPage) {
 				localizer.localizeTextFields(&component.ItemFilter.SearchLabel, &component.ItemFilter.AllLabel)
 				for index := range component.ItemFilter.Options {
 					option := &component.ItemFilter.Options[index]
-					option.Label = localizer.localizeRendererText(option.Label, "")
+					localizer.localizeTextField(&option.Label, "")
 				}
 			}
 			if component.ItemSelection != nil {
@@ -457,6 +510,16 @@ func (localizer textLocalizer) localizeBlock(block *Block) {
 	}
 }
 
+func (localizer textLocalizer) localizeFallbackField(field *string, fallback string) {
+	if localizer.texts != nil {
+		if _, done := localizer.texts[field]; done {
+			return
+		}
+		localizer.texts[field] = struct{}{}
+	}
+	*field = localizer.localizeWithFallback(*field, fallback)
+}
+
 func (localizer textLocalizer) localizeWithFallback(value string, fallback string) string {
 	localized := localizer.localizeRendererText(value, "")
 	if localized == value && fallback != "" {
@@ -475,7 +538,5 @@ func (localizer textLocalizer) localizeResourceGridPage(page *ResourceGridPage) 
 	if page.Card != nil {
 		localizer.localizeCardSchema(page.Card)
 	}
-	for key, value := range page.Text {
-		page.Text[key] = localizer.localizeRendererText(value, "")
-	}
+	localizer.localizeTextMap(&page.Text)
 }

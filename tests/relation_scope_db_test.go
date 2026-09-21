@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -88,7 +89,8 @@ func TestRelationScopeList_CanonicalizesIntegerIDAndQualifiesSourceColumn(t *tes
 		},
 		func(_ actions.ModuleAction) gin.HandlerFunc {
 			return func(c *gin.Context) {
-				ctx := icontext.SetUser(c.Request.Context(), &icontext.UserInfo{ID: 1, Role: "admin"})
+				ctx := context.WithValue(c.Request.Context(), icontext.LoggerContextKey, testLog)
+				ctx = icontext.SetUser(ctx, &icontext.UserInfo{ID: 1, Role: "admin"})
 				c.Request = c.Request.WithContext(ctx)
 				c.Next()
 			}
