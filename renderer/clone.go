@@ -539,6 +539,7 @@ func cloneMediaGalleryActions(v *MediaGalleryActions) *MediaGalleryActions {
 	cp.Recenter = cloneAction(v.Recenter)
 	cp.Crop = cloneAction(v.Crop)
 	cp.Remove = cloneAction(v.Remove)
+	cp.Open = cloneAction(v.Open)
 	return &cp
 }
 

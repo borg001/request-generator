@@ -413,6 +413,7 @@ func (localizer textLocalizer) localizeMediaActions(actions *MediaGalleryActions
 		localizer.localizeRendererAction(actions.Recenter)
 		localizer.localizeRendererAction(actions.Crop)
 		localizer.localizeRendererAction(actions.Remove)
+		localizer.localizeRendererAction(actions.Open)
 	}
 }
 

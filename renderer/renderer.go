@@ -2337,6 +2337,9 @@ type MediaGalleryActions struct {
 	// decision: for some profiles the two are one and the same.
 	SetAvatar *Action `json:"set_avatar,omitempty"`
 	SetCover  *Action `json:"set_cover,omitempty"`
+	// Open leads from one picture to the place that holds all of them - from
+	// the face a profile shows to its gallery.
+	Open *Action `json:"open,omitempty"`
 }
 
 type CollectionConfig struct {
