@@ -512,6 +512,14 @@ func CloneFieldPresentation(v *FieldPresentation) *FieldPresentation {
 	cp.RequiredIf = cloneCondition(v.RequiredIf)
 	cp.DisabledIf = cloneCondition(v.DisabledIf)
 	cp.ToneByValue = cloneSlice(v.ToneByValue)
+	if v.Suggest != nil {
+		suggest := *v.Suggest
+		suggest.Params = make(map[string]string, len(v.Suggest.Params))
+		for key, value := range v.Suggest.Params {
+			suggest.Params[key] = value
+		}
+		cp.Suggest = &suggest
+	}
 	return &cp
 }
 

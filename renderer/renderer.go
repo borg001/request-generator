@@ -1508,16 +1508,30 @@ type Media struct {
 	FallbackField string `json:"fallback_field,omitempty"`
 }
 
+// FieldSuggest names where a field's value can be proposed from the values of
+// other fields of the same form: an address asked with those values, and the
+// field of its answer that holds the proposal. A proposal fills the field while
+// the person has not written a value of their own; an answer without one
+// leaves the field to them.
+type FieldSuggest struct {
+	Endpoint string `json:"endpoint"`
+	// Params maps a query parameter to the form field whose value it carries.
+	Params     map[string]string `json:"params"`
+	ValueField string            `json:"value_field,omitempty"`
+}
+
 type FieldPresentation struct {
 	Renderer RendererKey `json:"renderer,omitempty"`
-	Variant  string      `json:"variant,omitempty"`
-	Style    string      `json:"style,omitempty"`
-	Icon     string      `json:"icon,omitempty"`
-	Size     MediaSize   `json:"size,omitempty"`
-	Ratio    MediaRatio  `json:"ratio,omitempty"`
-	Prefix   string      `json:"prefix,omitempty"`
-	Suffix   string      `json:"suffix,omitempty"`
-	Hint     string      `json:"hint,omitempty"`
+	// Suggest proposes the value from other fields of the form.
+	Suggest *FieldSuggest `json:"suggest,omitempty"`
+	Variant string        `json:"variant,omitempty"`
+	Style   string        `json:"style,omitempty"`
+	Icon    string        `json:"icon,omitempty"`
+	Size    MediaSize     `json:"size,omitempty"`
+	Ratio   MediaRatio    `json:"ratio,omitempty"`
+	Prefix  string        `json:"prefix,omitempty"`
+	Suffix  string        `json:"suffix,omitempty"`
+	Hint    string        `json:"hint,omitempty"`
 	// Placeholder is the empty-state copy shown inside the control. A rule the
 	// control already enforces - an accepted range, an expected format - belongs
 	// here rather than on a line of its own under the field.
