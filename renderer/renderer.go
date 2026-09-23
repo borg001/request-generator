@@ -1537,6 +1537,13 @@ type FieldPresentation struct {
 	// NoticeByValue tells the person, the moment they choose a value, what
 	// that choice brings with it.
 	NoticeByValue []FieldValueNotice `json:"notice_by_value,omitempty"`
+	// MinField and MaxField tie a number to another field of the same form:
+	// the two ends of one range. The upper end names its lower end in
+	// MinField and cannot be set below it; the lower end names its upper end
+	// in MaxField and cannot be set above it. The control holds a value
+	// inside that bound as it holds one inside its own accepted range.
+	MinField string `json:"min_field,omitempty"`
+	MaxField string `json:"max_field,omitempty"`
 }
 
 // FieldInputMode hints which virtual keyboard a text control should open.

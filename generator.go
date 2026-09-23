@@ -535,6 +535,7 @@ func (generator *Generator) fieldOptions(c *gin.Context, field fields.ModuleFiel
 		options[i].Badge = generator.Translate(lang, options[i].Badge)
 		options[i].Note = generator.Translate(lang, options[i].Note)
 		options[i].TrailingNote = generator.Translate(lang, options[i].TrailingNote)
+		options[i].Group = generator.Translate(lang, options[i].Group)
 	}
 	return options
 }

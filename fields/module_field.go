@@ -323,8 +323,12 @@ type ModuleFieldOptions struct {
 	// its corner, a figure on its trailing side with a note under it, and a
 	// line of emphasis under the description. They are words and figures the
 	// producer has already put together; the application only places them.
-	Badge        string            `json:"badge,omitempty"`
-	BadgeTone    string            `json:"badge_tone,omitempty"`
+	Badge     string `json:"badge,omitempty"`
+	BadgeTone string `json:"badge_tone,omitempty"`
+	// Group names the set an option belongs to in a long list - the ones
+	// most people pick, then the rest. The list heads each set where it
+	// begins; options with no group come first and read as the short list.
+	Group        string            `json:"group,omitempty"`
 	Trailing     string            `json:"trailing,omitempty"`
 	TrailingNote string            `json:"trailing_note,omitempty"`
 	Note         string            `json:"note,omitempty"`
