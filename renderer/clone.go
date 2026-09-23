@@ -898,6 +898,8 @@ func cloneCondition(v *Condition) *Condition {
 	cp.NotEmpty = clonePtr(v.NotEmpty)
 	cp.Truthy = clonePtr(v.Truthy)
 	cp.Falsy = clonePtr(v.Falsy)
+	cp.Future = clonePtr(v.Future)
+	cp.Past = clonePtr(v.Past)
 	cp.All = cloneConditions(v.All)
 	cp.Any = cloneConditions(v.Any)
 	cp.Not = cloneConditionValue(v.Not)

@@ -494,7 +494,9 @@ func hasCondition(condition *Condition) bool {
 		condition.Empty != nil ||
 		condition.NotEmpty != nil ||
 		condition.Truthy != nil ||
-		condition.Falsy != nil
+		condition.Falsy != nil ||
+		condition.Future != nil ||
+		condition.Past != nil
 	if hasDirectPredicate && condition.Path == "" {
 		return false
 	}
@@ -2886,12 +2888,16 @@ type ActionPresentation struct {
 	// ValueField names a record field whose value the action carries beside
 	// its label, the way a menu row shows the figure it leads to. ValueIcon is
 	// the mark in front of that figure.
-	ValueField string     `json:"value_field,omitempty"`
-	ValueIcon  string     `json:"value_icon,omitempty"`
-	Block      *bool      `json:"block,omitempty"`
-	VisibleIf  *Condition `json:"visible_if,omitempty"`
-	HiddenIf   *Condition `json:"hidden_if,omitempty"`
-	DisabledIf *Condition `json:"disabled_if,omitempty"`
+	ValueField string `json:"value_field,omitempty"`
+	// CountdownField names a record field holding a moment; the action shows
+	// the time left until it beside its label, the way ValueField shows a
+	// figure. It says nothing of when the action is shown - VisibleIf does.
+	CountdownField string     `json:"countdown_field,omitempty"`
+	ValueIcon      string     `json:"value_icon,omitempty"`
+	Block          *bool      `json:"block,omitempty"`
+	VisibleIf      *Condition `json:"visible_if,omitempty"`
+	HiddenIf       *Condition `json:"hidden_if,omitempty"`
+	DisabledIf     *Condition `json:"disabled_if,omitempty"`
 	// AttentionKey asks for the action to stand out until it is used once.
 	// The renderer remembers under this key that it was used, so the same key
 	// keeps quiet an action that already did its job.
@@ -3095,8 +3101,12 @@ func (list *PromptList) Validate() error {
 }
 
 type Confirm struct {
-	Title        string `json:"title,omitempty"`
-	Message      string `json:"message,omitempty"`
+	Title   string `json:"title,omitempty"`
+	Message string `json:"message,omitempty"`
+	// MessageField names a record field whose text is the question itself,
+	// when the question depends on the record - how many chances are left,
+	// what taking this one costs. Message is said when the field is empty.
+	MessageField string `json:"message_field,omitempty"`
 	CancelLabel  string `json:"cancel_label,omitempty"`
 	ConfirmLabel string `json:"confirm_label,omitempty"`
 }
@@ -3164,4 +3174,9 @@ type Condition struct {
 	All       []Condition   `json:"all,omitempty"`
 	Any       []Condition   `json:"any,omitempty"`
 	Not       interface{}   `json:"not,omitempty"`
+	// Future and Past read the value at Path as a moment and compare it with
+	// the reader's clock, so a condition can turn as time passes: a button
+	// that stands only while a window is open, one that comes once it closes.
+	Future *bool `json:"future,omitempty"`
+	Past   *bool `json:"past,omitempty"`
 }
