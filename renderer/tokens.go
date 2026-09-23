@@ -263,6 +263,9 @@ const (
 	RendererPrimaryRadio        RendererKey = "primary_radio"
 	RendererRecordSelect        RendererKey = "record_select"
 	RendererDateRange           RendererKey = "date_range"
+	// A choice of several drawn as one switch per option, for a short list
+	// of things each turned on or off on its own.
+	RendererSwitchList RendererKey = "switch_list"
 )
 
 type RecordSectionRenderer = RendererKey
@@ -324,11 +327,15 @@ const (
 	ActionPlacementBadge        ActionPlacement = "badge"
 	ActionPlacementHead         ActionPlacement = "head"
 	ActionPlacementMenu         ActionPlacement = "menu"
+	// In place of a workspace's composer: a command that has to be answered
+	// before anything can be written - unblocking the person - stands where
+	// the text would be typed, and the composer is not offered meanwhile.
+	ActionPlacementComposer ActionPlacement = "composer"
 )
 
 func (placement ActionPlacement) Valid() bool {
 	switch placement {
-	case "", ActionPlacementFull, ActionPlacementHalf, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu:
+	case "", ActionPlacementFull, ActionPlacementHalf, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu, ActionPlacementComposer:
 		return true
 	default:
 		return false
