@@ -266,6 +266,9 @@ const (
 	// A choice of several drawn as one switch per option, for a short list
 	// of things each turned on or off on its own.
 	RendererSwitchList RendererKey = "switch_list"
+	// A single choice between a few modes drawn as a strip of segments, the
+	// way a page's tabs are.
+	RendererSegmented RendererKey = "segmented"
 )
 
 type RecordSectionRenderer = RendererKey
