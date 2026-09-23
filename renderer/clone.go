@@ -443,6 +443,7 @@ func cloneFormSections(values []FormSection) []FormSection {
 		out[i].MediaActions = cloneMediaGalleryActions(v.MediaActions)
 		out[i].Prompts = clonePromptList(v.Prompts)
 		out[i].DateRange = cloneDateRangeConfig(v.DateRange)
+		out[i].VisibleIf = cloneCondition(v.VisibleIf)
 		out[i].Resource = cloneResource(v.Resource)
 		out[i].Load = cloneResourceLoad(v.Load)
 	}

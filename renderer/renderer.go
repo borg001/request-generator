@@ -1945,6 +1945,9 @@ type FormSection struct {
 	MediaPresets *MediaPresetsConfig `json:"media_presets,omitempty"`
 	Prompts      *PromptList         `json:"prompts,omitempty"`
 	DateRange    *DateRangeConfig    `json:"date_range,omitempty"`
+	// VisibleIf shows the section only while the record matches: a step that
+	// is done, or not yet open, is left out rather than shown empty.
+	VisibleIf *Condition `json:"visible_if,omitempty"`
 	// Resource declares another standard module action rendered inside this
 	// section. It stays server-side: Generator resolves it to Load per request.
 	Resource *Resource `json:"-"`

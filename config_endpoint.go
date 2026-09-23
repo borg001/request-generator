@@ -53,6 +53,9 @@ type ConfigNavigationEntry struct {
 	// now. The entry stays in the menu and says so instead of disappearing.
 	Locked     bool   `json:"locked,omitempty"`
 	LockReason string `json:"lock_reason,omitempty"`
+	// LockAction is the step that opens a closed destination - verification,
+	// a profile to finish - offered when the closed entry is chosen.
+	LockAction *renderer.Action `json:"lock_action,omitempty"`
 }
 
 type NavigationPageTarget struct {
@@ -85,6 +88,11 @@ type AccessTarget struct {
 // AccessGate answers whether a destination is closed to the current actor and
 // why. It is owned by the application: the generator only asks.
 type AccessGate func(c *gin.Context, target AccessTarget) (bool, string)
+
+// AccessGateAction names the step that opens a destination the access gate
+// closed, or nil when there is nothing the actor can do but wait. Its texts
+// are final: the application translates them.
+type AccessGateAction func(c *gin.Context, target AccessTarget) *renderer.Action
 
 // NavigationHidden answers whether a destination does not exist for the current
 // actor, so the menu leaves it out instead of showing it closed.
@@ -325,7 +333,11 @@ func (generator *Generator) buildNavigation(c *gin.Context, role string, lang lo
 				continue
 			}
 			if generator.AccessGate != nil {
-				configEntry.Locked, configEntry.LockReason = generator.AccessGate(c, AccessTarget{Kind: "navigation", ID: configEntry.ID, Path: configEntry.Path})
+				target := AccessTarget{Kind: "navigation", ID: configEntry.ID, Path: configEntry.Path}
+				configEntry.Locked, configEntry.LockReason = generator.AccessGate(c, target)
+				if configEntry.Locked && generator.AccessGateAction != nil {
+					configEntry.LockAction = generator.AccessGateAction(c, target)
+				}
 			}
 			result = append(result, configEntry)
 		}

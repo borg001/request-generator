@@ -46,6 +46,7 @@ type Generator struct {
 	// AccessGate lets the application close a destination for the current
 	// actor without removing it from the configuration.
 	AccessGate       AccessGate
+	AccessGateAction AccessGateAction
 	NavigationHidden NavigationHidden
 }
 
