@@ -328,7 +328,11 @@ type ModuleFieldOptions struct {
 	// Group names the set an option belongs to in a long list - the ones
 	// most people pick, then the rest. The list heads each set where it
 	// begins; options with no group come first and read as the short list.
-	Group        string            `json:"group,omitempty"`
+	Group string `json:"group,omitempty"`
+	// Exclusive marks an option that stands for all the others - "any", "no
+	// preference" - in a choice of several: picking it clears the rest, and
+	// picking any other option clears it.
+	Exclusive    bool              `json:"exclusive,omitempty"`
 	Trailing     string            `json:"trailing,omitempty"`
 	TrailingNote string            `json:"trailing_note,omitempty"`
 	Note         string            `json:"note,omitempty"`
