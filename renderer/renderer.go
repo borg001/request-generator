@@ -1459,9 +1459,13 @@ func (schema *CardSchema) Validate() error {
 }
 
 // CardEdgeAccent adds an opt-in visual line to the leading edge of a card.
-// Tone is an extensible presentation token interpreted by the consuming UI.
+// Tone is an extensible presentation token interpreted by the consuming UI;
+// it may bind a row value ("{{field}}"), and a row whose value is empty then
+// carries no accent. Wash also tints the card from that edge, for rows that
+// have to stand out from their neighbours rather than merely be marked.
 type CardEdgeAccent struct {
 	Tone ToneToken `json:"tone"`
+	Wash bool      `json:"wash,omitempty"`
 }
 
 // IconBinding resolves an icon and its visual tone from a row. IconField and
