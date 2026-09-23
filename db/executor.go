@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/darkrain/request-generator/actions"
@@ -53,4 +54,15 @@ type DBExecutor interface {
 	Delete(log *log.Entry, table pg.Table, where pg.BoolExpression, tc *TranslationContext) error
 	RawRequest(log *log.Entry, query string, params ...interface{}) (*sql.Rows, error)
 	RawDB() *sql.DB
+}
+
+// WithRequestContext binds generated reads when the executor supports it.
+// Existing third-party executors do not need to implement a new interface.
+func WithRequestContext(executor DBExecutor, ctx context.Context) DBExecutor {
+	if scoped, ok := executor.(interface {
+		WithContext(context.Context) DBExecutor
+	}); ok {
+		return scoped.WithContext(ctx)
+	}
+	return executor
 }

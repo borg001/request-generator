@@ -728,7 +728,7 @@ func (generator *Generator) actionList(module *BaseModule, action actions.ListMo
 
 		tc := generator.buildTranslationContext(module)
 
-		results, count, err := generator.db(module).List(
+		results, count, err := db.WithRequestContext(generator.db(module), c.Request.Context()).List(
 			l,
 			module.Table,
 			module.PrimaryKey,
@@ -1260,7 +1260,7 @@ func (generator *Generator) actionView(module *BaseModule, action actions.ViewMo
 
 		tc := generator.buildTranslationContext(module)
 
-		result, err := generator.db(module).View(l, module.Table, module.PrimaryKey, realFields, where, joins, tc)
+		result, err := db.WithRequestContext(generator.db(module), c.Request.Context()).View(l, module.Table, module.PrimaryKey, realFields, where, joins, tc)
 		if err != nil {
 			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
 			return
