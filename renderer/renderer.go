@@ -2900,7 +2900,10 @@ type ActionPresentation struct {
 	Block          *bool      `json:"block,omitempty"`
 	VisibleIf      *Condition `json:"visible_if,omitempty"`
 	HiddenIf       *Condition `json:"hidden_if,omitempty"`
-	DisabledIf     *Condition `json:"disabled_if,omitempty"`
+	// Screen keeps an action to one kind of screen: "desktop" leaves it out
+	// on a phone, "mobile" leaves it out on a wide screen. Empty is both.
+	Screen     string     `json:"screen,omitempty"`
+	DisabledIf *Condition `json:"disabled_if,omitempty"`
 	// AttentionKey asks for the action to stand out until it is used once.
 	// The renderer remembers under this key that it was used, so the same key
 	// keeps quiet an action that already did its job.
