@@ -4,6 +4,10 @@
 
 ### Added
 
+- **`WidgetSurface.PinnedRoutes`** — страницы, на которых виджет нельзя
+  закрыть и он виден, даже если его закрыли в другом месте (путь с `*` на
+  конце — префикс). JSON: `pinned_routes`.
+
 - Compact `renderer.Discovery` and `BaseModule.DiscoveryFunc` for config route
   capabilities without cloning page contents. Existing discovery/runtime hooks,
   validation and per-request access gates remain supported; wire format unchanged.

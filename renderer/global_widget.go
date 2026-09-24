@@ -118,6 +118,10 @@ type WidgetSurface struct {
 	// Badge binds to the widget summary record, so the consumer never has to
 	// infer a domain-specific counter.
 	Trigger *WidgetTrigger `json:"trigger,omitempty"`
+	// PinnedRoutes names the route paths on which the widget stays: it cannot
+	// be closed there and shows even after it was closed elsewhere. A path
+	// ending in "*" matches every route that starts with the rest.
+	PinnedRoutes []string `json:"pinned_routes,omitempty"`
 }
 
 // WidgetTrigger is a compact, typed shell control for a global widget. Label
