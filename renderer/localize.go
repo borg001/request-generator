@@ -272,6 +272,9 @@ func (localizer textLocalizer) localizeCardSchema(schema *CardSchema) {
 		localizer.localizeRendererAction(&schema.Actions[i])
 	}
 	localizer.localizeStatusBinding(schema.Status)
+	if schema.Segments != nil {
+		localizer.localizeTextField(&schema.Segments.Label, "")
+	}
 }
 
 // The status chip names its states the same way a badge does, so its words go

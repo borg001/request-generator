@@ -1433,6 +1433,19 @@ type CardSchema struct {
 	Badges           []Badge          `json:"badges,omitempty"`
 	Stats            []Badge          `json:"stats,omitempty"`
 	Actions          []Action         `json:"actions,omitempty"`
+	// Segments lays a row of equal marks along the bottom edge of the card.
+	Segments *CardSegments `json:"segments,omitempty"`
+}
+
+// CardSegments draws one mark per item of a list field along the bottom edge
+// of a card, each in the tone ToneMap gives its value: how many tries are
+// spent and how many are left, say. A value named in Pulse is the one under
+// way. Label says what the marks count, for a reader that cannot see them.
+type CardSegments struct {
+	Field   string            `json:"field"`
+	ToneMap map[string]string `json:"tone_map,omitempty"`
+	Pulse   []string          `json:"pulse,omitempty"`
+	Label   string            `json:"label,omitempty"`
 }
 
 func (schema *CardSchema) Validate() error {
@@ -1443,6 +1456,9 @@ func (schema *CardSchema) Validate() error {
 	case "", CardActionLayoutInline, CardActionLayoutEdgeFill, CardActionLayoutMenu:
 	default:
 		return fmt.Errorf("renderer.CardSchema: unsupported action layout %q", schema.ActionLayout)
+	}
+	if schema.Segments != nil && schema.Segments.Field == "" {
+		return fmt.Errorf("renderer.CardSchema: segments field is required")
 	}
 	if schema.LeadingAccent != nil && schema.LeadingAccent.Tone == "" {
 		return fmt.Errorf("renderer.CardSchema: leading_accent tone is required")
