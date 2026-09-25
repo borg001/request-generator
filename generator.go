@@ -562,6 +562,11 @@ func validateListFilterAvailability(page *renderer.ListPage, filters map[string]
 			return err
 		}
 	}
+	for field := range page.Filters.Defaults {
+		if _, ok := filters[field]; !ok {
+			return fmt.Errorf("renderer filter default %q is not available for the current request", field)
+		}
+	}
 	return nil
 }
 

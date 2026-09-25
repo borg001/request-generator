@@ -962,6 +962,10 @@ type Filters struct {
 	Text              *FilterText          `json:"text,omitempty"`
 	RangePresets      []FilterRangePresets `json:"range_presets,omitempty"`
 	DateRange         *DateRangeToolbar    `json:"date_range,omitempty"`
+	// Defaults are the filters a list opens with when the reader has none of
+	// their own: a starting point shown in the controls that the reader can
+	// change or clear, not a condition they cannot remove.
+	Defaults map[string]interface{} `json:"defaults,omitempty"`
 }
 
 // FilterPresentation selects a reusable arrangement of the controls declared

@@ -183,6 +183,7 @@ func cloneFilters(v *Filters) *Filters {
 	cp.Text = clonePtr(v.Text)
 	cp.RangePresets = cloneFilterRangePresets(v.RangePresets)
 	cp.DateRange = cloneDateRangeToolbar(v.DateRange)
+	cp.Defaults = cloneMap(v.Defaults)
 	return &cp
 }
 
@@ -196,6 +197,7 @@ func cloneFilterGroups(values []FilterGroup) []FilterGroup {
 		out[i].Fields = cloneSlice(value.Fields)
 		out[i].Sections = cloneFilterGroupSections(value.Sections)
 		out[i].Items = cloneFilterGroupItems(value.Items)
+		out[i].VisibleIf = cloneCondition(value.VisibleIf)
 	}
 	return out
 }
