@@ -51,6 +51,13 @@ func LocalizeGlobalWidget(widget GlobalWidget, resolve TextResolver) GlobalWidge
 			localizer := textLocalizer{resolve: resolve}
 			localizer.localizeTextFields(&confirm.Title, &confirm.Message, &confirm.CancelLabel, &confirm.ConfirmLabel)
 		}
+		if label := localized.Workspace.Commands[index].MultiLabel; label != "" {
+			localized.Workspace.Commands[index].MultiLabel = resolve(label, "")
+		}
+		if confirm := localized.Workspace.Commands[index].MultiConfirm; confirm != nil {
+			localizer := textLocalizer{resolve: resolve}
+			localizer.localizeTextFields(&confirm.Title, &confirm.Message, &confirm.CancelLabel, &confirm.ConfirmLabel)
+		}
 	}
 	localizer := textLocalizer{resolve: resolve}
 	for index := range localized.Workspace.ComposerActions {
@@ -402,6 +409,16 @@ type WorkspaceCommand struct {
 	// The renderer offers a selection of rows and runs the command for each of
 	// them; a row the command is not visible for is not offered.
 	Multi bool `json:"multi,omitempty"`
+	// MultiLabel names the command on the bar of several picked rows, where
+	// the bar already says what is picked: "Delete" beside "Chats selected",
+	// not "Delete chat". A producer translation key; empty keeps Label.
+	MultiLabel string `json:"multi_label,omitempty"`
+	// MultiConfirm is asked once before the command runs for several rows.
+	// Its texts may carry {count}, the number of rows, and
+	// {plural:form|form|...}, the form that agrees with that number by the
+	// page language's plural rules (one|other, or one|few|many). Without it
+	// the single-row Confirm is asked.
+	MultiConfirm *Confirm `json:"multi_confirm,omitempty"`
 	Resource
 	Refresh []WorkspaceRefreshTarget `json:"refresh"`
 }
@@ -436,6 +453,14 @@ func (command WorkspaceCommand) Validate() error {
 	if command.Confirm != nil {
 		if err := command.Confirm.Validate(); err != nil {
 			return fmt.Errorf("confirm: %w", err)
+		}
+	}
+	if !command.Multi && (command.MultiLabel != "" || command.MultiConfirm != nil) {
+		return fmt.Errorf("multi_label and multi_confirm need a multi command")
+	}
+	if command.MultiConfirm != nil {
+		if err := command.MultiConfirm.Validate(); err != nil {
+			return fmt.Errorf("multi_confirm: %w", err)
 		}
 	}
 	if err := command.Resource.Validate("resource"); err != nil {
@@ -980,6 +1005,10 @@ func cloneWorkspaceCommands(values []WorkspaceCommand) []WorkspaceCommand {
 		if value.Confirm != nil {
 			confirm := *value.Confirm
 			cloned[index].Confirm = &confirm
+		}
+		if value.MultiConfirm != nil {
+			confirm := *value.MultiConfirm
+			cloned[index].MultiConfirm = &confirm
 		}
 		cloned[index].Bindings = cloneRequestBindings(value.Bindings)
 		cloned[index].Refresh = cloneSlice(value.Refresh)
