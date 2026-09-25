@@ -376,6 +376,7 @@ func (component DisplayComponent) Validate() error {
 			ComponentDisplayActionRows:    DisplayActions,
 			ComponentDisplayFlowSteps:     DisplayStatusTimeline,
 			ComponentDisplayCheckList:     DisplayStatusTimeline,
+			ComponentDisplayProgress:      DisplayStatusTimeline,
 			ComponentDisplayPlanCard:      DisplayDataList,
 			ComponentDisplayFlowCard:      DisplayStatusTimeline,
 			ComponentDisplayCardRail:      DisplayRecordCarousel,
@@ -2892,9 +2893,14 @@ type RecordSection struct {
 	LayoutSlot  LayoutSlotToken       `json:"layout_slot,omitempty"`
 	Order       int                   `json:"order,omitempty"`
 	MobileOrder int                   `json:"mobile_order,omitempty"`
-	Block       *Block                `json:"block,omitempty"`
-	Stack       *Stack                `json:"stack,omitempty"`
-	Components  []DisplayComponent    `json:"components,omitempty"`
+	// MobileFold folds the section on a phone under a head of that name,
+	// together with every section that names the same fold: the page opens
+	// on what matters most and the rest is a tap away. The head stands where
+	// the first folded section stands. A wide screen shows every section.
+	MobileFold string             `json:"mobile_fold,omitempty"`
+	Block      *Block             `json:"block,omitempty"`
+	Stack      *Stack             `json:"stack,omitempty"`
+	Components []DisplayComponent `json:"components,omitempty"`
 }
 
 type ResourceGridPage struct {

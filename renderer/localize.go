@@ -473,7 +473,7 @@ func (localizer textLocalizer) localizeRecordPage(page *RecordPage) {
 	}
 	for i := range page.Sections {
 		section := &page.Sections[i]
-		localizer.localizeTextFields(&section.Title, &section.TitleFallback, &section.Subtitle, &section.LoadingLabel, &section.RetryLabel)
+		localizer.localizeTextFields(&section.Title, &section.TitleFallback, &section.Subtitle, &section.LoadingLabel, &section.RetryLabel, &section.MobileFold)
 		localizer.localizeBlock(section.Block)
 		for j := range section.Components {
 			component := &section.Components[j]

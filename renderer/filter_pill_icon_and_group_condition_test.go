@@ -66,3 +66,30 @@ func TestFilterDisclosureIsServedAndLocalized(t *testing.T) {
 		t.Fatal("localizing a page changed the page it was given")
 	}
 }
+
+// A record section can fold on a phone under a head named in the reader's
+// language.
+func TestRecordSectionMobileFoldIsLocalized(t *testing.T) {
+	page := Universal{Record: &RecordPage{Sections: []RecordSection{{ID: "location", MobileFold: "deals.more_details"}}}}
+	raw, err := json.Marshal(page.Record.Sections[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"mobile_fold":"deals.more_details"`) {
+		t.Fatalf("section JSON %s lacks the fold", raw)
+	}
+	localized := Localize(page, func(value, _ string) string { return "localized:" + value })
+	if got := localized.Record.Sections[0].MobileFold; got != "localized:deals.more_details" {
+		t.Fatalf("fold %q is not localized", got)
+	}
+}
+
+// A run of steps can read as progress, and only a status timeline can.
+func TestStatusTimelineReadsAsProgress(t *testing.T) {
+	if err := (DisplayComponent{ID: "stages", Type: DisplayStatusTimeline, DisplayType: ComponentDisplayProgress, Fields: []string{"stages"}}).Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if err := (DisplayComponent{ID: "money", Type: DisplayDataList, DisplayType: ComponentDisplayProgress}).Validate(); err == nil {
+		t.Fatal("progress belongs to the status timeline")
+	}
+}

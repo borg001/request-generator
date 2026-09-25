@@ -434,6 +434,10 @@ const (
 	// and a line each, one under the other - where nothing happens in order
 	// and the rail between the marks would say there is a sequence.
 	ComponentDisplayCheckList ComponentDisplayType = "check_list"
+	// A run of steps can read on a phone as one line of marks with the step
+	// it has reached named under it, where every step on its own line would
+	// stand taller than the screen. A wide screen still reads every step.
+	ComponentDisplayProgress ComponentDisplayType = "progress"
 	// A plan is read as a card of its own: the kind it is, its name, the price
 	// as one large figure with what it buys beside it, the line that says how
 	// it is paid, what it includes and leaves out, and the one step across the
