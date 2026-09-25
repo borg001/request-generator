@@ -518,6 +518,22 @@ func validateModuleVirtualFilterOptionsSources(module *BaseModule) error {
 	return nil
 }
 
+// fieldPresentationFor is how the field is shown for this request: its own
+// presentation unless the module adjusts it per request.
+func fieldPresentationFor(c *gin.Context, field fields.ModuleField) *renderer.FieldPresentation {
+	if field.PresentationFunc == nil {
+		return field.Presentation
+	}
+	base := renderer.FieldPresentation{}
+	if field.Presentation != nil {
+		base = *field.Presentation
+	}
+	if presentation := field.PresentationFunc(c, base); presentation != nil {
+		return presentation
+	}
+	return field.Presentation
+}
+
 func (generator *Generator) fieldOptions(c *gin.Context, field fields.ModuleField, role string, lang locale.Lang) []fields.ModuleFieldOptions {
 	options := make([]fields.ModuleFieldOptions, 0, len(field.Options))
 	options = append(options, field.Options...)
@@ -1151,7 +1167,7 @@ func (generator *Generator) actionDefrec(module *BaseModule) func(c *gin.Context
 			field.Title = generator.Translate(lang, field.Title)
 			field.Options = optionItems
 			field.Check = checkItems
-			field.Presentation = generator.localizeFieldPresentation(lang, field.Presentation)
+			field.Presentation = generator.localizeFieldPresentation(lang, fieldPresentationFor(c, field))
 			field.Media = generator.localizeFieldMedia(lang, field.Media, nil)
 
 			if field.RoleSection != nil {
@@ -1306,8 +1322,8 @@ func (generator *Generator) actionView(module *BaseModule, action actions.ViewMo
 				"edit":      containsColumn(editableColumns, field.Column),
 			}
 
-			if field.Presentation != nil {
-				fieldItem["presentation"] = generator.localizeFieldPresentation(lang, field.Presentation)
+			if presentation := fieldPresentationFor(c, field); presentation != nil {
+				fieldItem["presentation"] = generator.localizeFieldPresentation(lang, presentation)
 			}
 			if field.Media != nil {
 				fieldItem["media"] = generator.localizeFieldMedia(lang, field.Media, value)

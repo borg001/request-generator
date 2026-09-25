@@ -220,6 +220,12 @@ type ModuleField struct {
 	// organisation has a title - and only the module knows which is being
 	// edited. It returns a translation key; an empty result keeps Title.
 	TitleFunc func(c *gin.Context) string `json:"-"`
+	// PresentationFunc shows the field for the request at hand, when how it
+	// is shown depends on who fills the form in - a limit set per role, say.
+	// It gets a copy of Presentation (the zero value when there is none) and
+	// returns what to show; nil keeps Presentation. The copy shares the maps
+	// and slices of Presentation, so only its plain values may change.
+	PresentationFunc func(c *gin.Context, presentation renderer.FieldPresentation) *renderer.FieldPresentation `json:"-"`
 }
 
 // ColumnName returns the database column name from the Jet column.
