@@ -1015,6 +1015,11 @@ type FilterGroup struct {
 	Fields       []string                `json:"fields,omitempty"`
 	Sections     []FilterGroupSection    `json:"sections,omitempty"`
 	Items        []FilterGroupItem       `json:"items,omitempty"`
+	// VisibleIf offers the group only while the list is asked for what the
+	// group narrows: the filters of one kind of result stand in the row only
+	// while a pill has switched the list to that kind. The condition reads
+	// the active filters as "filters.<key>".
+	VisibleIf *Condition `json:"visible_if,omitempty"`
 }
 
 // FilterGroupSection describes an ordered typed section inside a presented group.
@@ -1073,6 +1078,9 @@ type FilterPill struct {
 	Dot           bool                   `json:"dot,omitempty"`
 	Presentation  FilterPillPresentation `json:"presentation,omitempty"`
 	Tone          string                 `json:"tone,omitempty"`
+	// Icon marks a pill that switches the list to a kind of result of its
+	// own, set apart from the plain choices beside it.
+	Icon string `json:"icon,omitempty"`
 }
 
 // FilterPillPresentation describes the visual control for an existing filter
@@ -2019,6 +2027,13 @@ type DateRangeConfig struct {
 	Months        []string `json:"months,omitempty"`
 	FormatMonths  []string `json:"format_months,omitempty"`
 	Weekdays      []string `json:"weekdays,omitempty"`
+	// OpenEndField names a flag the form sends for a range with no end. The
+	// reader switches the end off, the picker then takes a start alone, and
+	// the end field goes out empty. OpenEndLabel and OpenEndHint name the
+	// localized switch and the line under it.
+	OpenEndField string `json:"open_end_field,omitempty"`
+	OpenEndLabel string `json:"open_end_label,omitempty"`
+	OpenEndHint  string `json:"open_end_hint,omitempty"`
 }
 
 func validateDateRangeSection(page *FormPage, section FormSection) error {
@@ -2043,7 +2058,17 @@ func validateDateRangeSection(page *FormPage, section FormSection) error {
 	for _, field := range section.Fields {
 		sectionFields[field] = struct{}{}
 	}
-	for _, field := range []string{config.StartField, config.EndField} {
+	dateFields := []string{config.StartField, config.EndField}
+	if config.OpenEndField != "" {
+		if config.OpenEndField == config.StartField || config.OpenEndField == config.EndField {
+			return fmt.Errorf("renderer.Universal: date range section %q open end field must differ from its dates", section.ID)
+		}
+		if config.OpenEndLabel == "" {
+			return fmt.Errorf("renderer.Universal: date range section %q open end field needs a label", section.ID)
+		}
+		dateFields = append(dateFields, config.OpenEndField)
+	}
+	for _, field := range dateFields {
 		if _, ok := pageFields[field]; !ok {
 			return fmt.Errorf("renderer.Universal: date range section %q field %q is not declared by the form", section.ID, field)
 		}

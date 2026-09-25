@@ -348,7 +348,7 @@ func (localizer textLocalizer) localizeDateRange(config *DateRangeConfig) {
 	if config == nil {
 		return
 	}
-	localizer.localizeTextFields(&config.Placeholder, &config.ApplyLabel, &config.CancelLabel, &config.StartLabel, &config.EndLabel, &config.EmptyLabel, &config.DialogLabel, &config.PreviousLabel, &config.NextLabel, &config.MinDaysLabel)
+	localizer.localizeTextFields(&config.Placeholder, &config.ApplyLabel, &config.CancelLabel, &config.StartLabel, &config.EndLabel, &config.EmptyLabel, &config.DialogLabel, &config.PreviousLabel, &config.NextLabel, &config.MinDaysLabel, &config.OpenEndLabel, &config.OpenEndHint)
 	for index := range config.Months {
 		localizer.localizeTextField(&config.Months[index], "")
 	}
