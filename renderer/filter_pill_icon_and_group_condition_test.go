@@ -47,3 +47,22 @@ func TestFilterDefaultsAreServedAndCloned(t *testing.T) {
 		t.Fatal("a clone shares its defaults with the original")
 	}
 }
+
+// Filters can fold under one heading, named in the reader's language.
+func TestFilterDisclosureIsServedAndLocalized(t *testing.T) {
+	page := Universal{List: &ListPage{Filters: &Filters{Enabled: true, Disclosure: &FilterDisclosure{Label: "filters.title"}}}}
+	raw, err := json.Marshal(page.List.Filters)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"disclosure":{"label":"filters.title"}`) {
+		t.Fatalf("filters JSON %s lacks the disclosure", raw)
+	}
+	localized := Localize(page, func(value, _ string) string { return "localized:" + value })
+	if got := localized.List.Filters.Disclosure.Label; got != "localized:filters.title" {
+		t.Fatalf("disclosure label %q is not localized", got)
+	}
+	if page.List.Filters.Disclosure.Label != "filters.title" {
+		t.Fatal("localizing a page changed the page it was given")
+	}
+}

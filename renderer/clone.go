@@ -184,6 +184,7 @@ func cloneFilters(v *Filters) *Filters {
 	cp.RangePresets = cloneFilterRangePresets(v.RangePresets)
 	cp.DateRange = cloneDateRangeToolbar(v.DateRange)
 	cp.Defaults = cloneMap(v.Defaults)
+	cp.Disclosure = clonePtr(v.Disclosure)
 	return &cp
 }
 

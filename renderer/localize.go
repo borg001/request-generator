@@ -155,6 +155,9 @@ func (localizer textLocalizer) localizeListPage(page *ListPage) {
 		localizer.localizeFilterGroups(page.Filters.Groups)
 		localizer.localizeFilterText(page.Filters.Text)
 		localizer.localizeFilterRangePresets(page.Filters.RangePresets)
+		if page.Filters.Disclosure != nil {
+			localizer.localizeTextFields(&page.Filters.Disclosure.Label)
+		}
 	}
 	if page.Summary != nil {
 		localizer.localizeTextFields(&page.Summary.Title, &page.Summary.TitleFallback)

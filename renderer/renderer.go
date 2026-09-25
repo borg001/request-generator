@@ -966,6 +966,16 @@ type Filters struct {
 	// their own: a starting point shown in the controls that the reader can
 	// change or clear, not a condition they cannot remove.
 	Defaults map[string]interface{} `json:"defaults,omitempty"`
+	// Disclosure folds every filter control under one heading, so a list whose
+	// filters are many opens on its records rather than on rows of controls.
+	Disclosure *FilterDisclosure `json:"disclosure,omitempty"`
+}
+
+// FilterDisclosure names the heading the filters fold under and says
+// whether it starts open.
+type FilterDisclosure struct {
+	Label string `json:"label"`
+	Open  bool   `json:"open,omitempty"`
 }
 
 // FilterPresentation selects a reusable arrangement of the controls declared
