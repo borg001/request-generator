@@ -88,6 +88,15 @@ func (generator *Generator) validateWorkspaceWidget(id string, workspace rendere
 	if _, _, err := generator.validateResource(id, "detail", workspace.Detail); err != nil {
 		return err
 	}
+	if workspace.Threads != nil {
+		_, threadsAction, err := generator.validateResource(id, "threads", workspace.Threads.Resource)
+		if err != nil {
+			return err
+		}
+		if threadsAction.Action() != actions.ModuleActionNameList {
+			return fmt.Errorf("widget %q threads action must be list", id)
+		}
+	}
 	if workspace.Summary != nil {
 		_, summaryAction, err := generator.validateResource(id, "summary", *workspace.Summary)
 		if err != nil {
@@ -768,7 +777,54 @@ func (generator *Generator) workspaceSelectionScope(widgetID string, workspace r
 		}
 		selectionFields[field.Name()] = fieldType
 	}
-	return widgetSelectionScope{Field: workspace.Selection.Field, Type: selectionType, Fields: selectionFields}, nil
+	selection := widgetSelectionScope{Field: workspace.Selection.Field, Type: selectionType, Fields: selectionFields}
+	if err := generator.addWorkspaceThreadFields(widgetID, workspace, &selection, nil); err != nil {
+		return widgetSelectionScope{}, err
+	}
+	return selection, nil
+}
+
+// addWorkspaceThreadFields lets bindings read the open thread: its fields are
+// merged over the selected row, so they join the selection scope. A field the
+// thread shares with the selected row keeps the thread's type.
+func (generator *Generator) addWorkspaceThreadFields(widgetID string, workspace renderer.WorkspaceWidget, selection *widgetSelectionScope, c *gin.Context) error {
+	if workspace.Threads == nil {
+		return nil
+	}
+	threadsModule, ok := generator.moduleByName(workspace.Threads.Resource.Module)
+	if !ok {
+		return fmt.Errorf("widget %q threads resource references unknown module %q", widgetID, workspace.Threads.Resource.Module)
+	}
+	threadsAction, ok := findModuleAction(threadsModule, workspace.Threads.Resource.Action)
+	if !ok {
+		return fmt.Errorf("widget %q threads resource %q references unknown action %q", widgetID, workspace.Threads.Resource.Module, workspace.Threads.Resource.Action)
+	}
+	list, ok := widgetListAction(threadsAction)
+	if !ok {
+		return fmt.Errorf("widget %q threads action must be list", widgetID)
+	}
+	moduleFields := threadsModule.Fields
+	if c != nil {
+		moduleFields = nil
+		for _, column := range list.GetColumns(c) {
+			if field := threadsModule.GetFieldByColumn(column); field != nil {
+				moduleFields = append(moduleFields, *field)
+			}
+		}
+	}
+	returned := false
+	for _, field := range moduleFields {
+		fieldType, err := runtimeTypedValueType(field)
+		if err != nil {
+			continue
+		}
+		selection.Fields[field.Name()] = fieldType
+		returned = returned || field.Name() == workspace.Threads.Field
+	}
+	if !returned {
+		return fmt.Errorf("widget %q thread field %q is not returned by threads action", widgetID, workspace.Threads.Field)
+	}
+	return nil
 }
 
 func (generator *Generator) workspaceSelectionScopeForContext(c *gin.Context, widgetID string, workspace renderer.WorkspaceWidget) (widgetSelectionScope, error) {
@@ -802,6 +858,9 @@ func (generator *Generator) workspaceSelectionScopeForContext(c *gin.Context, wi
 	}
 	if _, exists := selection.Fields[selection.Field]; !exists {
 		return widgetSelectionScope{}, fmt.Errorf("widget %q selection field %q is not returned by master action", widgetID, selection.Field)
+	}
+	if err := generator.addWorkspaceThreadFields(widgetID, workspace, &selection, c); err != nil {
+		return widgetSelectionScope{}, err
 	}
 	return selection, nil
 }

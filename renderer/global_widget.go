@@ -70,6 +70,18 @@ func LocalizeGlobalWidget(widget GlobalWidget, resolve TextResolver) GlobalWidge
 		localizer.localizeBadge(&localized.Workspace.ComposerBadges[index])
 	}
 	localized.Workspace.RetryLabel = resolve(localized.Workspace.RetryLabel, "")
+	if localized.Workspace.Threads != nil {
+		for index := range localized.Workspace.Threads.Groups {
+			group := &localized.Workspace.Threads.Groups[index]
+			group.Label = resolve(group.Label, "")
+			if group.EmptyLabel != "" {
+				group.EmptyLabel = resolve(group.EmptyLabel, "")
+			}
+		}
+		for index := range localized.Workspace.Threads.Badges {
+			localizer.localizeBadge(&localized.Workspace.Threads.Badges[index])
+		}
+	}
 	return localized
 }
 
@@ -199,12 +211,16 @@ func (surface WidgetSurface) Validate() error {
 // WorkspaceWidget composes server resources into a generic master-detail
 // shell surface. Resources remain normal module actions.
 type WorkspaceWidget struct {
-	Selection       WorkspaceSelection `json:"selection"`
-	Mode            WorkspaceMode      `json:"mode,omitempty"`
-	Summary         *Resource          `json:"summary,omitempty"`
-	Master          Resource           `json:"master"`
-	Detail          Resource           `json:"detail"`
-	ComposerActions []Action           `json:"composer_actions,omitempty"`
+	Selection WorkspaceSelection `json:"selection"`
+	Mode      WorkspaceMode      `json:"mode,omitempty"`
+	Summary   *Resource          `json:"summary,omitempty"`
+	Master    Resource           `json:"master"`
+	// Threads split the selected master row into the records it holds. When
+	// present, the detail, the composer and the commands read the thread that
+	// is open: its fields are merged over the selected row.
+	Threads         *WorkspaceThreads `json:"threads,omitempty"`
+	Detail          Resource          `json:"detail"`
+	ComposerActions []Action          `json:"composer_actions,omitempty"`
 	// ComposerBadges stand above the composer and say what the conversation is
 	// about right now - the state of the work it belongs to and who it names -
 	// so the reader can act on it without leaving the thread.
@@ -238,7 +254,14 @@ func (workspace WorkspaceWidget) Validate() error {
 	if err := workspace.Detail.Validate("detail"); err != nil {
 		return err
 	}
-	if !workspace.Detail.hasSelectionBinding(workspace.Selection.Field) {
+	if workspace.Threads != nil {
+		if err := workspace.Threads.Validate(workspace.Selection.Field); err != nil {
+			return fmt.Errorf("threads: %w", err)
+		}
+		if !workspace.Detail.hasSelectionBinding(workspace.Threads.Field) {
+			return fmt.Errorf("detail must bind thread field %q", workspace.Threads.Field)
+		}
+	} else if !workspace.Detail.hasSelectionBinding(workspace.Selection.Field) {
 		return fmt.Errorf("detail must bind selection field %q", workspace.Selection.Field)
 	}
 	seenComposerActions := make(map[string]struct{}, len(workspace.ComposerActions))
@@ -331,6 +354,89 @@ func (mode WorkspaceMode) Validate() error {
 	default:
 		return fmt.Errorf("unsupported value %q", mode)
 	}
+}
+
+// WorkspaceThreads lists the threads held under one master row and sorts them
+// into the groups the reader switches between.
+type WorkspaceThreads struct {
+	// Resource is a list action. Its bindings read the selected master row.
+	Resource Resource `json:"resource"`
+	// Field identifies a thread row. The detail binds it.
+	Field string `json:"field"`
+	// GroupField names the group a thread row belongs to.
+	GroupField string                 `json:"group_field"`
+	Groups     []WorkspaceThreadGroup `json:"groups"`
+	// LabelField and SubtitleField name a thread in the chooser of a group
+	// that holds several; AccentField colours a thread that is still live and
+	// CountField carries its unread count.
+	LabelField    string `json:"label_field,omitempty"`
+	SubtitleField string `json:"subtitle_field,omitempty"`
+	AccentField   string `json:"accent_field,omitempty"`
+	CountField    string `json:"count_field,omitempty"`
+	// A thread asked for by its own key - one opened from somewhere else - is
+	// found through the master row that holds it: LookupField lists the
+	// keys a master row holds, LookupFilter asks the master list for the row
+	// holding one key.
+	LookupField  string `json:"lookup_field,omitempty"`
+	LookupFilter string `json:"lookup_filter,omitempty"`
+	// Badges stand inside a thread's chip and read the thread row: the state
+	// of the work the thread belongs to, in that state's colour.
+	Badges []Badge `json:"badges,omitempty"`
+}
+
+// WorkspaceThreadGroup is one kind of thread held under the selected row.
+type WorkspaceThreadGroup struct {
+	Value string `json:"value"`
+	// Label is a producer translation key.
+	Label string `json:"label"`
+	Icon  string `json:"icon,omitempty"`
+	// Single groups hold one thread and show no chooser.
+	Single bool `json:"single,omitempty"`
+	// EmptyLabel says why the group has nothing to open. A translation key.
+	EmptyLabel string     `json:"empty_label,omitempty"`
+	VisibleIf  *Condition `json:"visible_if,omitempty"`
+}
+
+func (threads WorkspaceThreads) Validate(selectionField string) error {
+	if err := threads.Resource.Validate("threads"); err != nil {
+		return err
+	}
+	if !threads.Resource.hasSelectionBinding(selectionField) {
+		return fmt.Errorf("resource must bind selection field %q", selectionField)
+	}
+	if threads.Field == "" {
+		return fmt.Errorf("field is required")
+	}
+	if threads.GroupField == "" {
+		return fmt.Errorf("group field is required")
+	}
+	if len(threads.Groups) == 0 {
+		return fmt.Errorf("groups are required")
+	}
+	seen := make(map[string]struct{}, len(threads.Groups))
+	for index, group := range threads.Groups {
+		if group.Value == "" {
+			return fmt.Errorf("group %d: value is required", index)
+		}
+		if group.Label == "" {
+			return fmt.Errorf("group %q: label is required", group.Value)
+		}
+		if _, exists := seen[group.Value]; exists {
+			return fmt.Errorf("group %q is duplicated", group.Value)
+		}
+		seen[group.Value] = struct{}{}
+	}
+	seenBadges := make(map[string]struct{}, len(threads.Badges))
+	for index, badge := range threads.Badges {
+		if badge.ID == "" {
+			return fmt.Errorf("badge %d: id is required", index)
+		}
+		if _, exists := seenBadges[badge.ID]; exists {
+			return fmt.Errorf("badge %q is duplicated", badge.ID)
+		}
+		seenBadges[badge.ID] = struct{}{}
+	}
+	return nil
 }
 
 type WorkspaceSelection struct {
@@ -937,6 +1043,7 @@ type WidgetLoad struct {
 	Resource *ResourceLoad          `json:"resource,omitempty"`
 	Summary  *ResourceLoad          `json:"summary,omitempty"`
 	Master   *ResourceLoad          `json:"master,omitempty"`
+	Threads  *ResourceLoad          `json:"threads,omitempty"`
 	Detail   *ResourceLoad          `json:"detail,omitempty"`
 	Commands []WorkspaceCommandLoad `json:"commands,omitempty"`
 }
@@ -952,6 +1059,13 @@ func cloneWorkspaceWidget(value *WorkspaceWidget) *WorkspaceWidget {
 		cloned.Summary = &summary
 	}
 	cloned.Master.Bindings = cloneRequestBindings(value.Master.Bindings)
+	if value.Threads != nil {
+		threads := *value.Threads
+		threads.Resource.Bindings = cloneRequestBindings(value.Threads.Resource.Bindings)
+		threads.Groups = append([]WorkspaceThreadGroup(nil), value.Threads.Groups...)
+		threads.Badges = cloneBadges(value.Threads.Badges)
+		cloned.Threads = &threads
+	}
 	cloned.Detail.Bindings = cloneRequestBindings(value.Detail.Bindings)
 	cloned.ComposerActions = cloneActions(value.ComposerActions)
 	// The badges were left sharing their slice, and with it the maps inside it.
@@ -1126,6 +1240,7 @@ func (value WidgetLoad) Clone() WidgetLoad {
 		Resource: cloneResourceLoad(value.Resource),
 		Summary:  cloneResourceLoad(value.Summary),
 		Master:   cloneResourceLoad(value.Master),
+		Threads:  cloneResourceLoad(value.Threads),
 		Detail:   cloneResourceLoad(value.Detail),
 		Commands: cloneWorkspaceCommandLoads(value.Commands),
 	}

@@ -334,11 +334,15 @@ const (
 	// before anything can be written - unblocking the person - stands where
 	// the text would be typed, and the composer is not offered meanwhile.
 	ActionPlacementComposer ActionPlacement = "composer"
+	// Beside the open thread of a workspace whose rows hold threads: a
+	// command about the one thread being read - removing it - stands in the
+	// strip that chooses threads, and acts on the thread that is open.
+	ActionPlacementThread ActionPlacement = "thread"
 )
 
 func (placement ActionPlacement) Valid() bool {
 	switch placement {
-	case "", ActionPlacementFull, ActionPlacementHalf, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu, ActionPlacementComposer:
+	case "", ActionPlacementFull, ActionPlacementHalf, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu, ActionPlacementComposer, ActionPlacementThread:
 		return true
 	default:
 		return false
