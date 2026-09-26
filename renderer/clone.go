@@ -704,6 +704,12 @@ func cloneDisplayComponents(values []DisplayComponent) []DisplayComponent {
 		out[i].Block = cloneBlock(v.Block)
 		out[i].Preview = cloneDisplayPreview(v.Preview)
 		out[i].Prompts = clonePromptList(v.Prompts)
+		// The words of a component's filter, selection and media are
+		// translated in place: shared with the producer's page, the first
+		// reader's language stayed in it for every reader after.
+		out[i].MediaItems = cloneMediaGalleryItems(v.MediaItems)
+		out[i].ItemFilter = cloneItemFilter(v.ItemFilter)
+		out[i].ItemSelection = cloneItemSelection(v.ItemSelection)
 		if v.MediaLabels != nil {
 			labels := *v.MediaLabels
 			out[i].MediaLabels = &labels
@@ -728,6 +734,23 @@ func cloneDisplayComponents(values []DisplayComponent) []DisplayComponent {
 		}
 	}
 	return out
+}
+
+func cloneItemFilter(value *ItemFilter) *ItemFilter {
+	if value == nil {
+		return nil
+	}
+	cp := *value
+	cp.Options = cloneSlice(value.Options)
+	return &cp
+}
+
+func cloneItemSelection(value *ItemSelection) *ItemSelection {
+	if value == nil {
+		return nil
+	}
+	cp := *value
+	return &cp
 }
 
 func cloneDisplayPreview(value *DisplayPreview) *DisplayPreview {
