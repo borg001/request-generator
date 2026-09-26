@@ -419,6 +419,7 @@ func cloneBadges(values []Badge) []Badge {
 		out[i].VisibleIf = cloneCondition(v.VisibleIf)
 		out[i].Then = cloneBadgeState(v.Then)
 		out[i].Else = cloneBadgeState(v.Else)
+		out[i].Action = cloneAction(v.Action)
 	}
 	return out
 }

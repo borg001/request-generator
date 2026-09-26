@@ -1798,6 +1798,9 @@ type Badge struct {
 	VisibleIf *Condition        `json:"visible_if,omitempty"`
 	Then      *BadgeState       `json:"then,omitempty"`
 	Else      *BadgeState       `json:"else,omitempty"`
+	// Action is what pressing the badge does, when it does anything: a badge
+	// that names a case can open it.
+	Action *Action `json:"action,omitempty"`
 }
 
 type BadgeState struct {

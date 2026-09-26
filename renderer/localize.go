@@ -304,6 +304,7 @@ func (localizer textLocalizer) localizeBadge(badge *Badge) {
 		localizer.localizeTextField(&badge.Else.Label, badge.Else.LabelKey)
 		badge.Else.LabelKey = ""
 	}
+	localizer.localizeRendererAction(badge.Action)
 }
 
 func (localizer textLocalizer) localizeFormPage(page *FormPage) {
