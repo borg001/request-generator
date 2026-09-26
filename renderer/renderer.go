@@ -354,6 +354,9 @@ func (component DisplayComponent) Validate() error {
 	if component.Type == DisplayStatusTimeline && len(component.Fields) != 1 {
 		return fmt.Errorf("status timeline requires exactly one field")
 	}
+	if component.MobileColumns < 0 || component.MobileColumns > 4 {
+		return fmt.Errorf("display component %q: mobile columns must be between 0 and 4", component.ID)
+	}
 	if component.Type == DisplayPrompts && (component.Prompts == nil || len(component.Prompts.Items) == 0) {
 		return fmt.Errorf("display component %q: prompts require at least one item", component.ID)
 	}
@@ -2702,6 +2705,14 @@ type DisplayComponent struct {
 	Columns         int                  `json:"columns,omitempty"`
 	ReadonlyColumns int                  `json:"readonly_columns,omitempty"`
 	DisplayType     ComponentDisplayType `json:"display_type,omitempty"`
+	// MobileColumns is how many cells a row holds on a phone. Zero leaves it
+	// to the renderer, which folds a wide grid to two; three small figures
+	// read better side by side than two over one.
+	MobileColumns int `json:"mobile_columns,omitempty"`
+	// FormLook reads a filled-in form back the way it was filled: captions
+	// in the tone of the set, values in the colour of text, as in the form's
+	// own fields. A cell with a tone of its own keeps it.
+	FormLook bool `json:"form_look,omitempty"`
 	// ItemFilter narrows a set of items inside the component that shows them:
 	// a search over what they are called, and a choice among the states they
 	// declare. It is the producer that says which field holds the state and
