@@ -1665,7 +1665,70 @@ type FieldMediaConfig struct {
 	Labels  *MediaGalleryLabels  `json:"labels,omitempty"`
 	Actions *MediaGalleryActions `json:"actions,omitempty"`
 	Cropper *MediaCropperConfig  `json:"cropper,omitempty"`
+	Capture *MediaCaptureConfig  `json:"capture,omitempty"`
 }
+
+// MediaCaptureConfig lets a field take its picture or its video with the
+// device camera, inside an outline that shows where the person has to be,
+// besides picking a file. What the outline is for is the producer's to say;
+// the consumer only draws it. A screen with no camera at hand is also offered
+// to carry on on a phone.
+type MediaCaptureConfig struct {
+	Kind   MediaCaptureKind   `json:"kind"`
+	Frame  MediaCaptureFrame  `json:"frame,omitempty"`
+	Facing MediaCaptureFacing `json:"facing,omitempty"`
+	// TimerSeconds counts down before a photo is taken, so a phone standing on
+	// its own can take a full-length picture. Zero offers no timer.
+	TimerSeconds int `json:"timer_seconds,omitempty"`
+	// A video can be stopped only after MinDurationSeconds and stops by itself
+	// at MaxDurationSeconds. Zero leaves that end open.
+	MinDurationSeconds int `json:"min_duration_seconds,omitempty"`
+	MaxDurationSeconds int `json:"max_duration_seconds,omitempty"`
+
+	OpenLabel   string `json:"open_label"`
+	Title       string `json:"title"`
+	Hint        string `json:"hint,omitempty"`
+	ShootLabel  string `json:"shoot_label"`
+	StopLabel   string `json:"stop_label,omitempty"`
+	RetakeLabel string `json:"retake_label"`
+	UseLabel    string `json:"use_label"`
+	SwitchLabel string `json:"switch_label,omitempty"`
+	TimerLabel  string `json:"timer_label,omitempty"`
+	CloseLabel  string `json:"close_label"`
+	DeniedText  string `json:"denied_text,omitempty"`
+	// The offer to carry on on a phone: its button, the window it opens and
+	// the words beside the code. Without PhoneLabel it is not made.
+	PhoneLabel string `json:"phone_label,omitempty"`
+	PhoneTitle string `json:"phone_title,omitempty"`
+	PhoneText  string `json:"phone_text,omitempty"`
+}
+
+// MediaCaptureKind is what the camera takes.
+type MediaCaptureKind string
+
+const (
+	MediaCaptureKindPhoto MediaCaptureKind = "photo"
+	MediaCaptureKindVideo MediaCaptureKind = "video"
+)
+
+// MediaCaptureFrame is the outline laid over the camera: an oval for a face,
+// a standing figure for a full-length picture, or none.
+type MediaCaptureFrame string
+
+const (
+	MediaCaptureFrameNone MediaCaptureFrame = ""
+	MediaCaptureFrameFace MediaCaptureFrame = "face"
+	MediaCaptureFrameBody MediaCaptureFrame = "body"
+)
+
+// MediaCaptureFacing is the camera the capture opens with; the person can
+// switch to the other one.
+type MediaCaptureFacing string
+
+const (
+	MediaCaptureFacingUser        MediaCaptureFacing = "user"
+	MediaCaptureFacingEnvironment MediaCaptureFacing = "environment"
+)
 
 type MediaCropperConfig struct {
 	Title        string                     `json:"title,omitempty"`
@@ -1701,7 +1764,56 @@ func (config *FieldMediaConfig) Validate() error {
 			return err
 		}
 	}
-	return config.Cropper.Validate()
+	if err := config.Cropper.Validate(); err != nil {
+		return err
+	}
+	return config.Capture.Validate()
+}
+
+func (capture *MediaCaptureConfig) Validate() error {
+	if capture == nil {
+		return nil
+	}
+	switch capture.Kind {
+	case MediaCaptureKindPhoto, MediaCaptureKindVideo:
+	default:
+		return fmt.Errorf("renderer.MediaCaptureConfig: unsupported kind %q", capture.Kind)
+	}
+	switch capture.Frame {
+	case MediaCaptureFrameNone, MediaCaptureFrameFace, MediaCaptureFrameBody:
+	default:
+		return fmt.Errorf("renderer.MediaCaptureConfig: unsupported frame %q", capture.Frame)
+	}
+	switch capture.Facing {
+	case "", MediaCaptureFacingUser, MediaCaptureFacingEnvironment:
+	default:
+		return fmt.Errorf("renderer.MediaCaptureConfig: unsupported facing %q", capture.Facing)
+	}
+	if capture.TimerSeconds < 0 || capture.MinDurationSeconds < 0 || capture.MaxDurationSeconds < 0 {
+		return fmt.Errorf("renderer.MediaCaptureConfig: durations cannot be negative")
+	}
+	if capture.MaxDurationSeconds > 0 && capture.MinDurationSeconds > capture.MaxDurationSeconds {
+		return fmt.Errorf("renderer.MediaCaptureConfig: min duration exceeds max duration")
+	}
+	for _, label := range []struct {
+		name  string
+		value string
+	}{
+		{name: "open label", value: capture.OpenLabel},
+		{name: "title", value: capture.Title},
+		{name: "shoot label", value: capture.ShootLabel},
+		{name: "retake label", value: capture.RetakeLabel},
+		{name: "use label", value: capture.UseLabel},
+		{name: "close label", value: capture.CloseLabel},
+	} {
+		if strings.TrimSpace(label.value) == "" {
+			return fmt.Errorf("renderer.MediaCaptureConfig: %s is required", label.name)
+		}
+	}
+	if capture.Kind == MediaCaptureKindVideo && strings.TrimSpace(capture.StopLabel) == "" {
+		return fmt.Errorf("renderer.MediaCaptureConfig: stop label is required for a video")
+	}
+	return nil
 }
 
 func (cropper *MediaCropperConfig) Validate() error {

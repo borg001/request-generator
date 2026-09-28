@@ -125,6 +125,7 @@ func LocalizeFieldMedia(value *FieldMediaConfig, resolve TextResolver) *FieldMed
 	localizer.localizeMediaActions(localized.Actions)
 	localizer.localizeMediaGalleryItem(localized.Item)
 	localizer.localizeMediaCropper(localized.Cropper)
+	localizer.localizeMediaCapture(localized.Capture)
 	return localized
 }
 
@@ -445,6 +446,13 @@ func (localizer textLocalizer) localizeMediaCropper(cropper *MediaCropperConfig)
 		return
 	}
 	localizer.localizeTextFields(&cropper.Title, &cropper.Subtitle, &cropper.Hint, &cropper.ChooseLabel, &cropper.CancelLabel, &cropper.ConfirmLabel, &cropper.CloseLabel)
+}
+
+func (localizer textLocalizer) localizeMediaCapture(capture *MediaCaptureConfig) {
+	if capture == nil {
+		return
+	}
+	localizer.localizeTextFields(&capture.OpenLabel, &capture.Title, &capture.Hint, &capture.ShootLabel, &capture.StopLabel, &capture.RetakeLabel, &capture.UseLabel, &capture.SwitchLabel, &capture.TimerLabel, &capture.CloseLabel, &capture.DeniedText, &capture.PhoneLabel, &capture.PhoneTitle, &capture.PhoneText)
 }
 
 func (localizer textLocalizer) localizeCollection(collection *CollectionConfig) {

@@ -1286,6 +1286,7 @@ frontend использует обычный список. `query` содерж�
 | `media.actions` | `MediaGalleryActions`: стандартные действия `upload`, `link`, `update`, `reorder`, `recenter`, `crop`, `remove`, `set_avatar`, `set_cover`. `update` получает текущий `MediaGalleryItem` как scope и подходит, в том числе, для изменения `visibility` и `hide_face`. `set_avatar` и `set_cover` тоже получают текущий `MediaGalleryItem` как scope. |
 | `media.actions.set_avatar`, `media.actions.set_cover` | Typed `Action`: сделать существующую картинку аватаром или обложкой. Что из двух предлагать, решает producer. |
 | `media.cropper` | Optional typed config универсального image cropper. |
+| `media.capture` | Optional typed config съёмки камерой устройства: фото или видео с рамкой (`face`, `body`), таймер, предложение продолжить на телефоне. См. «Media Capture». |
 
 Producer задает labels как translation keys. Request-generator возвращает во внешнем JSON уже локализованные labels согласно `lang`/`Accept-Language`.
 
@@ -1385,6 +1386,39 @@ Media: &renderer.FieldMediaConfig{
 			MIMEType: renderer.MediaCropperOutputMIMETypeJPEG,
             Quality:  0.92,
         },
+    },
+},
+```
+
+### Media Capture
+
+`media.capture` добавляет полю съёмку камерой устройства рядом с выбором файла.
+Снятое consumer отдаёт в тот же `upload`, что и выбранный файл, поэтому значение
+поля не меняется: это по-прежнему ссылка на загруженный файл. Что означает
+рамка, решает producer; consumer её только рисует.
+
+| Поле | Значение |
+|------|----------|
+| `kind` | `photo` или `video`. Обязательно. |
+| `frame` | Контур поверх камеры: `face` — овал для лица, `body` — фигура в полный рост; пусто — без контура. |
+| `facing` | С какой камеры начать: `user` (фронтальная) или `environment` (задняя); переключить может сам человек. |
+| `timer_seconds` | Отсчёт перед снимком, чтобы телефон на подставке снял в полный рост. `0` — без таймера. |
+| `min_duration_seconds`, `max_duration_seconds` | Видео нельзя остановить раньше минимума и оно останавливается само на максимуме. `0` — без ограничения. |
+| `open_label`, `title`, `shoot_label`, `retake_label`, `use_label`, `close_label` | Обязательные translation keys: кнопка в поле, заголовок камеры, спуск, «переснять», «использовать», «закрыть». |
+| `stop_label` | Обязателен для `video`: остановить запись. |
+| `hint`, `switch_label`, `timer_label`, `denied_text` | Необязательные: подсказка над рамкой, смена камеры, таймер, текст, если камера недоступна или запрещена. |
+| `phone_label`, `phone_title`, `phone_text` | Предложение продолжить на телефоне: кнопка, окно с QR-кодом текущей страницы и текст рядом. Без `phone_label` не показывается. |
+
+Некорректный capture generator отклоняет при запуске.
+
+```go
+Media: &renderer.FieldMediaConfig{
+    Upload: &renderer.MediaUploadConfig{Accept: "image/jpeg,image/png,image/webp"},
+    Capture: &renderer.MediaCaptureConfig{
+        Kind: renderer.MediaCaptureKindPhoto, Frame: renderer.MediaCaptureFrameFace, Facing: renderer.MediaCaptureFacingUser,
+        OpenLabel: "items.capture.open", Title: "items.capture.face_title", Hint: "items.capture.face_hint",
+        ShootLabel: "items.capture.shoot", RetakeLabel: "items.capture.retake", UseLabel: "items.capture.use",
+        CloseLabel: "ui.close", PhoneLabel: "items.capture.phone",
     },
 },
 ```
