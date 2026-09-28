@@ -1062,8 +1062,10 @@ type WorkspaceCommandInputLoad struct {
 // WorkspaceMasterVariant is a list of the master that the pill Key=Val
 // switches to. Unfold names the field of a row that lists the threads it
 // holds, each with its id, title, avatar, status, unread_count,
-// last_message_time and preview: a row with one thread opens it, a row with
-// more unfolds into them.
+// last_message_time, preview and path (where the face of the person leads):
+// a row with one thread opens it, a row with more unfolds into them. A
+// thread opened from a row is one talk: the row names it, and there is no
+// other thread beside it to switch to.
 type WorkspaceMasterVariant struct {
 	Key    string   `json:"key"`
 	Val    string   `json:"val"`
