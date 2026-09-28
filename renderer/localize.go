@@ -279,6 +279,9 @@ func (localizer textLocalizer) localizeCardSchema(schema *CardSchema) {
 	if schema.Segments != nil {
 		localizer.localizeTextField(&schema.Segments.Label, "")
 	}
+	if schema.Chips != nil {
+		localizer.localizeTextField(&schema.Chips.Label, "")
+	}
 }
 
 // The status chip names its states the same way a badge does, so its words go

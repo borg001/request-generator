@@ -1461,6 +1461,22 @@ type CardSchema struct {
 	Actions          []Action         `json:"actions,omitempty"`
 	// Segments lays a row of equal marks along the bottom edge of the card.
 	Segments *CardSegments `json:"segments,omitempty"`
+	Chips    *CardChips    `json:"chips,omitempty"`
+}
+
+// CardChips is a set of short values on a line of their own under the
+// subtitle - the countries a profile works in, say - read as one group: the
+// first chip carries the icon, the rest continue it. The card shows
+// MaxVisible of them (fewer where it is narrow) and names the others by their
+// count, which opens the whole set on a hover or a press.
+type CardChips struct {
+	// Field holds the values: a list of words, or a JSON text of one.
+	Field      string `json:"field"`
+	Icon       string `json:"icon,omitempty"`
+	Tone       string `json:"tone,omitempty"`
+	MaxVisible int    `json:"max_visible,omitempty"`
+	// Label names the set for a screen reader and heads the list of all.
+	Label string `json:"label,omitempty"`
 }
 
 // CardSegments draws one mark per item of a list field along the bottom edge
@@ -1485,6 +1501,12 @@ func (schema *CardSchema) Validate() error {
 	}
 	if schema.Segments != nil && schema.Segments.Field == "" {
 		return fmt.Errorf("renderer.CardSchema: segments field is required")
+	}
+	if schema.Chips != nil && schema.Chips.Field == "" {
+		return fmt.Errorf("renderer.CardSchema: chips field is required")
+	}
+	if schema.Chips != nil && schema.Chips.MaxVisible < 0 {
+		return fmt.Errorf("renderer.CardSchema: chips max_visible cannot be negative")
 	}
 	if schema.LeadingAccent != nil && schema.LeadingAccent.Tone == "" {
 		return fmt.Errorf("renderer.CardSchema: leading_accent tone is required")

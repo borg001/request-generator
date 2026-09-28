@@ -332,6 +332,7 @@ func cloneCardSchema(v *CardSchema) *CardSchema {
 	cp := *v
 	cp.LeadingAccent = cloneCardEdgeAccent(v.LeadingAccent)
 	cp.Segments = cloneCardSegments(v.Segments)
+	cp.Chips = clonePtr(v.Chips)
 	cp.Media = cloneMedia(v.Media)
 	cp.Icon = cloneIconBinding(v.Icon)
 	cp.Title = cloneTextBinding(v.Title)
