@@ -1700,7 +1700,9 @@ type MediaCaptureConfig struct {
 	Frame  MediaCaptureFrame  `json:"frame,omitempty"`
 	Facing MediaCaptureFacing `json:"facing,omitempty"`
 	// TimerSeconds counts down before a photo is taken, so a phone standing on
-	// its own can take a full-length picture. Zero offers no timer.
+	// its own can take a full-length picture; the person can switch it off.
+	// Before a video it always counts down once the recording is asked for.
+	// Zero offers no timer.
 	TimerSeconds int `json:"timer_seconds,omitempty"`
 	// A video can be stopped only after MinDurationSeconds and stops by itself
 	// at MaxDurationSeconds. Zero leaves that end open.
@@ -1727,8 +1729,15 @@ type MediaCaptureConfig struct {
 	// outline and the hint change as the recording runs, and a field that takes
 	// a file draws the same steps as a moving picture beside its drop zone.
 	Steps []MediaCaptureStep `json:"steps,omitempty"`
-	// StepLabel names the step counter, e.g. "Step".
-	StepLabel string `json:"step_label,omitempty"`
+	// StepLabel names the step counter, e.g. "Step". NextStepLabel introduces
+	// the step that comes next, shown shortly before it starts, e.g. "Next".
+	StepLabel     string `json:"step_label,omitempty"`
+	NextStepLabel string `json:"next_step_label,omitempty"`
+	// DoneTitle and DoneText are said over what was taken, before it is kept
+	// or taken again, e.g. "Well done. Watch the video and retake it if
+	// needed."
+	DoneTitle string `json:"done_title,omitempty"`
+	DoneText  string `json:"done_text,omitempty"`
 	// The ask before the camera opens: what it is for and the button that
 	// lets the browser ask for it. Without PermissionLabel the camera opens at
 	// once. RetryLabel asks again after a refusal.
@@ -1740,18 +1749,19 @@ type MediaCaptureConfig struct {
 
 // MediaCaptureStep is one thing a recording has to show, for so many seconds.
 type MediaCaptureStep struct {
-	Frame   MediaCaptureFrame `json:"frame,omitempty"`
-	Prop    MediaCaptureProp  `json:"prop,omitempty"`
-	Hint    string            `json:"hint"`
-	Seconds int               `json:"seconds"`
+	Frame MediaCaptureFrame `json:"frame,omitempty"`
+	// Props is what the person does besides standing in the outline, one
+	// thing or several at once: holds up a sheet and speaks.
+	Props   []MediaCaptureProp `json:"props,omitempty"`
+	Hint    string             `json:"hint"`
+	Seconds int                `json:"seconds"`
 }
 
-// MediaCaptureProp is what the person does in a step besides standing in the
-// outline: holds up a sheet, or speaks.
+// MediaCaptureProp is one thing the person does in a step besides standing in
+// the outline: holds up a sheet, or speaks.
 type MediaCaptureProp string
 
 const (
-	MediaCapturePropNone   MediaCaptureProp = ""
 	MediaCapturePropSign   MediaCaptureProp = "sign"
 	MediaCapturePropSpeech MediaCaptureProp = "speech"
 )
@@ -1872,10 +1882,12 @@ func (capture *MediaCaptureConfig) Validate() error {
 		default:
 			return fmt.Errorf("renderer.MediaCaptureConfig: step %d has unsupported frame %q", index+1, step.Frame)
 		}
-		switch step.Prop {
-		case MediaCapturePropNone, MediaCapturePropSign, MediaCapturePropSpeech:
-		default:
-			return fmt.Errorf("renderer.MediaCaptureConfig: step %d has unsupported prop %q", index+1, step.Prop)
+		for _, prop := range step.Props {
+			switch prop {
+			case MediaCapturePropSign, MediaCapturePropSpeech:
+			default:
+				return fmt.Errorf("renderer.MediaCaptureConfig: step %d has unsupported prop %q", index+1, prop)
+			}
 		}
 		if strings.TrimSpace(step.Hint) == "" || step.Seconds <= 0 {
 			return fmt.Errorf("renderer.MediaCaptureConfig: step %d needs a hint and its seconds", index+1)

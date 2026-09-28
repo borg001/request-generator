@@ -564,7 +564,11 @@ func cloneMediaCapture(v *MediaCaptureConfig) *MediaCaptureConfig {
 	}
 	cp := *v
 	if v.Steps != nil {
-		cp.Steps = append([]MediaCaptureStep(nil), v.Steps...)
+		cp.Steps = make([]MediaCaptureStep, len(v.Steps))
+		for index, step := range v.Steps {
+			step.Props = append([]MediaCaptureProp(nil), step.Props...)
+			cp.Steps[index] = step
+		}
 	}
 	return &cp
 }
