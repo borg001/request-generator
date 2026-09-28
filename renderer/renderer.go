@@ -1723,7 +1723,31 @@ type MediaCaptureConfig struct {
 	PhoneLabel string `json:"phone_label,omitempty"`
 	PhoneTitle string `json:"phone_title,omitempty"`
 	PhoneText  string `json:"phone_text,omitempty"`
+	// Steps lead a video through what it has to show, one after another: the
+	// outline and the hint change as the recording runs, and a field that takes
+	// a file draws the same steps as a moving picture beside its drop zone.
+	Steps []MediaCaptureStep `json:"steps,omitempty"`
+	// StepLabel names the step counter, e.g. "Step".
+	StepLabel string `json:"step_label,omitempty"`
 }
+
+// MediaCaptureStep is one thing a recording has to show, for so many seconds.
+type MediaCaptureStep struct {
+	Frame   MediaCaptureFrame `json:"frame,omitempty"`
+	Prop    MediaCaptureProp  `json:"prop,omitempty"`
+	Hint    string            `json:"hint"`
+	Seconds int               `json:"seconds"`
+}
+
+// MediaCaptureProp is what the person does in a step besides standing in the
+// outline: holds up a sheet, or speaks.
+type MediaCaptureProp string
+
+const (
+	MediaCapturePropNone   MediaCaptureProp = ""
+	MediaCapturePropSign   MediaCaptureProp = "sign"
+	MediaCapturePropSpeech MediaCaptureProp = "speech"
+)
 
 // MediaCaptureKind is what the camera takes.
 type MediaCaptureKind string
@@ -1834,6 +1858,21 @@ func (capture *MediaCaptureConfig) Validate() error {
 	}
 	if capture.Kind == MediaCaptureKindVideo && strings.TrimSpace(capture.StopLabel) == "" {
 		return fmt.Errorf("renderer.MediaCaptureConfig: stop label is required for a video")
+	}
+	for index, step := range capture.Steps {
+		switch step.Frame {
+		case MediaCaptureFrameNone, MediaCaptureFrameFace, MediaCaptureFrameBody:
+		default:
+			return fmt.Errorf("renderer.MediaCaptureConfig: step %d has unsupported frame %q", index+1, step.Frame)
+		}
+		switch step.Prop {
+		case MediaCapturePropNone, MediaCapturePropSign, MediaCapturePropSpeech:
+		default:
+			return fmt.Errorf("renderer.MediaCaptureConfig: step %d has unsupported prop %q", index+1, step.Prop)
+		}
+		if strings.TrimSpace(step.Hint) == "" || step.Seconds <= 0 {
+			return fmt.Errorf("renderer.MediaCaptureConfig: step %d needs a hint and its seconds", index+1)
+		}
 	}
 	return nil
 }

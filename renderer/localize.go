@@ -455,7 +455,10 @@ func (localizer textLocalizer) localizeMediaCapture(capture *MediaCaptureConfig)
 	if capture == nil {
 		return
 	}
-	localizer.localizeTextFields(&capture.OpenLabel, &capture.Title, &capture.Hint, &capture.ShootLabel, &capture.StopLabel, &capture.RetakeLabel, &capture.UseLabel, &capture.SwitchLabel, &capture.TimerLabel, &capture.CloseLabel, &capture.DeniedText, &capture.PhoneLabel, &capture.PhoneTitle, &capture.PhoneText)
+	localizer.localizeTextFields(&capture.OpenLabel, &capture.Title, &capture.Hint, &capture.ShootLabel, &capture.StopLabel, &capture.RetakeLabel, &capture.UseLabel, &capture.SwitchLabel, &capture.TimerLabel, &capture.CloseLabel, &capture.DeniedText, &capture.PhoneLabel, &capture.PhoneTitle, &capture.PhoneText, &capture.StepLabel)
+	for index := range capture.Steps {
+		localizer.localizeTextFields(&capture.Steps[index].Hint)
+	}
 }
 
 func (localizer textLocalizer) localizeCollection(collection *CollectionConfig) {

@@ -79,3 +79,32 @@ func TestFieldMediaCarriesItsCapture(t *testing.T) {
 	require.Equal(t, "T:capture.phone_text", localized.Capture.PhoneText)
 	require.Equal(t, "capture.open", media.Capture.OpenLabel)
 }
+
+// A video led through steps says what each one shows and for how long; a copy
+// of the media does not share them, and their hints reach the reader
+// translated.
+func TestMediaCaptureSteps(t *testing.T) {
+	capture := validMediaCapture()
+	capture.Kind, capture.StopLabel, capture.StepLabel = MediaCaptureKindVideo, "capture.stop", "capture.step"
+	capture.Steps = []MediaCaptureStep{
+		{Frame: MediaCaptureFrameFace, Hint: "capture.close", Seconds: 4},
+		{Frame: MediaCaptureFrameBody, Prop: MediaCapturePropSign, Hint: "capture.sign", Seconds: 4},
+		{Frame: MediaCaptureFrameBody, Prop: MediaCapturePropSpeech, Hint: "capture.nick", Seconds: 3},
+	}
+	require.NoError(t, capture.Validate())
+
+	media := &FieldMediaConfig{Capture: capture}
+	copied := CloneFieldMediaConfig(media)
+	copied.Capture.Steps[0].Hint = "changed"
+	require.Equal(t, "capture.close", media.Capture.Steps[0].Hint)
+
+	localized := LocalizeFieldMedia(media, func(value, _ string) string { return "T:" + value })
+	require.Equal(t, "T:capture.sign", localized.Capture.Steps[1].Hint)
+	require.Equal(t, "T:capture.step", localized.Capture.StepLabel)
+	require.Equal(t, "capture.sign", media.Capture.Steps[1].Hint)
+
+	capture.Steps[1].Prop = "dance"
+	require.EqualError(t, capture.Validate(), `renderer.MediaCaptureConfig: step 2 has unsupported prop "dance"`)
+	capture.Steps[1].Prop, capture.Steps[2].Seconds = MediaCapturePropSign, 0
+	require.EqualError(t, capture.Validate(), "renderer.MediaCaptureConfig: step 3 needs a hint and its seconds")
+}

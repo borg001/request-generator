@@ -554,7 +554,18 @@ func CloneFieldMediaConfig(v *FieldMediaConfig) *FieldMediaConfig {
 	cp.Labels = clonePtr(v.Labels)
 	cp.Actions = cloneMediaGalleryActions(v.Actions)
 	cp.Cropper = clonePtr(v.Cropper)
-	cp.Capture = clonePtr(v.Capture)
+	cp.Capture = cloneMediaCapture(v.Capture)
+	return &cp
+}
+
+func cloneMediaCapture(v *MediaCaptureConfig) *MediaCaptureConfig {
+	if v == nil {
+		return nil
+	}
+	cp := *v
+	if v.Steps != nil {
+		cp.Steps = append([]MediaCaptureStep(nil), v.Steps...)
+	}
 	return &cp
 }
 
