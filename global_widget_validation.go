@@ -81,6 +81,18 @@ func (generator *Generator) validateWorkspaceWidget(id string, workspace rendere
 	if masterAction.Action() != actions.ModuleActionNameList {
 		return fmt.Errorf("widget %q master action must be list", id)
 	}
+	for _, variant := range workspace.MasterVariants {
+		variantModule, variantAction, err := generator.validateResource(id, "master variant", variant.Master)
+		if err != nil {
+			return err
+		}
+		if variantAction.Action() != actions.ModuleActionNameList {
+			return fmt.Errorf("widget %q master variant %s=%s action must be list", id, variant.Key, variant.Val)
+		}
+		if variantModule.GetField(workspace.Selection.Field) == nil {
+			return fmt.Errorf("widget %q master variant %s=%s does not define selection field %q", id, variant.Key, variant.Val, workspace.Selection.Field)
+		}
+	}
 	selection, err := generator.workspaceSelectionScope(id, workspace)
 	if err != nil {
 		return err

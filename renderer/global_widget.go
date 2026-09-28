@@ -215,6 +215,12 @@ type WorkspaceWidget struct {
 	Mode      WorkspaceMode      `json:"mode,omitempty"`
 	Summary   *Resource          `json:"summary,omitempty"`
 	Master    Resource           `json:"master"`
+	// MasterVariants are lists of the master of their own that a pill of the
+	// master switches to: with that pill on, the rows are what the pill is
+	// about - the orders or the tours themselves rather than the people - and
+	// a row holding several threads unfolds into them. A variant's rows carry
+	// the selection field too, so what is open is read the same way.
+	MasterVariants []WorkspaceMasterVariant `json:"master_variants,omitempty"`
 	// Threads split the selected master row into the records it holds. When
 	// present, the detail, the composer and the commands read the thread that
 	// is open: its fields are merged over the selected row.
@@ -245,6 +251,20 @@ func (workspace WorkspaceWidget) Validate() error {
 	}
 	if err := workspace.Master.Validate("master"); err != nil {
 		return err
+	}
+	seenVariants := make(map[string]struct{}, len(workspace.MasterVariants))
+	for index, variant := range workspace.MasterVariants {
+		if variant.Key == "" {
+			return fmt.Errorf("master variant %d: key is required", index)
+		}
+		if err := variant.Master.Validate(fmt.Sprintf("master variant %d", index)); err != nil {
+			return err
+		}
+		pill := variant.Key + "=" + variant.Val
+		if _, exists := seenVariants[pill]; exists {
+			return fmt.Errorf("master variant %q is duplicated", pill)
+		}
+		seenVariants[pill] = struct{}{}
 	}
 	if workspace.Summary != nil {
 		if err := workspace.Summary.Validate("summary"); err != nil {
@@ -1039,13 +1059,34 @@ type WorkspaceCommandInputLoad struct {
 	Definition ResourceLoad `json:"definition"`
 }
 
+// WorkspaceMasterVariant is a list of the master that the pill Key=Val
+// switches to. Unfold names the field of a row that lists the threads it
+// holds, each with its id, title, avatar, status, unread_count,
+// last_message_time and preview: a row with one thread opens it, a row with
+// more unfolds into them.
+type WorkspaceMasterVariant struct {
+	Key    string   `json:"key"`
+	Val    string   `json:"val"`
+	Master Resource `json:"master"`
+	Unfold string   `json:"unfold,omitempty"`
+}
+
+// WorkspaceMasterVariantLoad is how a variant's list is asked for.
+type WorkspaceMasterVariantLoad struct {
+	Key    string       `json:"key"`
+	Val    string       `json:"val"`
+	Master ResourceLoad `json:"master"`
+}
+
 type WidgetLoad struct {
-	Resource *ResourceLoad          `json:"resource,omitempty"`
-	Summary  *ResourceLoad          `json:"summary,omitempty"`
-	Master   *ResourceLoad          `json:"master,omitempty"`
-	Threads  *ResourceLoad          `json:"threads,omitempty"`
-	Detail   *ResourceLoad          `json:"detail,omitempty"`
-	Commands []WorkspaceCommandLoad `json:"commands,omitempty"`
+	Resource *ResourceLoad `json:"resource,omitempty"`
+	Summary  *ResourceLoad `json:"summary,omitempty"`
+	Master   *ResourceLoad `json:"master,omitempty"`
+	// MasterVariants are the lists a pill of the master switches to.
+	MasterVariants []WorkspaceMasterVariantLoad `json:"master_variants,omitempty"`
+	Threads        *ResourceLoad                `json:"threads,omitempty"`
+	Detail         *ResourceLoad                `json:"detail,omitempty"`
+	Commands       []WorkspaceCommandLoad       `json:"commands,omitempty"`
 }
 
 func cloneWorkspaceWidget(value *WorkspaceWidget) *WorkspaceWidget {
@@ -1059,6 +1100,13 @@ func cloneWorkspaceWidget(value *WorkspaceWidget) *WorkspaceWidget {
 		cloned.Summary = &summary
 	}
 	cloned.Master.Bindings = cloneRequestBindings(value.Master.Bindings)
+	if value.MasterVariants != nil {
+		cloned.MasterVariants = make([]WorkspaceMasterVariant, len(value.MasterVariants))
+		for index, variant := range value.MasterVariants {
+			variant.Master.Bindings = cloneRequestBindings(variant.Master.Bindings)
+			cloned.MasterVariants[index] = variant
+		}
+	}
 	if value.Threads != nil {
 		threads := *value.Threads
 		threads.Resource.Bindings = cloneRequestBindings(value.Threads.Resource.Bindings)

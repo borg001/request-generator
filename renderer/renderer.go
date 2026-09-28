@@ -1543,6 +1543,9 @@ type Media struct {
 	// CountField names a number the picture carries on its rim - unread
 	// messages, say - opposite the status dot.
 	CountField string `json:"count_field,omitempty"`
+	// MoreField names how many more there are than the pictures of a row of
+	// faces shows, said as "+N" at its end.
+	MoreField string `json:"more_field,omitempty"`
 	// A picture can carry one small mark in its corner - pinned, locked, the
 	// state that belongs to the thing pictured rather than to a row of chips
 	// beside it. MarkerField names the truth, MarkerIcon what to draw.
