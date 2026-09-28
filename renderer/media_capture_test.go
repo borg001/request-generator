@@ -101,6 +101,10 @@ func TestMediaCaptureSteps(t *testing.T) {
 	localized := LocalizeFieldMedia(media, func(value, _ string) string { return "T:" + value })
 	require.Equal(t, "T:capture.sign", localized.Capture.Steps[1].Hint)
 	require.Equal(t, "T:capture.step", localized.Capture.StepLabel)
+	media.Capture.PermissionLabel, media.Capture.RetryLabel = "capture.allow", "capture.retry"
+	localized = LocalizeFieldMedia(media, func(value, _ string) string { return "T:" + value })
+	require.Equal(t, "T:capture.allow", localized.Capture.PermissionLabel)
+	require.Equal(t, "T:capture.retry", localized.Capture.RetryLabel)
 	require.Equal(t, "capture.sign", media.Capture.Steps[1].Hint)
 
 	capture.Steps[1].Prop = "dance"

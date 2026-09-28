@@ -1729,6 +1729,13 @@ type MediaCaptureConfig struct {
 	Steps []MediaCaptureStep `json:"steps,omitempty"`
 	// StepLabel names the step counter, e.g. "Step".
 	StepLabel string `json:"step_label,omitempty"`
+	// The ask before the camera opens: what it is for and the button that
+	// lets the browser ask for it. Without PermissionLabel the camera opens at
+	// once. RetryLabel asks again after a refusal.
+	PermissionTitle string `json:"permission_title,omitempty"`
+	PermissionText  string `json:"permission_text,omitempty"`
+	PermissionLabel string `json:"permission_label,omitempty"`
+	RetryLabel      string `json:"retry_label,omitempty"`
 }
 
 // MediaCaptureStep is one thing a recording has to show, for so many seconds.
