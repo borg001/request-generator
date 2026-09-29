@@ -691,7 +691,9 @@ renderer.FormSection{
 
 `list` содержит только упорядоченные `fields` и typed `columns` от одного до
 четырех. Каждый field выводится как самостоятельный item без описания строк,
-ячеек или колонок в producer metadata.
+ячеек или колонок в producer metadata. Необязательный `mobile_columns` (от 1
+до 4) задаёт, сколько items стоит в ряду на телефоне; без него consumer
+решает сам (обычно по два). `1` отдаёт единственной плашке всю ширину телефона.
 
 ```go
 renderer.FormSection{

@@ -4,6 +4,9 @@
 
 ### Added
 
+- **`FieldMatrixList.MobileColumns` (`mobile_columns`)** — сколько items списка
+  стоит в ряду на телефоне (1–4); без него решает consumer.
+
 - **`CardSchema.Chips` (`chips`)** — набор коротких значений (например, страны
   профиля) строкой под subtitle: иконка в первой плашке, «+N» со списком всех.
 

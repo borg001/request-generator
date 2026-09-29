@@ -8,6 +8,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// A list says how many of its items stand in a row on a phone, within what a
+// row can hold, and the reader gets the word.
+func TestFieldMatrixListMobileColumns(t *testing.T) {
+	list := func(mobile int) *FieldMatrix {
+		return &FieldMatrix{Type: FieldMatrixTypeList, List: &FieldMatrixList{Fields: []string{"since"}, Columns: FieldMatrixColumnsThree, MobileColumns: mobile}}
+	}
+	require.NoError(t, list(0).Validate("timing"))
+	require.NoError(t, list(1).Validate("timing"))
+	require.EqualError(t, list(5).Validate("timing"), `renderer.Universal: matrix section "timing" list mobile columns must be 0-4`)
+	require.EqualError(t, list(-1).Validate("timing"), `renderer.Universal: matrix section "timing" list mobile columns must be 0-4`)
+	raw, err := json.Marshal(list(1).List)
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), `"mobile_columns":1`)
+	raw, err = json.Marshal(list(0).List)
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), "mobile_columns")
+	copied := cloneFieldMatrix(list(1))
+	assert.Equal(t, 1, copied.List.MobileColumns)
+}
+
 func TestFieldMatrixValidate(t *testing.T) {
 	tests := []struct {
 		name   string

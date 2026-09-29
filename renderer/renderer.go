@@ -2346,6 +2346,10 @@ type FieldMatrixList struct {
 	// Align sets a tile to be read from its start - the caption over the
 	// figure - rather than centred.
 	Align AlignToken `json:"align,omitempty"`
+	// MobileColumns is how many items a row holds on a phone, from one to
+	// four; zero leaves the consumer's own rule. One lets a lone figure take
+	// the phone's width instead of half of it.
+	MobileColumns int `json:"mobile_columns,omitempty"`
 }
 
 type FieldMatrixTable struct {
@@ -2478,6 +2482,9 @@ func (matrix *FieldMatrix) Validate(sectionID string) error {
 		case FieldMatrixColumnsOne, FieldMatrixColumnsTwo, FieldMatrixColumnsThree, FieldMatrixColumnsFour:
 		default:
 			return fmt.Errorf("renderer.Universal: matrix section %q list has unsupported columns", sectionID)
+		}
+		if matrix.List.MobileColumns < 0 || matrix.List.MobileColumns > 4 {
+			return fmt.Errorf("renderer.Universal: matrix section %q list mobile columns must be 0-4", sectionID)
 		}
 	default:
 		return fmt.Errorf("renderer.Universal: matrix section %q has unsupported matrix type %q", sectionID, matrix.Type)
