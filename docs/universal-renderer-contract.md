@@ -2153,7 +2153,7 @@ request-generator.
 | `form_page.sections[].media_visibility_states[].value` | `public`, `private`, `paid`, `internal` |
 | `media.item.usage` | `gallery`, `avatar`, `poster`, `cover` |
 | `record_page.sections[].components[].type` | `media_gallery`, `actions`, `identity`, `data_list`, `badge_group_block`, `text`, `badge_list`, `accordion_groups`, `status_timeline`, `record_carousel`, `prompts` |
-| `record_page.sections[].components[].display_type` | `key_value_grid`, `tile_grid` (только `data_list`); `action_rows` (только `actions`); `flow_steps` (только `status_timeline`); `card_rail` (только `record_carousel`) |
+| `record_page.sections[].components[].display_type` | `key_value_grid`, `tile_grid` (только `data_list`); `action_rows` (только `actions`); `flow_steps` (только `status_timeline`); `card_rail`, `progress_rows` (только `record_carousel`) |
 | `record_page.sections[].components[].main_ratio`, `.thumb_ratio` | `square`, `portrait`, `tall` |
 | `action.variant` | `default`, `primary`, `secondary`, `success`, `warning`, `danger` |
 | `action.placement` | `full`, `half`, `filter_footer`, `badge`, `head`, `menu`; пустое значение — позиция по умолчанию |
@@ -3142,8 +3142,17 @@ target action убирается), разрешает `matrix.source` и лок�
 `actions` (строка: иконка, label, `description` действия и шеврон);
 `flow_steps` — для `status_timeline` (нумерованные шаги со стрелками: порядок
 действий, а не прошедшая история); `card_rail` — для `record_carousel`
-(полоса узких карточек с горизонтальной прокруткой). Generator отклоняет
-неизвестное значение и значение не своего типа.
+(полоса узких карточек с горизонтальной прокруткой); `progress_rows` — для
+`record_carousel` (строки записей, каждая на своём пути по одному ряду шагов).
+Generator отклоняет неизвестное значение и значение не своего типа.
+
+`components[].mobile_fold` (`DisplayComponent.MobileFold`, string) — на
+телефоне компонент свёрнут под заголовок, который его открывает. Соседние
+компоненты с одним и тем же `mobile_fold` открываются и закрываются вместе,
+заголовок читает `title` (и `title_tone`) первого из них, а их собственный
+первый заголовок на телефоне не повторяется. Длинная запись на телефоне
+читается как список заголовков, каждый в одно касание. Широкий экран
+показывает компоненты как есть. Поле сериализуется только непустым.
 
 `accordion_groups` использует `collection_groups`: `source_field` указывает поле-коллекцию записи, а каждая группа задает уникальный `id`, локализуемую подпись, необязательный renderer-token `tone` для элементов группы и `item_condition`. `tone` является строкой: библиотека не ограничивает палитру конкретного приложения. Условие вычисляется относительно каждого элемента этой коллекции, а не относительно корневой записи.
 
@@ -3187,6 +3196,21 @@ target action убирается), разрешает `matrix.source` и лок�
 `components[].auto_scroll` (`DisplayComponent.AutoScroll`, bool) — полоса
 карточек медленно и циклично едет вбок и останавливается, пока на ней
 указатель. Поле сериализуется только при `true`.
+
+`display_type: progress_rows` — записи, каждая на своём пути по одному ряду
+шагов (например, модели на пути через тур). Строка записи:
+
+- `title`, `src`, `status` (`online` — точка на аватаре), `target_path` —
+  запись и куда ведёт её картинка;
+- `badge` (`label`, `tone`) — где запись стоит сейчас;
+- `note` — что это значит в днях и датах;
+- `progress` — `steps` (сколько шагов в ряду), `reached` (сколько пройдено),
+  `fraction` (0–1: насколько запись прошла в шаг, на котором стоит, например
+  дни до зачёта), `stopped` (путь оборвался на этом шаге);
+- `action_ids` — шаги читателя для записи из `record_page.actions`; они
+  стоят в конце строки и выполняются со строкой как `record`.
+
+Пустой набор читает `value_fallback`.
 
 ### Компонент prompts
 

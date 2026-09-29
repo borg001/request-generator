@@ -456,6 +456,12 @@ const (
 	// now, and whether it is met. A timeline would say these happen one after
 	// another, and a table would say they are records.
 	ComponentDisplayReadinessRows ComponentDisplayType = "readiness_rows"
+	// A set of records each on its own way through the same run of steps
+	// reads as rows of them: the record, where it stands now, a line of what
+	// that means in days and dates, and a bar of the steps lit as far as it
+	// has come - the step it is on lit in part as far as it has gone into
+	// it. A step the reader can take for the record stands at the row's end.
+	ComponentDisplayProgressRows ComponentDisplayType = "progress_rows"
 	// A balance can be a card of its own: the mark and the name of the balance
 	// over a hairline, the figures under it beside the picture of what each
 	// one counts, and the light of the balance's colour in the corner. It

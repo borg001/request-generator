@@ -94,6 +94,20 @@ func TestDisplayComponentValidation(t *testing.T) {
 			component: DisplayComponent{Type: DisplayDataList, DisplayType: ComponentDisplayType("cards")},
 		},
 		{
+			name:      "progress rows of records",
+			component: DisplayComponent{Type: DisplayRecordCarousel, DisplayType: ComponentDisplayProgressRows, Fields: []string{"tour_progress"}},
+			valid:     true,
+		},
+		{
+			name:      "progress rows on another component",
+			component: DisplayComponent{Type: DisplayDataList, DisplayType: ComponentDisplayProgressRows, Items: []DisplayFieldRef{{Field: "incall"}}},
+		},
+		{
+			name:      "a component folded on a phone",
+			component: DisplayComponent{Type: DisplayText, Title: "tours.workflow_terms", Fields: []string{"description"}, MobileFold: "terms"},
+			valid:     true,
+		},
+		{
 			name:      "items on another component",
 			component: DisplayComponent{Type: DisplayMediaGallery, Items: []DisplayFieldRef{{Field: "photos"}}},
 		},
@@ -317,4 +331,15 @@ func TestDisplayPromptsComponent(t *testing.T) {
 
 	untitled := DisplayComponent{ID: "invitation", Type: DisplayPrompts, Prompts: &PromptList{Items: []Prompt{{ID: "invitation"}}}}
 	require.EqualError(t, untitled.Validate(), `display component "invitation": prompt "invitation" must define title or text`)
+}
+
+// A component folded on a phone says so under mobile_fold, and a component
+// that does not fold leaves the key out.
+func TestDisplayComponentMobileFoldJSON(t *testing.T) {
+	folded, err := json.Marshal(DisplayComponent{ID: "route", Type: DisplayDataList, MobileFold: "route"})
+	assert.NoError(t, err)
+	assert.Contains(t, string(folded), `"mobile_fold":"route"`)
+	open, err := json.Marshal(DisplayComponent{ID: "route", Type: DisplayDataList})
+	assert.NoError(t, err)
+	assert.NotContains(t, string(open), "mobile_fold")
 }

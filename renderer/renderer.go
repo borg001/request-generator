@@ -384,6 +384,7 @@ func (component DisplayComponent) Validate() error {
 			ComponentDisplayFlowCard:      DisplayStatusTimeline,
 			ComponentDisplayCardRail:      DisplayRecordCarousel,
 			ComponentDisplayReadinessRows: DisplayRecordCarousel,
+			ComponentDisplayProgressRows:  DisplayRecordCarousel,
 		}
 		expected, known := owner[component.DisplayType]
 		if !known {
@@ -2918,6 +2919,12 @@ type DisplayComponent struct {
 	// in the tone of the set, values in the colour of text, as in the form's
 	// own fields. A cell with a tone of its own keeps it.
 	FormLook bool `json:"form_look,omitempty"`
+	// MobileFold folds the component on a phone under a head that opens it:
+	// the components next to each other that name the same fold open and
+	// close together, and the head reads the title of the first of them. A
+	// long record then reads on a phone as its headings, each a tap away. A
+	// wide screen shows the components as they are.
+	MobileFold string `json:"mobile_fold,omitempty"`
 	// ItemFilter narrows a set of items inside the component that shows them:
 	// a search over what they are called, and a choice among the states they
 	// declare. It is the producer that says which field holds the state and

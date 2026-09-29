@@ -4,6 +4,16 @@
 
 ### Added
 
+- **`DisplayComponent.MobileFold` (`mobile_fold`)** — компонент на телефоне
+  свёрнут под заголовок, который его открывает; соседние компоненты с тем же
+  `mobile_fold` открываются и закрываются вместе, заголовок — `title` первого
+  из них. Широкий экран показывает их как есть.
+
+- **`display_type: progress_rows`** для `record_carousel` — строки записей,
+  каждая на своём пути по одному ряду шагов: где она сейчас (`badge`), что это
+  значит в днях и датах (`note`), полоса шагов (`progress`: `steps`,
+  `reached`, `fraction`, `stopped`) и шаг читателя (`action_ids`) в конце.
+
 - **`FieldMatrixList.MobileColumns` (`mobile_columns`)** — сколько items списка
   стоит в ряду на телефоне (1–4); без него решает consumer.
 
