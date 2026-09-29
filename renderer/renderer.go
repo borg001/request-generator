@@ -1588,8 +1588,12 @@ type Media struct {
 type FieldSuggest struct {
 	Endpoint string `json:"endpoint"`
 	// Params maps a query parameter to the form field whose value it carries.
-	Params     map[string]string `json:"params"`
-	ValueField string            `json:"value_field,omitempty"`
+	Params map[string]string `json:"params"`
+	// Optional names the parameters the proposal is asked for without: an
+	// empty one is left out of the query instead of holding the question
+	// back. Every other parameter has to be filled first.
+	Optional   []string `json:"optional,omitempty"`
+	ValueField string   `json:"value_field,omitempty"`
 }
 
 type FieldPresentation struct {
