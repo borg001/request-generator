@@ -479,6 +479,9 @@ type ComponentRatio string
 const (
 	ComponentRatioSquare   ComponentRatio = "square"
 	ComponentRatioPortrait ComponentRatio = "portrait"
+	// A picture framed wider than tall, three by two - a tour's cover is cut
+	// to that shape when it is chosen - is shown whole.
+	ComponentRatioLandscape ComponentRatio = "landscape"
 	// A grid of pictures is read as columns of tall tiles, whatever shape the
 	// pictures inside them were published in.
 	ComponentRatioTall ComponentRatio = "tall"

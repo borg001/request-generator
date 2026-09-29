@@ -47,8 +47,11 @@ type ConfigNavigationEntry struct {
 	Group       string               `json:"group,omitempty"`
 	GroupTitle  string               `json:"group_title,omitempty"`
 	// Home marks the entry the brand leads to for this actor.
-	Home  bool                   `json:"home,omitempty"`
-	Query map[string]interface{} `json:"query,omitempty"`
+	Home bool `json:"home,omitempty"`
+	// Account marks the entry to the actor's own profile, drawn on a phone
+	// as the account itself.
+	Account bool                   `json:"account,omitempty"`
+	Query   map[string]interface{} `json:"query,omitempty"`
 	// A destination can exist for an actor and still be closed to them right
 	// now. The entry stays in the menu and says so instead of disappearing.
 	Locked     bool   `json:"locked,omitempty"`
@@ -320,6 +323,7 @@ func (generator *Generator) buildNavigation(c *gin.Context, role string, lang lo
 				MobileOrder: entry.MobileOrder,
 				MobileTitle: generator.TranslateWithFallback(lang, entry.MobileTitle, ""),
 				Home:        entry.Home,
+				Account:     entry.Account,
 				Target:      target,
 				Query:       entry.Query,
 			}
