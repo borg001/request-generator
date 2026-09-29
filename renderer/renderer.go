@@ -3425,6 +3425,10 @@ type Confirm struct {
 	MessageField string `json:"message_field,omitempty"`
 	CancelLabel  string `json:"cancel_label,omitempty"`
 	ConfirmLabel string `json:"confirm_label,omitempty"`
+	// Next is a second question asked the moment the first one is answered
+	// yes - a model at a tour says she is there, then that she hands her
+	// profile over. The action runs once the last question is answered.
+	Next *Confirm `json:"next,omitempty"`
 }
 
 // ActionFailure is what to offer when an operation is refused: the words of the
@@ -3448,6 +3452,11 @@ func (confirm Confirm) Validate() error {
 	}
 	if confirm.ConfirmLabel == "" {
 		return fmt.Errorf("confirm_label is required")
+	}
+	if confirm.Next != nil {
+		if err := confirm.Next.Validate(); err != nil {
+			return fmt.Errorf("next: %w", err)
+		}
 	}
 	return nil
 }

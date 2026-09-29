@@ -944,6 +944,7 @@ func cloneConfirm(v *Confirm) *Confirm {
 		return nil
 	}
 	cp := *v
+	cp.Next = cloneConfirm(v.Next)
 	return &cp
 }
 

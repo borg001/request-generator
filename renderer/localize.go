@@ -82,8 +82,8 @@ func (localizer textLocalizer) localizeRendererAction(action *Action) {
 	if action.Modal != nil {
 		localizer.localizeTextFields(&action.Modal.Title)
 	}
-	if action.Confirm != nil {
-		localizer.localizeTextFields(&action.Confirm.Title, &action.Confirm.Message, &action.Confirm.CancelLabel, &action.Confirm.ConfirmLabel)
+	for confirm := action.Confirm; confirm != nil; confirm = confirm.Next {
+		localizer.localizeTextFields(&confirm.Title, &confirm.Message, &confirm.CancelLabel, &confirm.ConfirmLabel)
 	}
 	if action.AfterFailure != nil {
 		localizer.localizeTextFields(&action.AfterFailure.Title, &action.AfterFailure.CancelLabel, &action.AfterFailure.ConfirmLabel)
