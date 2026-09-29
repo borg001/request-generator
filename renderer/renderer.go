@@ -3042,6 +3042,10 @@ type DisplayFieldRef struct {
 	// beside the figure instead of a glyph. A balance is read faster by what
 	// it is a balance of than by its caption.
 	Art string `json:"art,omitempty"`
+	// Icon is the mark the cell carries in this component, in place of its
+	// field's own: the same field can read as a plain tile of a form in one
+	// place and as a marked line of its own panel in another.
+	Icon string `json:"icon,omitempty"`
 	// BadgeField names another field whose value rides beside this figure as
 	// a small word: a sum that is on its way says so next to the sum, not in
 	// a line of its own below the balance.

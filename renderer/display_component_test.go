@@ -343,3 +343,14 @@ func TestDisplayComponentMobileFoldJSON(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotContains(t, string(open), "mobile_fold")
 }
+
+// A cell names its own mark in a component, in place of its field's, and a
+// cell that does not leaves the key out.
+func TestDisplayFieldRefIconJSON(t *testing.T) {
+	marked, err := json.Marshal(DisplayFieldRef{Field: "payment_terms_display", Icon: "ref_card"})
+	assert.NoError(t, err)
+	assert.Contains(t, string(marked), `"icon":"ref_card"`)
+	plain, err := json.Marshal(DisplayFieldRef{Field: "payment_terms_display"})
+	assert.NoError(t, err)
+	assert.NotContains(t, string(plain), "icon")
+}
