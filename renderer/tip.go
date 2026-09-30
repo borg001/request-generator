@@ -32,6 +32,20 @@ type Tip struct {
 	Dismiss *Action `json:"dismiss"`
 	// Action is a step the tip offers besides closing.
 	Action *Action `json:"action,omitempty"`
+	// Steps make the tip an introduction: its own title and text open it,
+	// and the steps follow one after another, each at a place of the screen.
+	// The reader goes on, or skips the rest; either way is its answer.
+	Steps     []TipStep `json:"steps,omitempty"`
+	NextLabel string    `json:"next_label,omitempty"`
+	SkipLabel string    `json:"skip_label,omitempty"`
+	DoneLabel string    `json:"done_label,omitempty"`
+}
+
+// TipStep is one step of an introduction.
+type TipStep struct {
+	Anchor string `json:"anchor,omitempty"`
+	Title  string `json:"title,omitempty"`
+	Text   string `json:"text"`
 }
 
 func validateTips(scope string, tips []Tip) error {
@@ -61,6 +75,14 @@ func validateTips(scope string, tips []Tip) error {
 			if err := tip.Action.Validate(); err != nil {
 				return fmt.Errorf("%s tip %q action: %w", scope, tip.ID, err)
 			}
+		}
+		for index, step := range tip.Steps {
+			if strings.TrimSpace(step.Text) == "" {
+				return fmt.Errorf("%s tip %q step %d: text is required", scope, tip.ID, index+1)
+			}
+		}
+		if len(tip.Steps) > 0 && (strings.TrimSpace(tip.NextLabel) == "" || strings.TrimSpace(tip.DoneLabel) == "") {
+			return fmt.Errorf("%s tip %q: an introduction names its next and done buttons", scope, tip.ID)
 		}
 	}
 	return nil
@@ -94,13 +116,17 @@ func cloneTips(values []Tip) []Tip {
 		out[i] = tip
 		out[i].Dismiss = cloneAction(tip.Dismiss)
 		out[i].Action = cloneAction(tip.Action)
+		out[i].Steps = cloneSlice(tip.Steps)
 	}
 	return out
 }
 
 func (localizer textLocalizer) localizeTips(tips []Tip) {
 	for i := range tips {
-		localizer.localizeTextFields(&tips[i].Title, &tips[i].Text)
+		localizer.localizeTextFields(&tips[i].Title, &tips[i].Text, &tips[i].NextLabel, &tips[i].SkipLabel, &tips[i].DoneLabel)
+		for step := range tips[i].Steps {
+			localizer.localizeTextFields(&tips[i].Steps[step].Title, &tips[i].Steps[step].Text)
+		}
 		localizer.localizeRendererAction(tips[i].Dismiss)
 		localizer.localizeRendererAction(tips[i].Action)
 	}

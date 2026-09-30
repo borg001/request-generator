@@ -61,3 +61,23 @@ func TestTipsAreLocalizedWithoutTouchingTheSource(t *testing.T) {
 	require.Equal(t, "hints.got_it", source.Record.Tips[0].Dismiss.Label)
 	require.Equal(t, "hints.got_it", source.List.Tips[0].Dismiss.Label)
 }
+
+// An introduction is a tip with steps: each step says something, and the
+// reader is told how to go on and how to finish.
+func TestAnIntroductionIsATipWithSteps(t *testing.T) {
+	render := tipPage()
+	render.Record.Tips[0].Steps = []TipStep{{Anchor: "/deals", Title: "hints.intro_1.title", Text: "hints.intro_1.text"}}
+	render.Record.Tips[0].NextLabel, render.Record.Tips[0].SkipLabel, render.Record.Tips[0].DoneLabel = "hints.next", "hints.skip", "hints.done"
+	require.NoError(t, render.Validate())
+
+	localized := Localize(render, func(value, key string) string { return "ru:" + value })
+	require.Equal(t, "ru:hints.intro_1.text", localized.Record.Tips[0].Steps[0].Text)
+	require.Equal(t, "ru:hints.next", localized.Record.Tips[0].NextLabel)
+	require.Equal(t, "hints.intro_1.text", render.Record.Tips[0].Steps[0].Text)
+
+	render.Record.Tips[0].Steps[0].Text = ""
+	require.ErrorContains(t, render.Validate(), "step 1: text is required")
+	render.Record.Tips[0].Steps[0].Text = "hints.intro_1.text"
+	render.Record.Tips[0].DoneLabel = ""
+	require.ErrorContains(t, render.Validate(), "names its next and done buttons")
+}
