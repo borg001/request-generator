@@ -677,7 +677,7 @@ func (generator *Generator) actionList(module *BaseModule, action actions.ListMo
 
 		if hook := actions.ResolveRoleHook(module.RoleBeforeHook, role); hook != nil {
 			if err := hook(c); err != nil {
-				response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
+				response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), nil)
 				return
 			}
 		}
@@ -689,7 +689,7 @@ func (generator *Generator) actionList(module *BaseModule, action actions.ListMo
 
 		err := action.BeforeRequest(c)
 		if err != nil {
-			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
+			response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), nil)
 			return
 		}
 
@@ -952,7 +952,7 @@ func (generator *Generator) actionAdd(module *BaseModule, action actions.AddModu
 		if action.Mode != actions.AddModeAtomic {
 			if hook := actions.ResolveRoleHook(module.RoleBeforeHook, role); hook != nil {
 				if err := hook(c); err != nil {
-					response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
+					response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), nil)
 					return
 				}
 			}
@@ -965,7 +965,7 @@ func (generator *Generator) actionAdd(module *BaseModule, action actions.AddModu
 			err := action.BeforeRequest(c)
 			if err != nil {
 				if !c.Writer.Written() {
-					response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), []string{
+					response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), []string{
 						err.Error(),
 					})
 				}
@@ -1134,7 +1134,7 @@ func (generator *Generator) actionDefrec(module *BaseModule) func(c *gin.Context
 
 		err := module.Defrec.BeforeRequest(c)
 		if err != nil {
-			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
+			response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), nil)
 			return
 		}
 
@@ -1226,7 +1226,7 @@ func (generator *Generator) actionView(module *BaseModule, action actions.ViewMo
 
 		if hook := actions.ResolveRoleHook(module.RoleBeforeHook, role); hook != nil {
 			if err := hook(c); err != nil {
-				response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
+				response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), nil)
 				return
 			}
 		}
@@ -1240,7 +1240,7 @@ func (generator *Generator) actionView(module *BaseModule, action actions.ViewMo
 
 		err := action.BeforeRequest(c)
 		if err != nil {
-			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
+			response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), nil)
 			return
 		}
 
@@ -1405,7 +1405,7 @@ func (generator *Generator) actionUpdate(module *BaseModule, action actions.Upda
 		if action.Mode != actions.UpdateModeAtomic {
 			if hook := actions.ResolveRoleHook(module.RoleBeforeHook, role); hook != nil {
 				if err := hook(c); err != nil {
-					response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
+					response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), nil)
 					return
 				}
 			}
@@ -1418,7 +1418,7 @@ func (generator *Generator) actionUpdate(module *BaseModule, action actions.Upda
 			err = action.BeforeRequest(c)
 			if err != nil {
 				if !c.Writer.Written() {
-					response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), []string{err.Error()})
+					response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), []string{err.Error()})
 				}
 				return
 			}
@@ -1646,7 +1646,7 @@ func (generator *Generator) actionDelete(module *BaseModule, action actions.Dele
 
 		if hook := actions.ResolveRoleHook(module.RoleBeforeHook, role); hook != nil {
 			if err := hook(c); err != nil {
-				response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), nil)
+				response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), nil)
 				return
 			}
 		}
@@ -1658,7 +1658,7 @@ func (generator *Generator) actionDelete(module *BaseModule, action actions.Dele
 
 		err := action.BeforeRequest(c)
 		if err != nil {
-			response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), []string{err.Error()})
+			response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), []string{err.Error()})
 			return
 		}
 
