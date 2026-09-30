@@ -117,3 +117,21 @@ func TestTipStoryIsToldInStepsWithScenes(t *testing.T) {
 	story.Presentation = "carousel"
 	require.ErrorContains(t, render.Validate(), `presentation "carousel" is unknown`)
 }
+
+// A tip can bring a sample to its page - a picture in a gallery - whose badge
+// and menu are spoken in the reader's language, and only known samples pass.
+func TestTipDemoIsASampleOfAKnownKind(t *testing.T) {
+	render := tipPage()
+	tip := &render.Record.Tips[0]
+	tip.Demo = &TipDemo{Kind: TipDemoMediaItem, Label: "hints.demo", Menu: []string{"settings.media.publish_post"}}
+	require.NoError(t, render.Validate())
+	encoded, err := json.Marshal(*tip)
+	require.NoError(t, err)
+	require.Contains(t, string(encoded), `"demo":{"kind":"media_item","label":"hints.demo","menu":["settings.media.publish_post"]}`)
+	localized := Localize(render, func(value, key string) string { return "ru:" + value })
+	require.Equal(t, "ru:hints.demo", localized.Record.Tips[0].Demo.Label)
+	require.Equal(t, "ru:settings.media.publish_post", localized.Record.Tips[0].Demo.Menu[0])
+	require.Equal(t, "hints.demo", render.Record.Tips[0].Demo.Label, "the source is not touched")
+	tip.Demo.Kind = "hologram"
+	require.ErrorContains(t, render.Validate(), `demo kind "hologram" is unknown`)
+}

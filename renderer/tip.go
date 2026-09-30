@@ -48,7 +48,29 @@ type Tip struct {
 	// places it names. A story tells the way something goes, window by
 	// window, with a scene playing over each step's words.
 	Presentation TipPresentation `json:"presentation,omitempty"`
+	// Demo is a sample the page shows while the tip is told, so the steps can
+	// point at the parts of something the reader does not have yet - a
+	// picture in a gallery. It answers its controls on the page alone and is
+	// gone once the tip is answered.
+	Demo *TipDemo `json:"demo,omitempty"`
 }
+
+// TipDemo is the sample a tip brings to its page.
+type TipDemo struct {
+	Kind TipDemoKind `json:"kind"`
+	// Label is the badge on the sample: it says the thing is not the reader's.
+	Label string `json:"label,omitempty"`
+	// Menu is what the sample's own menu shows - words only; none of it runs.
+	Menu []string `json:"menu,omitempty"`
+}
+
+// TipDemoKind is what the sample is.
+type TipDemoKind string
+
+const (
+	// TipDemoMediaItem is a picture standing in a media gallery.
+	TipDemoMediaItem TipDemoKind = "media_item"
+)
 
 // TipPresentation is how a tip is told.
 type TipPresentation string
@@ -110,6 +132,9 @@ func validateTips(scope string, tips []Tip) error {
 		if tip.Presentation == TipPresentationStory && len(tip.Steps) == 0 {
 			return fmt.Errorf("%s tip %q: a story is told in steps", scope, tip.ID)
 		}
+		if tip.Demo != nil && tip.Demo.Kind != TipDemoMediaItem {
+			return fmt.Errorf("%s tip %q: demo kind %q is unknown", scope, tip.ID, tip.Demo.Kind)
+		}
 	}
 	return nil
 }
@@ -143,6 +168,11 @@ func cloneTips(values []Tip) []Tip {
 		out[i].Dismiss = cloneAction(tip.Dismiss)
 		out[i].Action = cloneAction(tip.Action)
 		out[i].Steps = cloneSlice(tip.Steps)
+		if tip.Demo != nil {
+			demo := *tip.Demo
+			demo.Menu = cloneSlice(tip.Demo.Menu)
+			out[i].Demo = &demo
+		}
 	}
 	return out
 }
@@ -155,5 +185,11 @@ func (localizer textLocalizer) localizeTips(tips []Tip) {
 		}
 		localizer.localizeRendererAction(tips[i].Dismiss)
 		localizer.localizeRendererAction(tips[i].Action)
+		if demo := tips[i].Demo; demo != nil {
+			localizer.localizeTextFields(&demo.Label)
+			for item := range demo.Menu {
+				localizer.localizeTextFields(&demo.Menu[item])
+			}
+		}
 	}
 }
