@@ -149,7 +149,7 @@ func cloneTips(values []Tip) []Tip {
 
 func (localizer textLocalizer) localizeTips(tips []Tip) {
 	for i := range tips {
-		localizer.localizeTextFields(&tips[i].Title, &tips[i].Text, &tips[i].NextLabel, &tips[i].SkipLabel, &tips[i].DoneLabel)
+		localizer.localizeTextFields(&tips[i].Title, &tips[i].Text, &tips[i].NextLabel, &tips[i].SkipLabel, &tips[i].DoneLabel, &tips[i].BackLabel)
 		for step := range tips[i].Steps {
 			localizer.localizeTextFields(&tips[i].Steps[step].Title, &tips[i].Steps[step].Text)
 		}

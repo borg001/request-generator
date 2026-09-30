@@ -111,6 +111,9 @@ func TestTipStoryIsToldInStepsWithScenes(t *testing.T) {
 	require.Contains(t, string(encoded), `"presentation":"story"`)
 	require.Contains(t, string(encoded), `"scene":"order_fill"`)
 	require.Contains(t, string(encoded), `"back_label":"hints.back"`)
+	// The story's back button is spoken in the reader's language too.
+	localized := Localize(render, func(value, key string) string { return "ru:" + value })
+	require.Equal(t, "ru:hints.back", localized.Record.Tips[0].BackLabel)
 	story.Presentation = "carousel"
 	require.ErrorContains(t, render.Validate(), `presentation "carousel" is unknown`)
 }
