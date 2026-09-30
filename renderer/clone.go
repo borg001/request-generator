@@ -127,6 +127,7 @@ func cloneResourceGridPage(v *ResourceGridPage) *ResourceGridPage {
 	cp.Actions = cloneResourceGridActionsConfig(v.Actions)
 	cp.Text = cloneMap(v.Text)
 	cp.Context = cloneMap(v.Context)
+	cp.Tips = cloneTips(v.Tips)
 	return &cp
 }
 

@@ -53,7 +53,14 @@ type Tip struct {
 	// picture in a gallery. It answers its controls on the page alone and is
 	// gone once the tip is answered.
 	Demo *TipDemo `json:"demo,omitempty"`
+	// Cast is who the reader is in a story's scenes - a client, a model, an
+	// agency or a manager - so the one drawn for the reader looks like the
+	// reader: an agency sending an order is not drawn as a client.
+	Cast string `json:"cast,omitempty"`
 }
+
+// TipCasts are the people a story can cast its reader as.
+var TipCasts = map[string]bool{"client": true, "model": true, "agency": true, "manager": true}
 
 // TipDemo is the sample a tip brings to its page.
 type TipDemo struct {
@@ -135,6 +142,9 @@ func validateTips(scope string, tips []Tip) error {
 		if tip.Demo != nil && tip.Demo.Kind != TipDemoMediaItem {
 			return fmt.Errorf("%s tip %q: demo kind %q is unknown", scope, tip.ID, tip.Demo.Kind)
 		}
+		if tip.Cast != "" && !TipCasts[tip.Cast] {
+			return fmt.Errorf("%s tip %q: cast %q is unknown", scope, tip.ID, tip.Cast)
+		}
 	}
 	return nil
 }
@@ -152,6 +162,11 @@ func (r Universal) validateTips() error {
 	}
 	if r.Form != nil {
 		if err := validateTips("form page", r.Form.Tips); err != nil {
+			return err
+		}
+	}
+	if r.ResourceGrid != nil {
+		if err := validateTips("resource grid page", r.ResourceGrid.Tips); err != nil {
 			return err
 		}
 	}

@@ -3180,6 +3180,9 @@ type ResourceGridPage struct {
 	Actions     *ResourceGridActionsConfig `json:"actions,omitempty"`
 	Text        map[string]string          `json:"text,omitempty"`
 	Context     map[string]interface{}     `json:"context,omitempty"`
+	// Tips are the temporary hints of the page, as a list page has them: a
+	// grid of cards is a page a reader is walked through too.
+	Tips []Tip `json:"tips,omitempty"`
 }
 
 type ResourceGridListConfig struct {

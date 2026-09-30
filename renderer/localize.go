@@ -567,4 +567,5 @@ func (localizer textLocalizer) localizeResourceGridPage(page *ResourceGridPage) 
 		localizer.localizeCardSchema(page.Card)
 	}
 	localizer.localizeTextMap(&page.Text)
+	localizer.localizeTips(page.Tips)
 }

@@ -62,6 +62,18 @@ func TestTipsAreLocalizedWithoutTouchingTheSource(t *testing.T) {
 	require.Equal(t, "hints.got_it", source.List.Tips[0].Dismiss.Label)
 }
 
+// A grid of cards carries tips as a list does: checked, copied and put into
+// the reader's language (theGHub1/api#359).
+func TestResourceGridTipsAreCheckedAndLocalized(t *testing.T) {
+	source := Universal{ResourceGrid: &ResourceGridPage{Endpoint: "/api/agency_models", Tips: cloneTips(tipPage().Record.Tips)}}
+	require.NoError(t, source.validateTips())
+	localized := Localize(source, func(value, key string) string { return "ru:" + value })
+	require.Equal(t, "ru:hints.status.text", localized.ResourceGrid.Tips[0].Text)
+	require.Equal(t, "hints.status.text", source.ResourceGrid.Tips[0].Text)
+	source.ResourceGrid.Tips[1].Device = TipDeviceDesktop
+	require.ErrorContains(t, source.validateTips(), "told twice on desktop")
+}
+
 // An introduction is a tip with steps: each step says something, and the
 // reader is told how to go on and how to finish.
 func TestAnIntroductionIsATipWithSteps(t *testing.T) {
@@ -134,4 +146,13 @@ func TestTipDemoIsASampleOfAKnownKind(t *testing.T) {
 	require.Equal(t, "hints.demo", render.Record.Tips[0].Demo.Label, "the source is not touched")
 	tip.Demo.Kind = "hologram"
 	require.ErrorContains(t, render.Validate(), `demo kind "hologram" is unknown`)
+}
+
+// A story casts its reader as one of its people; anyone else is refused.
+func TestTipCastIsOneOfTheStoryPeople(t *testing.T) {
+	render := tipPage()
+	render.Record.Tips[0].Cast = "agency"
+	require.NoError(t, render.Validate())
+	render.Record.Tips[0].Cast = "admin"
+	require.ErrorContains(t, render.Validate(), `cast "admin" is unknown`)
 }
