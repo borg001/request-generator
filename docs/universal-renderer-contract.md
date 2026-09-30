@@ -1047,6 +1047,7 @@ Typed field metadata нужна для одиночных полей, где б�
 | `presentation.notice_by_value[].title` | Optional локализуемый заголовок. |
 | `presentation.notice_by_value[].message` | Локализуемый текст уведомления. Обязателен: сериализуется всегда. |
 | `presentation.notice_by_value[].confirm_label` | Optional локализуемая подпись кнопки, закрывающей уведомление. |
+| `presentation.info` | `renderer.InfoHint`: постоянное пояснение «i» у подписи поля, в форме и в записи. См. «Пояснение «i»». |
 
 `placeholder` локализуется вместе с `prefix`, `suffix`, `hint` и
 `description`. Тексты `notice_by_value[]` (`title`, `message`,
@@ -3368,6 +3369,33 @@ Generator отклоняет `prompts` без элементов, `prompts` у �
 
 `record_page.sections[].subtitle` (`RecordSection.Subtitle`) — строка под
 заголовком панели. Локализуется вместе с `title`.
+
+### Пояснение «i»
+
+`renderer.InfoHint` — постоянное пояснение, которое читатель открывает рядом с
+тем, что оно объясняет. Оно стоит у подписи поля (`presentation.info`), у
+заголовка record-секции (`record_page.sections[].info`) и у заголовка display
+component (`components[].info`).
+
+| Go | JSON | Тип | Назначение |
+|---|---|---|---|
+| `InfoHint.ID` | `info.id` | string | Имя пояснения отдельно от места, где оно стоит. |
+| `InfoHint.Title` | `info.title` | string | Optional локализуемый заголовок. |
+| `InfoHint.Text` | `info.text` | string | Локализуемый текст. Обязателен и сериализуется всегда: пояснение без текста отклоняется `Validate()`. |
+| `InfoHint.Action` | `info.action` | `Action` | Optional переход туда, где тема рассказана полностью. |
+
+Как пояснение открывается, решает consumer: наведением и кликом там, где есть
+указатель, и снизу экрана там, где есть только палец. Тексты и подпись
+действия локализуются вместе со страницей, копия страницы получает свою копию
+пояснения.
+
+```json
+{
+  "id": "details",
+  "title": "Details",
+  "info": {"id": "meetings", "title": "Meetings", "text": "Incall is at the model's place; outcall is where the client is."}
+}
+```
 
 ### Иконка и декорация блока
 

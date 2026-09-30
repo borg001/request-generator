@@ -14,6 +14,7 @@ func (generator *Generator) localizeFieldPresentation(lang locale.Lang, value *r
 	for _, field := range []*string{&localized.Prefix, &localized.Suffix, &localized.Hint, &localized.Placeholder, &localized.Description} {
 		*field = resolver(*field, "")
 	}
+	renderer.LocalizeInfoHint(localized.Info, resolver)
 	if len(localized.NoticeByValue) > 0 {
 		notices := append([]renderer.FieldValueNotice(nil), localized.NoticeByValue...)
 		for index := range notices {

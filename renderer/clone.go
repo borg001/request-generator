@@ -533,6 +533,7 @@ func CloneFieldPresentation(v *FieldPresentation) *FieldPresentation {
 	cp.RequiredIf = cloneCondition(v.RequiredIf)
 	cp.DisabledIf = cloneCondition(v.DisabledIf)
 	cp.ToneByValue = cloneSlice(v.ToneByValue)
+	cp.Info = CloneInfoHint(v.Info)
 	if v.Suggest != nil {
 		suggest := *v.Suggest
 		suggest.Params = make(map[string]string, len(v.Suggest.Params))
@@ -681,6 +682,7 @@ func cloneRecordSections(values []RecordSection) []RecordSection {
 		out[i].Block = cloneBlock(v.Block)
 		out[i].Stack = cloneStack(v.Stack)
 		out[i].Components = cloneDisplayComponents(v.Components)
+		out[i].Info = CloneInfoHint(v.Info)
 	}
 	return out
 }
@@ -721,6 +723,7 @@ func cloneDisplayComponents(values []DisplayComponent) []DisplayComponent {
 		out[i].Block = cloneBlock(v.Block)
 		out[i].Preview = cloneDisplayPreview(v.Preview)
 		out[i].Prompts = clonePromptList(v.Prompts)
+		out[i].Info = CloneInfoHint(v.Info)
 		// The words of a component's filter, selection and media are
 		// translated in place: shared with the producer's page, the first
 		// reader's language stayed in it for every reader after.

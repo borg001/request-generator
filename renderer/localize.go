@@ -490,6 +490,7 @@ func (localizer textLocalizer) localizeRecordPage(page *RecordPage) {
 		section := &page.Sections[i]
 		localizer.localizeTextFields(&section.Title, &section.TitleFallback, &section.Subtitle, &section.LoadingLabel, &section.RetryLabel, &section.MobileFold)
 		localizer.localizeBlock(section.Block)
+		localizer.localizeInfoHint(section.Info)
 		for j := range section.Components {
 			component := &section.Components[j]
 			localizer.localizeTextFields(&component.ValueLabel, &component.ValueFallback, &component.MatrixLabel, &component.Title, &component.TitleFallback, &component.Subtitle, &component.SubtitleFallback)
@@ -517,6 +518,7 @@ func (localizer textLocalizer) localizeRecordPage(page *RecordPage) {
 			}
 			localizer.localizeMediaGalleryItems(component.MediaItems)
 			localizer.localizePromptList(component.Prompts)
+			localizer.localizeInfoHint(component.Info)
 		}
 	}
 }

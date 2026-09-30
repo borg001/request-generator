@@ -228,6 +228,9 @@ func validateRecordComponents(page *RecordPage) error {
 		if err := section.Block.Validate(); err != nil {
 			return fmt.Errorf("renderer.Universal: record section %q block: %w", section.ID, err)
 		}
+		if err := section.Info.Validate(); err != nil {
+			return fmt.Errorf("renderer.Universal: record section %q: %w", section.ID, err)
+		}
 		for _, component := range section.Components {
 			if err := component.Validate(); err != nil {
 				return fmt.Errorf("renderer.Universal: record section %q component %q: %w", section.ID, component.ID, err)
@@ -342,6 +345,9 @@ func (filter *ItemFilter) Validate() error {
 }
 
 func (component DisplayComponent) Validate() error {
+	if err := component.Info.Validate(); err != nil {
+		return fmt.Errorf("display component %q: %w", component.ID, err)
+	}
 	if err := component.ItemFilter.Validate(); err != nil {
 		return fmt.Errorf("display component %q: %w", component.ID, err)
 	}
@@ -1636,6 +1642,9 @@ type FieldPresentation struct {
 	// inside that bound as it holds one inside its own accepted range.
 	MinField string `json:"min_field,omitempty"`
 	MaxField string `json:"max_field,omitempty"`
+	// Info is the lasting explanation a reader opens beside the field's
+	// label, wherever the field is read: in a form and in a record.
+	Info *InfoHint `json:"info,omitempty"`
 }
 
 // FieldInputMode hints which virtual keyboard a text control should open.
@@ -1668,6 +1677,9 @@ func (presentation *FieldPresentation) Validate() error {
 	}
 	if !presentation.InputMode.Valid() {
 		return fmt.Errorf("renderer.FieldPresentation: unsupported input mode %q", presentation.InputMode)
+	}
+	if err := presentation.Info.Validate(); err != nil {
+		return fmt.Errorf("renderer.FieldPresentation: %w", err)
 	}
 	return nil
 }
@@ -2941,12 +2953,15 @@ type DisplayComponent struct {
 	CollectionGroups    *DisplayCollectionGroups `json:"collection_groups,omitempty"`
 	SeparatorVariant    ToneToken                `json:"separator_variant,omitempty"`
 	SeparatorAppearance SeparatorAppearance      `json:"separator_appearance,omitempty"`
-	MatrixColumns       []map[string]interface{} `json:"matrix_columns,omitempty"`
-	ValueLabel          string                   `json:"value_label,omitempty"`
-	ValueFallback       string                   `json:"value_fallback,omitempty"`
-	MatrixLabel         string                   `json:"matrix_label,omitempty"`
-	MatrixLabelIcon     string                   `json:"matrix_label_icon,omitempty"`
-	Block               *Block                   `json:"block,omitempty"`
+	// Info is the lasting explanation a reader opens beside the component's
+	// title: what its figures or its words mean.
+	Info            *InfoHint                `json:"info,omitempty"`
+	MatrixColumns   []map[string]interface{} `json:"matrix_columns,omitempty"`
+	ValueLabel      string                   `json:"value_label,omitempty"`
+	ValueFallback   string                   `json:"value_fallback,omitempty"`
+	MatrixLabel     string                   `json:"matrix_label,omitempty"`
+	MatrixLabelIcon string                   `json:"matrix_label_icon,omitempty"`
+	Block           *Block                   `json:"block,omitempty"`
 	// Preview declares that this component's picture can be opened: it names
 	// the dialog and the page actions that belong to the picture rather than
 	// to the page. A long press is the gesture for it on a touch screen.
@@ -3132,6 +3147,8 @@ type RecordSection struct {
 	Block      *Block             `json:"block,omitempty"`
 	Stack      *Stack             `json:"stack,omitempty"`
 	Components []DisplayComponent `json:"components,omitempty"`
+	// Info is the lasting explanation a reader opens beside the title.
+	Info *InfoHint `json:"info,omitempty"`
 }
 
 type ResourceGridPage struct {
