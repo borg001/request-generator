@@ -25,6 +25,7 @@ func cloneListPage(v *ListPage) *ListPage {
 	cp.Selection = cloneListSelection(v.Selection)
 	cp.Context = cloneMap(v.Context)
 	cp.Actions = cloneActions(v.Actions)
+	cp.Tips = cloneTips(v.Tips)
 	return &cp
 }
 
@@ -53,6 +54,7 @@ func cloneFormPage(v *FormPage) *FormPage {
 	cp.Sections = cloneFormSections(v.Sections)
 	cp.Fields = cloneSlice(v.Fields)
 	cp.Context = cloneMap(v.Context)
+	cp.Tips = cloneTips(v.Tips)
 	return &cp
 }
 
@@ -84,6 +86,7 @@ func cloneRecordPage(v *RecordPage) *RecordPage {
 	cp.Sections = cloneRecordSections(v.Sections)
 	cp.Theme = cloneRecordTheme(v.Theme)
 	cp.Actions = cloneActions(v.Actions)
+	cp.Tips = cloneTips(v.Tips)
 	return &cp
 }
 

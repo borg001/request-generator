@@ -73,6 +73,9 @@ func (r Universal) IsZero() bool {
 }
 
 func (r Universal) Validate() error {
+	if err := r.validateTips(); err != nil {
+		return fmt.Errorf("renderer.Universal: %w", err)
+	}
 	if r.Record != nil {
 		for _, section := range r.Record.Sections {
 			if section.Resource == nil {
@@ -1195,6 +1198,8 @@ type ListPage struct {
 	Selection  *ListSelection         `json:"selection,omitempty"`
 	Context    map[string]interface{} `json:"context,omitempty"`
 	Actions    []Action               `json:"actions,omitempty"`
+	// Tips are the temporary hints the page tells its reader.
+	Tips []Tip `json:"tips,omitempty"`
 }
 
 // ListSelection declares server-owned selection for a list of cards. The
@@ -2034,6 +2039,8 @@ type FormPage struct {
 	Sections   []FormSection          `json:"sections,omitempty"`
 	Fields     []string               `json:"fields,omitempty"`
 	Context    map[string]interface{} `json:"context,omitempty"`
+	// Tips are the temporary hints the page tells its reader.
+	Tips []Tip `json:"tips,omitempty"`
 }
 
 // FormNavigation opts a form into section tabs without changing field ownership
@@ -3105,6 +3112,8 @@ type RecordPage struct {
 	Sections      []RecordSection   `json:"sections,omitempty"`
 	Theme         *RecordTheme      `json:"theme,omitempty"`
 	Actions       []Action          `json:"actions,omitempty"`
+	// Tips are the temporary hints the page tells its reader.
+	Tips []Tip `json:"tips,omitempty"`
 }
 
 type RecordNavigation struct {

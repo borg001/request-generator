@@ -147,6 +147,7 @@ func (localizer textLocalizer) localizeRenderer(render Universal) Universal {
 
 func (localizer textLocalizer) localizeListPage(page *ListPage) {
 	localizer.localizeTextFields(&page.Title, &page.Subtitle)
+	localizer.localizeTips(page.Tips)
 	for i := range page.Actions {
 		localizer.localizeRendererAction(&page.Actions[i])
 	}
@@ -312,6 +313,7 @@ func (localizer textLocalizer) localizeBadge(badge *Badge) {
 }
 
 func (localizer textLocalizer) localizeFormPage(page *FormPage) {
+	localizer.localizeTips(page.Tips)
 	localizer.localizeTextFields(&page.Title, &page.Subtitle)
 	if page.Workflow != nil {
 		localizer.localizeTextFields(&page.Workflow.PreviousLabel, &page.Workflow.NextLabel)
@@ -483,6 +485,7 @@ func (localizer textLocalizer) localizeCollection(collection *CollectionConfig) 
 
 func (localizer textLocalizer) localizeRecordPage(page *RecordPage) {
 	localizer.localizeTextFields(&page.Title, &page.Subtitle, &page.Badge)
+	localizer.localizeTips(page.Tips)
 	for i := range page.Actions {
 		localizer.localizeRendererAction(&page.Actions[i])
 	}
