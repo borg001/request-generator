@@ -39,16 +39,33 @@ type Tip struct {
 	NextLabel string    `json:"next_label,omitempty"`
 	SkipLabel string    `json:"skip_label,omitempty"`
 	DoneLabel string    `json:"done_label,omitempty"`
+	// BackLabel names the button that turns a story back a window.
+	BackLabel string `json:"back_label,omitempty"`
 	// Brand puts the application's mark on top of the tip's opening card: a
 	// welcome says whose place the reader has come to.
 	Brand bool `json:"brand,omitempty"`
+	// Presentation says how the tip is told. By default it stands by the
+	// places it names. A story tells the way something goes, window by
+	// window, with a scene playing over each step's words.
+	Presentation TipPresentation `json:"presentation,omitempty"`
 }
+
+// TipPresentation is how a tip is told.
+type TipPresentation string
+
+const (
+	// TipPresentationStory is a window of steps, each with its scene.
+	TipPresentationStory TipPresentation = "story"
+)
 
 // TipStep is one step of an introduction.
 type TipStep struct {
 	Anchor string `json:"anchor,omitempty"`
 	Title  string `json:"title,omitempty"`
 	Text   string `json:"text"`
+	// Scene names the moving picture over the step's words in a story; the
+	// consumer draws the scenes it knows by these names.
+	Scene string `json:"scene,omitempty"`
 }
 
 func validateTips(scope string, tips []Tip) error {
@@ -86,6 +103,12 @@ func validateTips(scope string, tips []Tip) error {
 		}
 		if len(tip.Steps) > 0 && (strings.TrimSpace(tip.NextLabel) == "" || strings.TrimSpace(tip.DoneLabel) == "") {
 			return fmt.Errorf("%s tip %q: an introduction names its next and done buttons", scope, tip.ID)
+		}
+		if tip.Presentation != "" && tip.Presentation != TipPresentationStory {
+			return fmt.Errorf("%s tip %q: presentation %q is unknown", scope, tip.ID, tip.Presentation)
+		}
+		if tip.Presentation == TipPresentationStory && len(tip.Steps) == 0 {
+			return fmt.Errorf("%s tip %q: a story is told in steps", scope, tip.ID)
 		}
 	}
 	return nil

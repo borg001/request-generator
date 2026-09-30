@@ -95,3 +95,22 @@ func TestTipBrandIsWrittenOnlyWhenAsked(t *testing.T) {
 	require.NoError(t, err)
 	require.NotContains(t, string(plain), `"brand"`)
 }
+
+// A story is told in steps, each with its scene; an unknown way of telling
+// and a story without steps are refused.
+func TestTipStoryIsToldInStepsWithScenes(t *testing.T) {
+	render := tipPage()
+	story := &render.Record.Tips[0]
+	story.Presentation = TipPresentationStory
+	require.ErrorContains(t, render.Validate(), "a story is told in steps")
+	story.Steps = []TipStep{{Title: "hints.story_1.title", Text: "hints.story_1.text", Scene: "order_fill"}}
+	story.NextLabel, story.DoneLabel, story.BackLabel = "hints.next", "hints.done", "hints.back"
+	require.NoError(t, render.Validate())
+	encoded, err := json.Marshal(*story)
+	require.NoError(t, err)
+	require.Contains(t, string(encoded), `"presentation":"story"`)
+	require.Contains(t, string(encoded), `"scene":"order_fill"`)
+	require.Contains(t, string(encoded), `"back_label":"hints.back"`)
+	story.Presentation = "carousel"
+	require.ErrorContains(t, render.Validate(), `presentation "carousel" is unknown`)
+}

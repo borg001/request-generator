@@ -3415,7 +3415,9 @@ Generator отклоняет `prompts` без элементов, `prompts` у �
 | `Tip.Dismiss` | `tips[].dismiss` | `Action` | Действие producer, которое записывает ответ. Обязателен. |
 | `Tip.Action` | `tips[].action` | `Action` | Optional шаг, который подсказка предлагает. |
 | `Tip.Steps[]` | `tips[].steps[]` | `{anchor, title, text}` | Шаги знакомства: title и text подсказки открывают его, шаги идут следом. |
-| `Tip.NextLabel`, `Tip.SkipLabel`, `Tip.DoneLabel` | `tips[].next_label` … | string | Подписи кнопок знакомства; `next_label` и `done_label` обязательны при шагах. |
+| `Tip.NextLabel`, `Tip.SkipLabel`, `Tip.DoneLabel`, `Tip.BackLabel` | `tips[].next_label` … | string | Подписи кнопок знакомства; `next_label` и `done_label` обязательны при шагах; `back_label` — кнопка «назад» истории. |
+| `Tip.Presentation` | `tips[].presentation` | `""` \| `story` | Как подсказку говорят: по умолчанию у мест страницы; `story` — окно из шагов, над словами каждого шага играет сцена `steps[].scene`. История без шагов отклоняется. |
+| `TipStep.Scene` | `tips[].steps[].scene` | string | Имя движущейся картинки шага в истории; consumer рисует сцены, которые знает по этим именам, и шаг без знакомой сцены — просто словами. |
 | `Tip.Brand` | `tips[].brand` | bool | Знак приложения над открывающей карточкой: приветствие говорит, куда читатель пришёл. Какой знак, решает consumer (у каждой роли свой бренд). |
 
 `Validate()` отклоняет подсказку без id, текста, известного экрана или
