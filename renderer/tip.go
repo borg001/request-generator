@@ -69,6 +69,18 @@ type TipDemo struct {
 	Label string `json:"label,omitempty"`
 	// Menu is what the sample's own menu shows - words only; none of it runs.
 	Menu []string `json:"menu,omitempty"`
+	// People are the persons a list of people shows while its walk is told:
+	// drawn, nobody's profile, answering nothing (theGHub1/api#360).
+	People []TipDemoPerson `json:"people,omitempty"`
+}
+
+// TipDemoPerson is one sample person: a name, who the person is - a
+// client, a model, an agency or a manager - and how the two follow each
+// other: the person follows the reader (follower), or both do (mutual).
+type TipDemoPerson struct {
+	Name     string `json:"name"`
+	Role     string `json:"role"`
+	Relation string `json:"relation,omitempty"`
 }
 
 // TipDemoKind is what the sample is.
@@ -77,6 +89,8 @@ type TipDemoKind string
 const (
 	// TipDemoMediaItem is a picture standing in a media gallery.
 	TipDemoMediaItem TipDemoKind = "media_item"
+	// TipDemoPeople are people standing at the head of a list of people.
+	TipDemoPeople TipDemoKind = "people"
 )
 
 // TipPresentation is how a tip is told.
@@ -139,8 +153,21 @@ func validateTips(scope string, tips []Tip) error {
 		if tip.Presentation == TipPresentationStory && len(tip.Steps) == 0 {
 			return fmt.Errorf("%s tip %q: a story is told in steps", scope, tip.ID)
 		}
-		if tip.Demo != nil && tip.Demo.Kind != TipDemoMediaItem {
+		if tip.Demo != nil && tip.Demo.Kind != TipDemoMediaItem && tip.Demo.Kind != TipDemoPeople {
 			return fmt.Errorf("%s tip %q: demo kind %q is unknown", scope, tip.ID, tip.Demo.Kind)
+		}
+		if tip.Demo != nil && tip.Demo.Kind == TipDemoPeople {
+			if len(tip.Demo.People) == 0 {
+				return fmt.Errorf("%s tip %q: people demo has no people", scope, tip.ID)
+			}
+			for _, person := range tip.Demo.People {
+				if !TipCasts[person.Role] {
+					return fmt.Errorf("%s tip %q: demo person role %q is unknown", scope, tip.ID, person.Role)
+				}
+				if person.Relation != "" && person.Relation != "follower" && person.Relation != "mutual" {
+					return fmt.Errorf("%s tip %q: demo person relation %q is unknown", scope, tip.ID, person.Relation)
+				}
+			}
 		}
 		if tip.Cast != "" && !TipCasts[tip.Cast] {
 			return fmt.Errorf("%s tip %q: cast %q is unknown", scope, tip.ID, tip.Cast)
@@ -186,6 +213,7 @@ func cloneTips(values []Tip) []Tip {
 		if tip.Demo != nil {
 			demo := *tip.Demo
 			demo.Menu = cloneSlice(tip.Demo.Menu)
+			demo.People = cloneSlice(tip.Demo.People)
 			out[i].Demo = &demo
 		}
 	}
@@ -204,6 +232,9 @@ func (localizer textLocalizer) localizeTips(tips []Tip) {
 			localizer.localizeTextFields(&demo.Label)
 			for item := range demo.Menu {
 				localizer.localizeTextFields(&demo.Menu[item])
+			}
+			for person := range demo.People {
+				localizer.localizeTextFields(&demo.People[person].Name)
 			}
 		}
 	}

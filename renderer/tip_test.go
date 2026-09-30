@@ -156,3 +156,22 @@ func TestTipCastIsOneOfTheStoryPeople(t *testing.T) {
 	render.Record.Tips[0].Cast = "admin"
 	require.ErrorContains(t, render.Validate(), `cast "admin" is unknown`)
 }
+
+// A list of contacts is walked through on sample people (theGHub1/api#360):
+// each is someone of a known kind, following the reader or followed back,
+// and is put into the reader's language on a copy.
+func TestTipDemoPeopleArePeopleOfAKnownKind(t *testing.T) {
+	render := tipPage()
+	render.Record.Tips[0].Demo = &TipDemo{Kind: TipDemoPeople, Label: "hints.demo", People: []TipDemoPerson{
+		{Name: "hints.demo_model", Role: "model", Relation: "follower"},
+		{Name: "hints.demo_client", Role: "client", Relation: "mutual"},
+	}}
+	require.NoError(t, render.Validate())
+	localized := Localize(render, func(value, key string) string { return "ru:" + value })
+	require.Equal(t, "ru:hints.demo_model", localized.Record.Tips[0].Demo.People[0].Name)
+	require.Equal(t, "hints.demo_model", render.Record.Tips[0].Demo.People[0].Name)
+	render.Record.Tips[0].Demo.People[1].Role = "admin"
+	require.ErrorContains(t, render.Validate(), `demo person role "admin" is unknown`)
+	render.Record.Tips[0].Demo.People = nil
+	require.ErrorContains(t, render.Validate(), "people demo has no people")
+}
