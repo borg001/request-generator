@@ -112,6 +112,9 @@ func (r Universal) Validate() error {
 			if err := validateFormSectionActions(r.Form, section); err != nil {
 				return err
 			}
+			if err := section.Info.Validate(); err != nil {
+				return fmt.Errorf("renderer.Universal: form section %q: %w", section.ID, err)
+			}
 			if err := validateFormSectionColumns(section); err != nil {
 				return err
 			}
@@ -2227,6 +2230,9 @@ type FormSection struct {
 	MediaPresets *MediaPresetsConfig `json:"media_presets,omitempty"`
 	Prompts      *PromptList         `json:"prompts,omitempty"`
 	DateRange    *DateRangeConfig    `json:"date_range,omitempty"`
+	// Info explains the section beside its title: what its controls do that
+	// the words on them cannot say.
+	Info *InfoHint `json:"info,omitempty"`
 	// VisibleIf shows the section only while the record matches: a step that
 	// is done, or not yet open, is left out rather than shown empty.
 	VisibleIf *Condition `json:"visible_if,omitempty"`

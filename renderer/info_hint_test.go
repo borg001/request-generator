@@ -72,3 +72,29 @@ func TestFieldPresentationCarriesItsOwnInfoHint(t *testing.T) {
 	require.Equal(t, "en:hints.rate.text", copied.Info.Text)
 	require.Equal(t, "hints.rate.text", source.Info.Text)
 }
+
+// A form section explains itself beside its title too: the explanation is
+// written out, refused without words, and translated into a copy only.
+func TestFormSectionCarriesItsOwnInfoHint(t *testing.T) {
+	page := func() Universal {
+		return Universal{Form: &FormPage{Sections: []FormSection{{
+			ID:     "quiet_hours",
+			Title:  "quiet_hours.title",
+			Fields: []string{"quiet_hours_enabled"},
+			Info:   &InfoHint{ID: "quiet_hours", Title: "hints.quiet_hours.title", Text: "hints.quiet_hours.text"},
+		}}}}
+	}
+	source := page()
+	require.NoError(t, source.Validate())
+	encoded, err := json.Marshal(source.Form.Sections[0])
+	require.NoError(t, err)
+	require.Contains(t, string(encoded), `"info":{"id":"quiet_hours","title":"hints.quiet_hours.title","text":"hints.quiet_hours.text"}`)
+
+	localized := Localize(source, func(value, key string) string { return "ru:" + value })
+	require.Equal(t, "ru:hints.quiet_hours.text", localized.Form.Sections[0].Info.Text)
+	require.Equal(t, "hints.quiet_hours.text", source.Form.Sections[0].Info.Text)
+
+	empty := page()
+	empty.Form.Sections[0].Info.Text = ""
+	require.ErrorContains(t, empty.Validate(), "text is required")
+}

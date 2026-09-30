@@ -3374,8 +3374,10 @@ Generator отклоняет `prompts` без элементов, `prompts` у �
 
 `renderer.InfoHint` — постоянное пояснение, которое читатель открывает рядом с
 тем, что оно объясняет. Оно стоит у подписи поля (`presentation.info`), у
-заголовка record-секции (`record_page.sections[].info`) и у заголовка display
-component (`components[].info`).
+заголовка record-секции (`record_page.sections[].info`), у заголовка секции
+формы (`form_page.sections[].info`) и у заголовка display component
+(`components[].info`). Переключатель несёт свою подпись внутри кнопки, поэтому
+пояснение к группе переключателей ставится на секцию формы, а не на поле.
 
 | Go | JSON | Тип | Назначение |
 |---|---|---|---|

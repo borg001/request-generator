@@ -332,6 +332,7 @@ func (localizer textLocalizer) localizeFormPage(page *FormPage) {
 
 func (localizer textLocalizer) localizeFormSection(section *FormSection) {
 	localizer.localizeTextFields(&section.Title, &section.StepHint, &section.PanelTitle, &section.Subtitle, &section.LoadingLabel, &section.GroupTitle)
+	localizer.localizeInfoHint(section.Info)
 	localizer.localizePromptList(section.Prompts)
 	localizer.localizeFieldMatrix(section.Matrix)
 	if section.ListPage != nil {
