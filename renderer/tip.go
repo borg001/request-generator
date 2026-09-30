@@ -39,6 +39,9 @@ type Tip struct {
 	NextLabel string    `json:"next_label,omitempty"`
 	SkipLabel string    `json:"skip_label,omitempty"`
 	DoneLabel string    `json:"done_label,omitempty"`
+	// Brand puts the application's mark on top of the tip's opening card: a
+	// welcome says whose place the reader has come to.
+	Brand bool `json:"brand,omitempty"`
 }
 
 // TipStep is one step of an introduction.

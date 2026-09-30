@@ -226,6 +226,12 @@ type ModuleField struct {
 	// returns what to show; nil keeps Presentation. The copy shares the maps
 	// and slices of Presentation, so only its plain values may change.
 	PresentationFunc func(c *gin.Context, presentation renderer.FieldPresentation) *renderer.FieldPresentation `json:"-"`
+	// MediaFunc adjusts the media control of the field for the request at
+	// hand: the way to a gallery named by whose gallery it is, say. It gets a
+	// copy of Media and returns what to use; nil keeps Media. The copy
+	// shares the pointers and slices of Media, so a change to one of them
+	// replaces it with a new value instead of writing through it.
+	MediaFunc func(c *gin.Context, media renderer.FieldMediaConfig) *renderer.FieldMediaConfig `json:"-"`
 }
 
 // ColumnName returns the database column name from the Jet column.

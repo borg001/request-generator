@@ -81,3 +81,17 @@ func TestAnIntroductionIsATipWithSteps(t *testing.T) {
 	render.Record.Tips[0].DoneLabel = ""
 	require.ErrorContains(t, render.Validate(), "names its next and done buttons")
 }
+
+// A welcome carries the application's mark on its opening card, and says so
+// under "brand"; a tip without it says nothing.
+func TestTipBrandIsWrittenOnlyWhenAsked(t *testing.T) {
+	render := tipPage()
+	render.Record.Tips[0].Brand = true
+	require.NoError(t, render.Validate())
+	encoded, err := json.Marshal(render.Record.Tips[0])
+	require.NoError(t, err)
+	require.Contains(t, string(encoded), `"brand":true`)
+	plain, err := json.Marshal(render.Record.Tips[1])
+	require.NoError(t, err)
+	require.NotContains(t, string(plain), `"brand"`)
+}

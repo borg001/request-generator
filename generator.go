@@ -540,6 +540,18 @@ func fieldPresentationFor(c *gin.Context, field fields.ModuleField) *renderer.Fi
 	return field.Presentation
 }
 
+// fieldMediaFor is the media control of the field for this request: its own
+// unless the module adjusts it per request.
+func fieldMediaFor(c *gin.Context, field fields.ModuleField) *renderer.FieldMediaConfig {
+	if field.MediaFunc == nil || field.Media == nil {
+		return field.Media
+	}
+	if media := field.MediaFunc(c, *field.Media); media != nil {
+		return media
+	}
+	return field.Media
+}
+
 func (generator *Generator) fieldOptions(c *gin.Context, field fields.ModuleField, role string, lang locale.Lang) []fields.ModuleFieldOptions {
 	options := make([]fields.ModuleFieldOptions, 0, len(field.Options))
 	options = append(options, field.Options...)
@@ -1174,7 +1186,7 @@ func (generator *Generator) actionDefrec(module *BaseModule) func(c *gin.Context
 			field.Options = optionItems
 			field.Check = checkItems
 			field.Presentation = generator.localizeFieldPresentation(lang, fieldPresentationFor(c, field))
-			field.Media = generator.localizeFieldMedia(lang, field.Media, nil)
+			field.Media = generator.localizeFieldMedia(lang, fieldMediaFor(c, field), nil)
 
 			if field.RoleSection != nil {
 				if s, ok := field.RoleSection[role]; ok {
@@ -1332,7 +1344,7 @@ func (generator *Generator) actionView(module *BaseModule, action actions.ViewMo
 				fieldItem["presentation"] = generator.localizeFieldPresentation(lang, presentation)
 			}
 			if field.Media != nil {
-				fieldItem["media"] = generator.localizeFieldMedia(lang, field.Media, value)
+				fieldItem["media"] = generator.localizeFieldMedia(lang, fieldMediaFor(c, field), value)
 			}
 
 			if field.OptionsSource != nil {

@@ -3416,6 +3416,7 @@ Generator отклоняет `prompts` без элементов, `prompts` у �
 | `Tip.Action` | `tips[].action` | `Action` | Optional шаг, который подсказка предлагает. |
 | `Tip.Steps[]` | `tips[].steps[]` | `{anchor, title, text}` | Шаги знакомства: title и text подсказки открывают его, шаги идут следом. |
 | `Tip.NextLabel`, `Tip.SkipLabel`, `Tip.DoneLabel` | `tips[].next_label` … | string | Подписи кнопок знакомства; `next_label` и `done_label` обязательны при шагах. |
+| `Tip.Brand` | `tips[].brand` | bool | Знак приложения над открывающей карточкой: приветствие говорит, куда читатель пришёл. Какой знак, решает consumer (у каждой роли свой бренд). |
 
 `Validate()` отклоняет подсказку без id, текста, известного экрана или
 ответа, одну подсказку дважды на одном экране и шаг без текста. Подсказки
