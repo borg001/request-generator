@@ -526,6 +526,19 @@ func validateModuleVirtualFilterOptionsSources(module *BaseModule) error {
 
 // fieldPresentationFor is how the field is shown for this request: its own
 // presentation unless the module adjusts it per request.
+// fieldTitleFor names a field for the request at hand: what TitleFunc answers,
+// else the field's own title. A record read by a form carries the same name
+// the field list gives - the view used to skip TitleFunc, so a settings form
+// named a TopMember's switch as a model's (theGHub1/api#367).
+func fieldTitleFor(c *gin.Context, field fields.ModuleField) string {
+	if field.TitleFunc != nil {
+		if title := field.TitleFunc(c); title != "" {
+			return title
+		}
+	}
+	return field.Title
+}
+
 func fieldPresentationFor(c *gin.Context, field fields.ModuleField) *renderer.FieldPresentation {
 	if field.PresentationFunc == nil {
 		return field.Presentation
@@ -1177,12 +1190,7 @@ func (generator *Generator) actionDefrec(module *BaseModule) func(c *gin.Context
 				}
 			}
 
-			if field.TitleFunc != nil {
-				if title := field.TitleFunc(c); title != "" {
-					field.Title = title
-				}
-			}
-			field.Title = generator.Translate(lang, field.Title)
+			field.Title = generator.Translate(lang, fieldTitleFor(c, field))
 			field.Options = optionItems
 			field.Check = checkItems
 			field.Presentation = generator.localizeFieldPresentation(lang, fieldPresentationFor(c, field))
@@ -1333,7 +1341,7 @@ func (generator *Generator) actionView(module *BaseModule, action actions.ViewMo
 			value := resultMap[fieldKey]
 
 			fieldItem := map[string]interface{}{
-				"title":     generator.Translate(lang, field.Title),
+				"title":     generator.Translate(lang, fieldTitleFor(c, field)),
 				"type":      string(field.Type),
 				"form_type": string(fieldFormTypeForRole(field, roleStr)),
 				"value":     value,
