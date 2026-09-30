@@ -3250,7 +3250,20 @@ type ActionPresentation struct {
 	// The renderer remembers under this key that it was used, so the same key
 	// keeps quiet an action that already did its job.
 	AttentionKey string `json:"attention_key,omitempty"`
+	// Control draws the action as something other than a button. "switch" is
+	// a labelled switch that stands on while the field Active names is
+	// truthy; pressing it runs the action. Two actions - one shown while off,
+	// the other while on - make one switch.
+	Control ActionControl `json:"control,omitempty"`
 }
+
+// ActionControl is the kind of control an action is drawn as.
+type ActionControl string
+
+const (
+	// ActionControlSwitch draws the action as an on/off switch with its label.
+	ActionControlSwitch ActionControl = "switch"
+)
 
 func (presentation ActionPresentation) Validate() error {
 	if !presentation.Placement.Valid() {
@@ -3267,6 +3280,9 @@ func (presentation ActionPresentation) Validate() error {
 	}
 	if presentation.ActiveIf != nil && !hasCondition(presentation.ActiveIf) {
 		return fmt.Errorf("active_if is invalid")
+	}
+	if presentation.Control != "" && presentation.Control != ActionControlSwitch {
+		return fmt.Errorf("unsupported control %q", presentation.Control)
 	}
 	return nil
 }

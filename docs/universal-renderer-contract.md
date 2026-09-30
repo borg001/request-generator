@@ -2159,6 +2159,7 @@ request-generator.
 | `action.variant` | `default`, `primary`, `secondary`, `success`, `warning`, `danger` |
 | `action.placement` | `full`, `half`, `filter_footer`, `badge`, `head`, `menu`; пустое значение — позиция по умолчанию |
 | `action.appearance`, `action.active_appearance` | open token. Гарантированные UI kit варианты: `solid`, `outline`, `outline-fill`, `ghost`, `soft`, `link`; integration может передать свой string token. |
+| `action.control` | `""` \| `switch` | Чем нарисовать действие вместо кнопки. `switch` — подписанный переключатель: включён, пока поле из `active` истинно; нажатие выполняет действие. Пара действий (одно видно, пока выключено, другое — пока включено) даёт один переключатель. Неизвестное значение отклоняется. |
 
 Generator отклоняет неизвестные значения `action.placement`, pill
 `presentation`, `display_type` и `media_visibility_states[].value` при
