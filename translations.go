@@ -79,7 +79,36 @@ func flattenJSON(data map[string]interface{}, prefix string, result map[string]s
 
 // Translate resolves a translation key for the given locale.
 // Returns the translated text, or the key itself if not found.
+// SetTranslationOverrides replaces, for one language, the words the
+// application changes while it runs - text an administrator edits, say. They
+// are read before the files and served with them; keys left out read the
+// files again. Readers are never locked: every call publishes a new set.
+func (g *Generator) SetTranslationOverrides(lang locale.Lang, overrides map[string]string) {
+	g.overridesMu.Lock()
+	defer g.overridesMu.Unlock()
+	current, _ := g.translationOverrides.Load().(map[locale.Lang]map[string]string)
+	next := make(map[locale.Lang]map[string]string, len(current)+1)
+	for existing, words := range current {
+		next[existing] = words
+	}
+	copied := make(map[string]string, len(overrides))
+	for key, value := range overrides {
+		copied[key] = value
+	}
+	next[lang] = copied
+	g.translationOverrides.Store(next)
+}
+
+func (g *Generator) translationOverride(lang locale.Lang, key string) (string, bool) {
+	overrides, _ := g.translationOverrides.Load().(map[locale.Lang]map[string]string)
+	text, ok := overrides[lang][key]
+	return text, ok
+}
+
 func (g *Generator) Translate(lang locale.Lang, key string) string {
+	if text, ok := g.translationOverride(lang, key); ok {
+		return text
+	}
 	if g.translations != nil {
 		if langMap, ok := g.translations[lang]; ok {
 			if text, ok := langMap[key]; ok {
@@ -229,6 +258,17 @@ func (g *Generator) handleLangTranslations() gin.HandlerFunc {
 		if !ok {
 			c.JSON(http.StatusNotFound, gin.H{"message": fmt.Sprintf("locale %q not found", string(key))})
 			return
+		}
+		overrides, _ := g.translationOverrides.Load().(map[locale.Lang]map[string]string)
+		if len(overrides[key]) > 0 {
+			merged := make(map[string]string, len(langMap)+len(overrides[key]))
+			for word, text := range langMap {
+				merged[word] = text
+			}
+			for word, text := range overrides[key] {
+				merged[word] = text
+			}
+			langMap = merged
 		}
 
 		c.JSON(http.StatusOK, langMap)

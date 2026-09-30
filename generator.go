@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/darkrain/request-generator/actions"
 	"github.com/darkrain/request-generator/db"
@@ -38,6 +40,10 @@ type Generator struct {
 	Locales              []locale.Lang
 	DefaultLocale        locale.Lang
 	translations         map[locale.Lang]map[string]string
+	// translationOverrides are words the application replaces while it runs,
+	// read before the files; see SetTranslationOverrides.
+	translationOverrides atomic.Value
+	overridesMu          sync.Mutex
 	EnableOpenAPI        bool
 	GroupTitles          map[string]string
 	IconMap              map[string]string
