@@ -98,3 +98,41 @@ func TestFormSectionCarriesItsOwnInfoHint(t *testing.T) {
 	empty.Form.Sections[0].Info.Text = ""
 	require.ErrorContains(t, empty.Validate(), "text is required")
 }
+
+// A list page explains itself beside its title: the explanation is written
+// out, refused without words, and translated into a copy only (#375).
+func TestListPageCarriesItsOwnInfoHint(t *testing.T) {
+	page := func() Universal {
+		return Universal{List: &ListPage{
+			ID:    "deals",
+			Title: "deals.menu.list",
+			Info:  &InfoHint{ID: "deals_tours_model", Title: "hints.deals_tours_model.title", Text: "hints.deals_tours_model.text"},
+		}}
+	}
+	source := page()
+	require.NoError(t, source.Validate())
+	encoded, err := json.Marshal(source.List)
+	require.NoError(t, err)
+	require.Contains(t, string(encoded), `"info":{"id":"deals_tours_model","title":"hints.deals_tours_model.title","text":"hints.deals_tours_model.text"}`)
+
+	localized := Localize(source, func(value, key string) string { return "ru:" + value })
+	require.Equal(t, "ru:hints.deals_tours_model.text", localized.List.Info.Text)
+	require.Equal(t, "hints.deals_tours_model.text", source.List.Info.Text)
+
+	empty := page()
+	empty.List.Info.Text = ""
+	require.ErrorContains(t, empty.Validate(), "text is required")
+}
+
+// A gallery item shown to its owner the way others see it carries the
+// original beside it, and the gallery names both views (#375).
+func TestMediaGalleryItemCarriesItsOriginal(t *testing.T) {
+	item := MediaGalleryItem{ID: "7", Src: "storage://link/7/blur_faces", Thumbnail: "storage://link/7/blur_faces", OriginalSrc: "storage://link/7", OriginalThumbnail: "storage://link/7"}
+	encoded, err := json.Marshal(item)
+	require.NoError(t, err)
+	require.Contains(t, string(encoded), `"original_src":"storage://link/7"`)
+	require.Contains(t, string(encoded), `"original_thumbnail":"storage://link/7"`)
+	labels, err := json.Marshal(MediaGalleryLabels{ViewMine: "As I see it", ViewOthers: "As others see it"})
+	require.NoError(t, err)
+	require.JSONEq(t, `{"view_mine":"As I see it","view_others":"As others see it"}`, string(labels))
+}

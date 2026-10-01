@@ -553,6 +553,9 @@ func validateListPage(scope string, page *ListPage) error {
 	if page == nil {
 		return nil
 	}
+	if err := page.Info.Validate(); err != nil {
+		return fmt.Errorf("renderer.Universal: %s: %w", scope, err)
+	}
 	if err := page.Grid.Validate(); err != nil {
 		return fmt.Errorf("renderer.Universal: %s: %w", scope, err)
 	}
@@ -1203,6 +1206,9 @@ type ListPage struct {
 	Actions    []Action               `json:"actions,omitempty"`
 	// Tips are the temporary hints the page tells its reader.
 	Tips []Tip `json:"tips,omitempty"`
+	// Info is the lasting explanation of the whole page, opened beside its
+	// title: the rules a reader of this page lives by.
+	Info *InfoHint `json:"info,omitempty"`
 }
 
 // ListSelection declares server-owned selection for a list of cards. The
@@ -2580,6 +2586,12 @@ type MediaGalleryItem struct {
 	SortOrder       int             `json:"sort_order"`
 	Title           string          `json:"title,omitempty"`
 	Description     string          `json:"description,omitempty"`
+	// OriginalSrc and OriginalThumbnail are the picture as its owner took it,
+	// given beside Src when Src shows it the way others see it - its face
+	// masked. A consumer that offers its owner both views switches between
+	// them; one that does not shows Src.
+	OriginalSrc       string `json:"original_src,omitempty"`
+	OriginalThumbnail string `json:"original_thumbnail,omitempty"`
 	// Badges are server-owned annotations for an individual gallery item. They
 	// are useful for state that must survive reloads, such as a published media
 	// item, without making the browser infer state from a URL or local cache.
@@ -2609,6 +2621,10 @@ type MediaGalleryLabels struct {
 	PrivateHint  string `json:"private_hint,omitempty"`
 	HideFace     string `json:"hide_face,omitempty"`
 	HideFaceHint string `json:"hide_face_hint,omitempty"`
+	// The two views of a gallery whose items carry their originals: the
+	// pictures as their owner sees them, and as everyone else does.
+	ViewMine   string `json:"view_mine,omitempty"`
+	ViewOthers string `json:"view_others,omitempty"`
 	// A gallery large enough to be a page of its own is read in parts. These
 	// name the parts; a consumer that is given none of them shows the gallery
 	// whole, as before.

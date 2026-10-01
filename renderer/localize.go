@@ -148,6 +148,7 @@ func (localizer textLocalizer) localizeRenderer(render Universal) Universal {
 func (localizer textLocalizer) localizeListPage(page *ListPage) {
 	localizer.localizeTextFields(&page.Title, &page.Subtitle)
 	localizer.localizeTips(page.Tips)
+	localizer.localizeInfoHint(page.Info)
 	for i := range page.Actions {
 		localizer.localizeRendererAction(&page.Actions[i])
 	}

@@ -26,6 +26,7 @@ func cloneListPage(v *ListPage) *ListPage {
 	cp.Context = cloneMap(v.Context)
 	cp.Actions = cloneActions(v.Actions)
 	cp.Tips = cloneTips(v.Tips)
+	cp.Info = CloneInfoHint(v.Info)
 	return &cp
 }
 
