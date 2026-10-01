@@ -72,6 +72,10 @@ type TipDemo struct {
 	// People are the persons a list of people shows while its walk is told:
 	// drawn, nobody's profile, answering nothing (theGHub1/api#360).
 	People []TipDemoPerson `json:"people,omitempty"`
+	// Picture names which of the application's sample pictures a media item
+	// shows - the application holds the files, with a twin whose face is
+	// hidden. Without one the kit draws its own (theGHub1/api#372).
+	Picture string `json:"picture,omitempty"`
 }
 
 // TipDemoPerson is one sample person: a name, who the person is - a
