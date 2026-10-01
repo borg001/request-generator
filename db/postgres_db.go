@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
@@ -34,6 +35,7 @@ type DB struct {
 	sql           *sql.DB
 	Debug         bool
 	preparedViews *preparedViewCache
+	readContext   context.Context
 }
 type Tx struct {
 	sql *sql.Tx
@@ -539,9 +541,9 @@ func (db *DB) List(
 	// Execute main query
 	var rows *sql.Rows
 	if len(args) > 0 {
-		rows, err = db.sql.Query(query, args...)
+		rows, err = db.sql.QueryContext(db.queryContext(), query, args...)
 	} else {
-		rows, err = db.sql.Query(query)
+		rows, err = db.sql.QueryContext(db.queryContext(), query)
 	}
 	if err != nil {
 		log.Errorln("LIST ERR: ", err)
@@ -573,7 +575,7 @@ func (db *DB) List(
 		err = rows.Scan(columnValues...)
 		if err != nil {
 			log.Errorln("[DEBUG] SCAN ERR: ", err)
-			continue
+			return nil, 0, err
 		}
 
 		currentResult := make(map[string]interface{})
@@ -670,18 +672,23 @@ func (db *DB) List(
 		results = append(results, currentResult)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	rows.Close()
+
 	result = append(result, results...)
 
 	// Execute count query
 	var countResult *sql.Rows
 	if len(countArgs) > 0 {
-		countResult, err = db.sql.Query(countQuery, countArgs...)
+		countResult, err = db.sql.QueryContext(db.queryContext(), countQuery, countArgs...)
 	} else {
-		countResult, err = db.sql.Query(countQuery)
+		countResult, err = db.sql.QueryContext(db.queryContext(), countQuery)
 	}
 	if err != nil {
 		log.Errorln("COUNT ERR: ", err)
-		return result, 0, nil
+		return nil, 0, err
 	}
 	defer countResult.Close()
 
@@ -689,11 +696,15 @@ func (db *DB) List(
 	for countResult.Next() {
 		var currentCount int64
 		err = countResult.Scan(&currentCount)
-		if err == nil {
-			count += currentCount
+		if err != nil {
+			return nil, 0, err
 		}
+		count += currentCount
 	}
 
+	if err := countResult.Err(); err != nil {
+		return nil, 0, err
+	}
 	return result, count, nil
 }
 
@@ -816,7 +827,7 @@ func (db *DB) View(
 		err = rows.Scan(columnValues...)
 		if err != nil {
 			log.Errorln("[DEBUG] VIEW SCAN ERR: ", err)
-			continue
+			return nil, err
 		}
 
 		currentResult := make(map[string]interface{})
@@ -894,6 +905,9 @@ func (db *DB) View(
 		results = append(results, currentResult)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	if len(results) > 0 {
 		return results[0], nil
 	}

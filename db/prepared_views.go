@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"sync"
@@ -10,6 +11,7 @@ type preparedViewCache struct {
 	mu         sync.Mutex
 	limit      int
 	statements map[string]*sql.Stmt
+	pending    map[string]chan struct{}
 }
 
 // NewDBWithPreparedViews opts this executor into reusing prepared View queries.
@@ -22,44 +24,72 @@ type preparedViewCache struct {
 func NewDBWithPreparedViews(pool *sql.DB, maxStatements int) *DB {
 	db := NewDB(pool)
 	if maxStatements > 0 {
-		db.preparedViews = &preparedViewCache{limit: maxStatements, statements: make(map[string]*sql.Stmt)}
+		db.preparedViews = &preparedViewCache{limit: maxStatements, statements: make(map[string]*sql.Stmt), pending: make(map[string]chan struct{})}
 	}
 	return db
 }
 
 func (db *DB) queryView(query string, args ...interface{}) (*sql.Rows, error) {
+	return db.QueryContext(db.queryContext(), query, args...)
+}
+
+// QueryContext executes a parameterized read using the same bounded statement
+// cache as View when enabled by NewDBWithPreparedViews. It never caches rows or
+// argument values. Callers must close the returned rows.
+func (db *DB) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	if db.preparedViews == nil {
-		return db.sql.Query(query, args...)
+		return db.sql.QueryContext(ctx, query, args...)
 	}
-	stmt, err := db.preparedViews.statement(db.sql, query)
+	stmt, err := db.preparedViews.statement(ctx, db.sql, query)
 	if err != nil {
 		return nil, err
 	}
 	if stmt == nil {
-		return db.sql.Query(query, args...)
+		return db.sql.QueryContext(ctx, query, args...)
 	}
 	// sql.Stmt prepared on sql.DB handles concurrent use and preparation on
 	// additional/replacement pool connections. Never bind it to one sql.Conn.
-	return stmt.Query(args...)
+	return stmt.QueryContext(ctx, args...)
 }
 
-func (cache *preparedViewCache) statement(pool *sql.DB, query string) (*sql.Stmt, error) {
-	cache.mu.Lock()
-	defer cache.mu.Unlock()
-	if stmt := cache.statements[query]; stmt != nil {
-		return stmt, nil
+func (cache *preparedViewCache) statement(ctx context.Context, pool *sql.DB, query string) (*sql.Stmt, error) {
+	for {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		cache.mu.Lock()
+		if stmt := cache.statements[query]; stmt != nil {
+			cache.mu.Unlock()
+			return stmt, nil
+		}
+		if ready := cache.pending[query]; ready != nil {
+			cache.mu.Unlock()
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-ready:
+			}
+			continue
+		}
+		if len(cache.statements)+len(cache.pending) >= cache.limit {
+			cache.mu.Unlock()
+			return nil, nil
+		}
+		ready := make(chan struct{})
+		cache.pending[query] = ready
+		cache.mu.Unlock()
+		// A cold SQL shape must not hold the cache mutex while acquiring a pool
+		// connection. Only requests for the same shape wait for its preparation.
+		stmt, err := pool.PrepareContext(ctx, query)
+		cache.mu.Lock()
+		delete(cache.pending, query)
+		if err == nil {
+			cache.statements[query] = stmt
+		}
+		close(ready)
+		cache.mu.Unlock()
+		return stmt, err
 	}
-	if len(cache.statements) >= cache.limit {
-		return nil, nil
-	}
-	// Serialize initial preparation so simultaneous cold requests cannot create
-	// duplicate retained statements. Failed preparations are not cached.
-	stmt, err := pool.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	cache.statements[query] = stmt
-	return stmt, nil
 }
 
 // ClosePreparedViews releases retained statements and disables further caching.
@@ -78,4 +108,20 @@ func (db *DB) ClosePreparedViews() error {
 	}
 	cache.limit = 0
 	return result
+}
+
+// WithContext returns an immutable request-scoped copy sharing the pool and
+// statement cache. Generated View and List/COUNT honor cancellation; writes
+// are unchanged.
+func (db *DB) WithContext(ctx context.Context) DBExecutor {
+	scoped := *db
+	scoped.readContext = ctx
+	return &scoped
+}
+
+func (db *DB) queryContext() context.Context {
+	if db.readContext != nil {
+		return db.readContext
+	}
+	return context.Background()
 }
