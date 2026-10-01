@@ -916,6 +916,24 @@ BeforeAction: func(c *gin.Context) error {
 | `ColumnsFunc`  | `func(c *gin.Context) []pg.Column`        | Динамический список колонок                |
 | `Fields`       | `[]actions.RoleContext`                    | Колонки по ролям (приоритет над Columns)   |
 
+#### Статус отказа
+
+Отказ `BeforeAction` или role hook-а (`RoleBeforeHook`) отвечает 400. Чтобы
+ответить другим 4xx — например, 404 для записи, которую читателю видеть
+нельзя, — верните `actions.NewStatusError(status, message)`. Статус вне 4xx
+становится 400; `actions.ErrorStatus` читает статус и у
+`AtomicCommittedRejection`. Текст уходит без перевода: переводите его сами
+(`module.Translate(c, key, fallback)`).
+
+```go
+BeforeAction: func(c *gin.Context) error {
+    if !recordVisible(c) {
+        return actions.NewStatusError(http.StatusNotFound, module.Translate(c, "records.not_found", "Not found"))
+    }
+    return nil
+},
+```
+
 ### Этап 8. Регистрация модуля в приложении
 
 Добавьте модуль в массив `allModules` в `main.go`:
@@ -1364,6 +1382,13 @@ generator.LoadTranslationsFile(locale.AR, "translations/ar.json")
 2. Для каждого модуля регистрирует CRUD-маршруты с middleware
 3. Создаёт `GET /admin/api/lang` и `GET /admin/api/lang/:key` — i18n
 4. Создаёт `GET /admin/api/openapi.json` (если `EnableOpenAPI`)
+
+Слова, которые приложение меняет во время работы (например, тексты, которые
+правит администратор), задаёт `generator.SetTranslationOverrides(lang, words)`:
+они читаются раньше файлов переводов и сливаются с ними в ответе `/lang/:key`.
+`generator.AccessGateAction` называет шаг, который открывает пункт меню,
+закрытый `AccessGate` (`navigation[].lock_action`). Подробнее — в
+`docs/universal-renderer-contract.md`.
 
 ### DBExecutor
 

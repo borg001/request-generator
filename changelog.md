@@ -4,6 +4,101 @@
 
 ### Added
 
+- **`renderer.InfoHint` (`info`)** — постоянное пояснение «i» рядом с тем,
+  что оно объясняет: `FieldPresentation.Info` (подпись поля в форме и в
+  записи), `RecordSection.Info`, `FormSection.Info`, `DisplayComponent.Info` и
+  `ListPage.Info` (заголовок страницы списка). `{id, title, text, action}`;
+  без `text` отклоняется. Проверяется, копируется и локализуется вместе со
+  страницей (`CloneInfoHint`, `LocalizeInfoHint`).
+
+- **`renderer.Tip` (`tips`)** — временные подсказки страницы, по одной на
+  экран (`device`: `desktop` | `mobile`): `ListPage.Tips`, `RecordPage.Tips`,
+  `FormPage.Tips` и `ResourceGridPage.Tips`. Ответ записывает действие
+  `dismiss` producer-а, `version` говорит подсказку заново. `steps` делают
+  знакомство (`next_label`, `skip_label`, `done_label`), `presentation: story`
+  — историю со сценой `steps[].scene` и `back_label`; `cast` рисует читателя
+  его ролью (`renderer.TipCasts`); `brand` ставит знак приложения над первой
+  карточкой; `demo` — образец на странице: `media_item` (`label`, `menu`,
+  `picture` — одна из картинок приложения) или `people` (`people[]`: `name`,
+  `role`, `relation` `follower` | `mutual`). Одна подсказка дважды на одном
+  экране, неизвестные `device`, `presentation`, `demo.kind`, `cast`, `role` и
+  `relation` отклоняются.
+
+- **`MediaGalleryItem.OriginalSrc` / `OriginalThumbnail` (`original_src`,
+  `original_thumbnail`)** — картинка такой, какой её снял владелец, рядом с
+  `src`, который показывает её так, как видят другие (лицо замаскировано), и
+  **`MediaGalleryLabels.ViewMine` / `ViewOthers` (`view_mine`,
+  `view_others`)** — подписи двух видов. Эти две подписи библиотека не
+  переводит: producer передаёт готовый текст.
+
+- **`MediaGalleryActions.Open` (`media.actions.open`)** — переход от одной
+  картинки к месту, где лежат все (от лица профиля к его галерее).
+
+- **`actions.NewStatusError` / `actions.ErrorStatus`** — отказ `BeforeAction`
+  или role hook-а может назвать свой 4xx (например, 404 для записи, которую
+  читателю видеть нельзя); остальное по-прежнему 400. `ErrorStatus` читает
+  статус и у `AtomicCommittedRejection`. Текст отказа не переводится.
+
+- **`Generator.SetTranslationOverrides(lang, words)`** — слова, которые
+  приложение заменяет во время работы (тексты, которые правит администратор):
+  читаются раньше файлов в `Translate` и сливаются с ними в
+  `GET /api/lang/:key`. Каждый вызов атомарно публикует новый набор языка.
+
+- **`ModuleField.PresentationFunc` и `ModuleField.MediaFunc`** — presentation
+  и media поля для текущего запроса (лимит по роли, путь к галерее того, чья
+  она). Функция получает копию и возвращает то, что показать; `nil` оставляет
+  поле. Применяются в `defrec` и `view`; общая metadata не меняется.
+
+- **`ConfigNavigationEntry.LockAction` (`navigation[].lock_action`) и
+  `Generator.AccessGateAction`** — шаг, который открывает закрытый пункт меню
+  (верификация, недозаполненный профиль). Спрашивается только для закрытых
+  пунктов navigation; тексты переводит приложение.
+
+- **Workspace: `WorkspaceWidget.Threads` (`threads`) и `MasterVariants`
+  (`master_variants`)** — строка master делится на нити, рассортированные по
+  группам (`group_field`, `groups[]`, `lookup_field`/`lookup_filter`,
+  `badges[]`); detail, composer и команды читают открытую нить. Pill
+  `key=val` может переключить master на свой список (заказы, туры), строка
+  которого разворачивается в нити (`unfold`). В `load` — `threads` и
+  `master_variants`. **`WorkspaceCommand.MultiLabel` / `MultiConfirm`** —
+  название multi-команды на панели выбранных строк и вопрос один раз на все
+  (`{count}`, `{plural:…}`).
+
+- **Действия: `ActionPlacementComposer` (`composer`),
+  `ActionPlacementThread` (`thread`), `ActionPresentation.CountdownField`
+  (`countdown_field`), `Screen` (`screen`: `desktop` | `mobile`), `Control`
+  (`control: switch`)**; **`Confirm.MessageField` (`message_field`)** — текст
+  вопроса из поля записи; **`Condition.Future` / `Past`** — условие по
+  моменту и часам читателя.
+
+- **Поля и варианты: `FieldPresentation.Suggest` (`suggest`: `endpoint`,
+  `params`, `value_field`)**, **`MinField` / `MaxField` (`min_field`,
+  `max_field`)** — концы одного диапазона в двух полях формы;
+  **`ModuleFieldOptions.Group` (`group`)**, переводится как `badge`, и
+  **`Exclusive` (`exclusive`)** — вариант «любой» в множественном выборе;
+  renderer keys **`switch_list`** и **`segmented`**.
+
+- **Фильтры: `Filters.Defaults` (`defaults`)** — фильтры, с которыми список
+  открывается (каждый ключ должен быть доступным фильтром, иначе list
+  отвечает ошибкой); **`Filters.Disclosure` (`disclosure`: `label`,
+  `open`)**; **`FilterGroup.VisibleIf`** (читает `filters.<key>`);
+  **`FilterPill.Icon`**; **`DateRangeConfig.OpenEndField` / `OpenEndLabel` /
+  `OpenEndHint`** — диапазон без конца.
+
+- **Карточка: `CardSchema.Segments` (`segments`: `field`, `tone_map`,
+  `pulse`, `label`)**, **`CardEdgeAccent.Wash`** и tone ведущей линии из поля
+  строки (`"{{field}}"`), **`Media.MoreField` (`more_field`)**,
+  **`Badge.Action` (`badges[].action`)**, формат текста
+  **`TextFormatHandle` (`handle`)**.
+
+- **Формы и записи: `FormSection.VisibleIf`**, **`FieldMatrixList.DisplayType`
+  / `Align`**, **`RecordSection.MobileFold`** (подпись свёрнутой на телефоне
+  группы секций), **`DisplayComponent.MobileColumns` (0–4), `FormLook`,
+  `HeadActions`, `Kicker`, `Highlight`** (`kicker` и `highlight` не
+  переводятся), **`DisplayFieldRef.BadgeCorner`**, `display_type`
+  **`check_list`** и **`progress`** (`status_timeline`) и **`plan_card`**
+  (`data_list`).
+
 - **`Confirm.Next` (`confirm.next`)** — второй вопрос, который задаётся сразу
   после «да» на первый (модель в туре подтверждает, что на месте, затем что
   передаёт анкету в управление). Действие выполняется после последнего
@@ -442,6 +537,16 @@
 
 ### Changed
 
+- **`TitleFunc` действует и во `view`** — `view.item[field].title` теперь
+  тоже берёт заголовок из `TitleFunc`: форма, которая читает запись через view,
+  называла переключатель TopMember-а словами модели (theGHub1/api#367). List
+  `heads` по-прежнему берут `Title`.
+
+- **Отказы hook-ов и `BeforeAction`** отвечают статусом, который называет
+  ошибка (`actions.ErrorStatus(err, 400)` во всех шести местах
+  `BeforeRequest` и пяти местах role hook-ов); ошибка без статуса — 400, как
+  раньше.
+
 - **`Convert` на `ModuleField`** принимает `*gin.Context` первым аргументом.
   Это позволяет использовать роль, пользователя или другие данные контекста при преобразовании значения.
 
@@ -486,6 +591,17 @@
   ```
 
 ### Fixed
+
+- **Фильтр, выбор и медиа компонента при переводе** — `item_filter`,
+  `item_selection` и `media_items` display component-а копируются вместе со
+  страницей. Раньше перевод первого читателя записывался в страницу producer-а,
+  и следующие читатели видели её на его языке.
+
+- **Клонирование `FieldMatrixList`** — список копируется целиком, поэтому
+  `display_type` и `align` больше не теряются по дороге к ответу.
+
+- **`back_label` истории** переводится вместе с остальными подписями
+  подсказки; второй вопрос `Confirm.Next` переводится вместе с первым.
 
 - **Фильтр по array-колонке с одним значением** — одиночное значение (например,
   от pill) оборачивается в Postgres array literal `{value}`. Раньше список

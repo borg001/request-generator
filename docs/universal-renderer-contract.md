@@ -89,6 +89,56 @@ mapping и error shape не менялись.
 заменял в них ключи одним языком, а все следующие запросы, на любом языке,
 получали этот первый язык.
 
+## Дополнения после 2.7.0
+
+Ниже — аддитивные изменения, сделанные после `2.7.0` без смены версии:
+`renderer.Version` по-прежнему `2.7.0`. Ответы без новых полей не меняются;
+required keys, CRUD route mapping и error shape прежние.
+
+- Пояснения и подсказки: `renderer.InfoHint` у поля, record-секции, секции
+  формы, display component и страницы списка (`list_page.info`);
+  `renderer.Tip` в `list_page.tips`, `record_page.tips`, `form_page.tips` и
+  `resource_grid_page.tips` — шаги, история (`presentation: story`, `scene`,
+  `back_label`, `cast`), образец (`demo`: `media_item` с `picture`, `people`)
+  и `brand`. См. «Пояснение «i»» и «Временные подсказки и знакомство».
+- Поля: `presentation.suggest` (с `optional`), `presentation.min_field` /
+  `max_field`, `media.capture`, `media.actions.open`,
+  `media.item.original_src` / `original_thumbnail`, `media.labels.view_mine` /
+  `view_others`; у вариантов — `group` и `exclusive`; renderer keys
+  `switch_list` и `segmented`. Go: `ModuleField.PresentationFunc` и
+  `MediaFunc`; `TitleFunc` теперь действует и во `view`.
+- Списки: `filters.defaults`, `filters.disclosure`,
+  `filters.groups[].visible_if`, `pill_rows[][].icon`; в карточке `chips`,
+  `segments`, `leading_accent.wash` и tone из поля строки,
+  `media.more_field`, `badges[].action`, формат текста `handle`.
+- Формы: `sections[].visible_if`, `date_range.open_end_field` /
+  `open_end_label` / `open_end_hint`, у `matrix.list` — `mobile_columns`,
+  `display_type`, `align`.
+- Записи: `sections[].mobile_fold`; у компонентов `mobile_fold`,
+  `mobile_columns`, `form_look`, `head_actions`, `kicker`, `highlight`; у
+  `items[]` — `icon` и `badge_corner`; `display_type` `check_list` и
+  `progress` (`status_timeline`), `plan_card` (`data_list`), `progress_rows`
+  (`record_carousel`); `main_ratio: landscape`.
+- Действия: `placement` `composer` и `thread`, `countdown_field`, `screen`,
+  `control: switch`, `confirm.message_field`, `confirm.next`; условия
+  `future` и `past`.
+- Глобальный виджет: `surface.pinned_routes`, `workspace.threads`,
+  `workspace.master_variants` (в `load` — `threads`, `master_variants`),
+  `commands[].multi_label`, `commands[].multi_confirm`.
+- `/api/config`: `navigation[].account`, `navigation[].lock_action`
+  (`Generator.AccessGateAction`).
+- Go API без изменения wire contract: `actions.NewStatusError` /
+  `actions.ErrorStatus` (статус отказа hook-а, см. «Статус отказа») и
+  `Generator.SetTranslationOverrides` (см. «Слова, заменённые во время
+  работы»).
+
+Новые значения закрытых enum: `placement: composer|thread`, `display_type:
+check_list|progress|plan_card|progress_rows`, `main_ratio: landscape`,
+`format: handle`, `control: switch`, `tips[].device: desktop|mobile`,
+`tips[].presentation: story`, `tips[].demo.kind: media_item|people`,
+`tips[].cast`. Consumer предыдущей сборки их не знает: сначала выкатывается
+consumer, затем producer начинает их отдавать (см. «Совместимость»).
+
 ## Визуальная Схема
 
 ```mermaid
@@ -349,8 +399,9 @@ rule, реализующий `fields.CheckRuleIntrospectable`, у которог
 `fields.ModuleField.TitleFunc` (`func(c *gin.Context) string`, в JSON не
 сериализуется) задаёт заголовок поля для текущего запроса. Функция возвращает
 translation key; пустой результат оставляет `Title`. Generator применяет её
-только в `defrec`, до перевода `Title`. На `view.item[field].title` и list
-`heads` она не влияет.
+в `defrec` и во `view` (`view.item[field].title`), до перевода `Title`: форма,
+которая читает запись через view, называет поле так же, как defrec. List
+`heads` по-прежнему берут `Title`.
 
 ```go
 {
@@ -364,6 +415,20 @@ translation key; пустой результат оставляет `Title`. Gen
     },
 }
 ```
+
+#### Presentation и media поля для запроса
+
+`fields.ModuleField.PresentationFunc` (`func(c *gin.Context, presentation
+renderer.FieldPresentation) *renderer.FieldPresentation`) и `MediaFunc`
+(`func(c *gin.Context, media renderer.FieldMediaConfig)
+*renderer.FieldMediaConfig`) задают presentation и media поля для текущего
+запроса — например, лимит, который зависит от роли того, кто заполняет форму.
+Функция получает копию `Presentation` (нулевое значение, если его нет) или
+`Media` и возвращает то, что показать; `nil` оставляет поле как есть.
+`MediaFunc` вызывается, только если у поля есть `Media`. Копия делит с модулем
+карты, срезы и указатели: менять можно простые значения, вложенное значение
+заменяется новым. Generator применяет обе функции в `defrec` и во `view`, до
+локализации; в JSON они не сериализуются.
 
 ### Form Section Columns
 
@@ -449,6 +514,13 @@ renderer.FormSection{
   }
 }
 ```
+
+`open_end_field` (`DateRangeConfig.OpenEndField`) — имя поля-флага формы для
+диапазона без конца. Читатель выключает конец переключателем, picker берёт
+одно начало, а поле конца уходит пустым. `open_end_label` (обязателен вместе с
+`open_end_field`) и `open_end_hint` — translation keys переключателя и строки
+под ним. Поле-флаг отличается от полей дат и объявлено и в `form_page.fields`,
+и в `section.fields`; generator проверяет это при `Universal.Validate()`.
 
 ### Prompt List Внутри Формы
 
@@ -694,6 +766,11 @@ renderer.FormSection{
 ячеек или колонок в producer metadata. Необязательный `mobile_columns` (от 1
 до 4) задаёт, сколько items стоит в ряду на телефоне; без него consumer
 решает сам (обычно по два). `1` отдаёт единственной плашке всю ширину телефона.
+`display_type` (`FieldMatrixList.DisplayType`) говорит, как читается список:
+строками «подпись — значение» (`key_value_grid`, по умолчанию) или плиткой на
+каждую цифру (`tile_grid`), как на странице цифр. `align`
+(`FieldMatrixList.Align`, design token `align`): `start` ставит подпись плитки
+над цифрой от начала, а не по центру. Generator эти два поля не проверяет.
 
 ```go
 renderer.FormSection{
@@ -948,8 +1025,10 @@ presentation. Значения переключателей, availability и upd
 | `navigation[].mobile_order` | Порядок в нижней mobile navigation. Положительные значения получают приоритет над пунктами без mobile order. |
 | `navigation[].mobile_title` | Уже локализованная короткая подпись для mobile navigation. Если поле пусто, frontend использует `title`. |
 | `navigation[].home` | Optional. Пункт, на который для этого актора ведёт бренд/логотип. Consumer следует первому пункту с `home: true`. |
+| `navigation[].account` | Optional. Пункт, ведущий в собственный профиль актора: меню телефона рисует его как аккаунт — аватар вместо иконки и под ним переключатель доступности из меню аккаунта. |
 | `navigation[].locked` | Optional. Пункт существует для актора, но сейчас закрыт: он остаётся в меню и сообщает об этом, а не исчезает. |
 | `navigation[].lock_reason` | Optional причина закрытия. Generator её не переводит: `AccessGate` возвращает готовый текст. |
+| `navigation[].lock_action` | Optional typed `Action`: шаг, который открывает закрытый пункт (верификация, недозаполненный профиль); consumer предлагает его, когда выбирают закрытый пункт. Его даёт `Generator.AccessGateAction` и только для закрытых пунктов `navigation`, не для `routes` и `widgets`. Тексты действия generator не переводит. |
 | `navigation_more_label` | Уже локализованная подпись overflow-кнопки mobile navigation. |
 | `routes` | Реестр page routes текущего актора: пункты `navigation` с `target.type=page` и страницы из `BaseModule.Routes`. Каждый элемент содержит уникальный `path` и `target` того же shape, что `navigation[].target`. |
 | `routes[].locked`, `routes[].lock_reason` | Optional. Страница, открытая по адресу (reload, закладка, ссылка), закрыта тем же правилом, что и пункт меню. |
@@ -967,7 +1046,9 @@ Renderer discovery происходит через `/api/config`: frontend мо�
 | Go | Назначение |
 |---|---|
 | `module.NavigationEntry.Home` | Пометка home-пункта; переносится в `navigation[].home`. |
+| `module.NavigationEntry.Account` | Пометка пункта собственного профиля; переносится в `navigation[].account`. |
 | `module.Generator.AccessGate` (тип `module.AccessGate`) | `func(c *gin.Context, target AccessTarget) (locked bool, reason string)`. Вызывается для каждого пункта navigation, каждого widget и каждого route. Принадлежит приложению; generator только спрашивает. |
+| `module.Generator.AccessGateAction` (тип `module.AccessGateAction`) | `func(c *gin.Context, target AccessTarget) *renderer.Action`. Спрашивается только для закрытого пункта navigation; результат идёт в `navigation[].lock_action`. `nil` — актору остаётся только ждать. Тексты действия окончательные: их переводит приложение. |
 | `module.Generator.NavigationHidden` (тип `module.NavigationHidden`) | `func(c *gin.Context, target AccessTarget) bool`. `true` убирает пункт navigation из ответа целиком. Спрашивается до `AccessGate`. На `routes` и `widgets` не действует. |
 | `module.AccessTarget` | `Kind`, `ID`, `Path`. `Kind` — строка без typed constants: `"navigation"` (заданы `ID` и `Path`), `"widget"` (`ID`), `"route"` (`Path`). |
 
@@ -1048,6 +1129,8 @@ Typed field metadata нужна для одиночных полей, где б�
 | `presentation.notice_by_value[].message` | Локализуемый текст уведомления. Обязателен: сериализуется всегда. |
 | `presentation.notice_by_value[].confirm_label` | Optional локализуемая подпись кнопки, закрывающей уведомление. |
 | `presentation.info` | `renderer.InfoHint`: постоянное пояснение «i» у подписи поля, в форме и в записи. См. «Пояснение «i»». |
+| `presentation.suggest` | `FieldSuggest`: значение поля предлагается из других полей той же формы. `endpoint` — адрес, который спрашивают; `params` — query-параметр → поле формы, чьё значение он несёт; `value_field` — поле ответа с предложением; `optional` — параметры, которые могут быть пустыми: пустой не попадает в запрос и не держит вопрос, остальные должны быть заполнены. Предложение заполняет поле, пока человек не написал своё; ответ без значения оставляет поле ему. |
+| `presentation.min_field`, `presentation.max_field` | Число связано с другим полем той же формы как концы одного диапазона: верхний конец называет нижний в `min_field` и не опускается ниже него, нижний называет верхний в `max_field` и не поднимается выше. Control держит значение внутри этой границы так же, как внутри своего диапазона. |
 
 `placeholder` локализуется вместе с `prefix`, `suffix`, `hint` и
 `description`. Тексты `notice_by_value[]` (`title`, `message`,
@@ -1083,6 +1166,8 @@ Typed field metadata нужна для одиночных полей, где б�
 | `chip_select` | Множественный выбор через chips. Используется с `form_type: multiselect`. |
 | `primary_radio` | Выбор одного основного варианта. Используется со scalar `form_type`, например `select`. |
 | `badge` | Статус или enum с tone, в том числе `presentation.tone_by_value`. |
+| `switch_list` | Множественный выбор: по переключателю на вариант — для короткого списка того, что включается по отдельности. |
+| `segmented` | Один выбор из нескольких режимов полосой сегментов, как вкладки страницы. |
 
 Каждый option может содержать `icon`. Значение и label остаются стандартными:
 
@@ -1145,8 +1230,10 @@ request-generator до выдачи JSON. `icon` является стабиль
 | `Trailing` | `trailing` | Значение с trailing-стороны варианта. Producer передаёт его уже отформатированным. |
 | `TrailingNote` | `trailing_note` | Подпись под `trailing`. Translation key. |
 | `Note` | `note` | Строка акцента под `description`. Translation key. |
+| `Group` | `group` | Набор, к которому вариант относится в длинном списке (самые частые, затем остальные): список ставит заголовок там, где набор начинается; варианты без группы идут первыми. Translation key. |
+| `Exclusive` | `exclusive` | Вариант означает «все остальные» («любой», «без разницы») в множественном выборе: выбор его снимает остальные, выбор любого другого снимает его. |
 
-`badge`, `note` и `trailing_note` generator переводит в `defrec`, `view` и
+`badge`, `note`, `trailing_note` и `group` generator переводит в `defrec`, `view` и
 обычных list filters; в `ListModuleAction.VirtualFilters` по-прежнему
 переводится только `label`. `media`, `badge_tone` и `trailing` не
 переводятся. Вариант без этих полей сериализуется как раньше
@@ -1290,6 +1377,9 @@ frontend использует обычный список. `query` содерж�
 | `media.actions.set_avatar`, `media.actions.set_cover` | Typed `Action`: сделать существующую картинку аватаром или обложкой. Что из двух предлагать, решает producer. |
 | `media.cropper` | Optional typed config универсального image cropper. |
 | `media.capture` | Optional typed config съёмки камерой устройства: фото или видео с рамкой (`face`, `body`), таймер, предложение продолжить на телефоне. См. «Media Capture». |
+| `media.item.original_src`, `media.item.original_thumbnail` | Картинка такой, какой её снял владелец, рядом с `src`, когда `src` показывает её так, как видят другие (с замаскированным лицом). Consumer, который предлагает владельцу оба вида, переключается между ними; остальные показывают `src`. |
+| `media.labels.view_mine`, `media.labels.view_others` | Подписи двух видов галереи, элементы которой несут оригиналы: «как вижу я» и «как видят другие». Эти две подписи библиотека не переводит (их нет в `localizeMediaLabels`): producer передаёт готовый текст. |
+| `media.actions.open` | Typed `Action`: переход от одной картинки к месту, где лежат все (от лица профиля к его галерее). Локализуется вместе с остальными действиями. |
 
 Producer задает labels как translation keys. Request-generator возвращает во внешнем JSON уже локализованные labels согласно `lang`/`Accept-Language`.
 
@@ -1527,6 +1617,12 @@ Media: &renderer.FieldMediaConfig{
 }
 ```
 
+`list_page.info` (`ListPage.Info`, `InfoHint`) — постоянное пояснение всей
+страницы рядом с её заголовком: правила, по которым живёт читатель этой
+страницы. `list_page.tips` — временные подсказки страницы (см. «Временные
+подсказки и знакомство»). Оба проверяются, копируются и локализуются вместе со
+страницей.
+
 Если producer-у не хватает поля для renderer metadata, поле нужно добавить в typed contract генератора и в документацию.
 
 ## Контракт Глобального Виджета
@@ -1677,6 +1773,51 @@ contract и его локализация. У каждого бейджа обя
   }
 }
 ```
+
+### Нити и варианты master
+
+`workspace.threads` (`WorkspaceThreads`) делит выбранную строку master на
+записи, которые она держит (например, разговоры с одним человеком), и
+сортирует их по группам, между которыми переключается читатель. Когда threads
+заданы, detail, composer и команды читают открытую нить: её поля наложены на
+выбранную строку и входят в selection scope.
+
+| JSON | Назначение |
+|---|---|
+| `threads.resource` | List action; его bindings читают выбранную строку master и обязаны связать поле selection. |
+| `threads.field` | Поле, которое называет нить; detail обязан связать его вместо поля selection. |
+| `threads.group_field`, `threads.groups[]` | Поле группы и группы: `value`, `label` (translation key), `icon`, `single` (одна нить, без выбора), `empty_label` (почему открыть нечего, translation key), `visible_if`. |
+| `threads.label_field`, `subtitle_field`, `accent_field`, `count_field` | Название и подзаголовок нити в выборе, подсветка живой нити, число непрочитанных. |
+| `threads.lookup_field`, `threads.lookup_filter` | Нить, открытая по своему ключу снаружи, находится через строку master: `lookup_field` перечисляет ключи, которые держит строка, `lookup_filter` спрашивает master о строке с этим ключом. |
+| `threads.badges[]` | Бейджи внутри чипа нити, читают строку нити; `id` обязателен и не повторяется. |
+
+`workspace.master_variants[]` (`WorkspaceMasterVariant`) — свои списки master,
+на которые переключает pill `key=val`: с этим pill строки — то, о чём pill
+(заказы или туры, а не люди). `master` — list action, строки которого несут
+поле selection; пара `key=val` не повторяется. `unfold` называет поле строки со
+списком её нитей (`id`, `title`, `avatar`, `status`, `unread_count`,
+`last_message_time`, `preview`, `path` — куда ведёт лицо человека): строка с
+одной нитью открывает её, с несколькими — разворачивается. Нить, открытая из
+строки, — один разговор: строка называет его, соседних нитей для переключения
+нет.
+
+В `load` generator отдаёт `threads` и `master_variants[]` (`key`, `val`,
+`master`); вариант, недоступный текущей роли, пропускается. При запуске
+generator проверяет, что `threads.resource` и `master` вариантов — list
+actions, что поле нити возвращается threads action и что варианты определяют
+поле selection.
+
+`surface.pinned_routes` (`WidgetSurface.PinnedRoutes`) — пути страниц, на
+которых виджет нельзя закрыть и он виден, даже если его закрыли в другом месте.
+Путь с `*` на конце — префикс.
+
+`commands[].multi_label` и `commands[].multi_confirm` допустимы только у
+команды с `multi: true`. `multi_label` — название команды на панели нескольких
+выбранных строк, где панель уже говорит, что выбрано («Удалить» рядом с
+«Выбрано чатов»); пусто — `label`. `multi_confirm` спрашивается один раз перед
+запуском для нескольких строк; его тексты могут нести `{count}` и
+`{plural:форма|форма|…}` — форму, согласованную с числом по правилам языка
+страницы. Без него спрашивается `confirm` одной строки. Оба переводятся.
 
 ### Объявление В Producer
 
@@ -1852,6 +1993,9 @@ type ActionPresentation struct {
     HiddenIf         *Condition
     DisabledIf       *Condition
     AttentionKey     string
+    CountdownField   string
+    Screen           string
+    Control          ActionControl
 }
 ```
 
@@ -1867,8 +2011,13 @@ the action beside the record identity line (card head). `menu` moves the action
 into a labelled group that opens the choices a record can be put into; the
 group label is `card_schema.action_menu_label`. An omitted
 placement keeps the renderer's normal action position. The value is
-presentation-only and does not change action execution. The closed set is
-`full`, `half`, `filter_footer`, `badge`, `head` and `menu`; an unknown value is
+presentation-only and does not change action execution. `composer` puts a
+workspace command that has to be answered before anything can be written
+(unblocking the person) where the text would be typed, and the composer is not
+offered meanwhile. `thread` puts a command about the open thread (removing it)
+in the strip that chooses the threads of a workspace with `threads`; it acts on
+the thread that is open. The closed set is `full`, `half`, `filter_footer`,
+`badge`, `head`, `menu`, `composer` and `thread`; an unknown value is
 rejected for every action, including `resource_grid_page.head_actions` and
 workspace commands.
 
@@ -1902,6 +2051,9 @@ aria-label. `active`, `visible_if`, `hidden_if` и
 | `value_field` | string | Поле записи, значение которого action показывает рядом с label (например, баланс рядом с пунктом меню, ведущим в кошелёк). Значение читает consumer. |
 | `value_icon` | string | Иконка перед этим значением. |
 | `attention_key` | string | Action выделяется, пока его не использовали один раз. Renderer запоминает под этим ключом, что action уже использован; тот же ключ гасит выделение и у других action. |
+| `countdown_field` | string | Поле записи с моментом: действие показывает рядом с label, сколько до него осталось, как `value_field` показывает цифру. Когда действие видно, решает `visible_if`. |
+| `screen` | string | Держит действие на одном виде экрана: `desktop` — его нет на телефоне, `mobile` — его нет на широком экране; пусто — на обоих. Generator значение не проверяет. |
+| `control` | `""` \| `switch` | Чем нарисовать действие вместо кнопки; см. `action.control` в «Renderer-Specific Enums And Open Tokens». |
 
 `active_if`, если задан, должен быть непустым условием: generator проверяет это
 в `ActionPresentation.Validate()`.
@@ -2144,7 +2296,7 @@ request-generator.
 | `card_schema.action_layout` | `inline`, `edge_fill` |
 | `card_schema.media.ratio` | `square`, `portrait`, `landscape`, `wide`, `natural` |
 | `card_schema.media.size` | `thumb`, `card`, `hero`, `original` |
-| `card_schema.meta.format` | `relative_time` |
+| `card_schema.meta.format` и `format` любой `TextBinding` | `relative_time`, `handle` |
 | `list_page.filters.pill_rows[][].presentation` | `tabs`, `toggle`, `summary`, `menu` |
 | `form_page.layout` | `one_column`, `two_column`, `three_column` |
 | `form_page.sections[].block.type` | `none`, `panel`, `card` |
@@ -2154,15 +2306,21 @@ request-generator.
 | `form_page.sections[].media_visibility_states[].value` | `public`, `private`, `paid`, `internal` |
 | `media.item.usage` | `gallery`, `avatar`, `poster`, `cover` |
 | `record_page.sections[].components[].type` | `media_gallery`, `actions`, `identity`, `data_list`, `badge_group_block`, `text`, `badge_list`, `accordion_groups`, `status_timeline`, `record_carousel`, `prompts` |
-| `record_page.sections[].components[].display_type` | `key_value_grid`, `tile_grid` (только `data_list`); `action_rows` (только `actions`); `flow_steps` (только `status_timeline`); `card_rail`, `progress_rows` (только `record_carousel`) |
-| `record_page.sections[].components[].main_ratio`, `.thumb_ratio` | `square`, `portrait`, `tall` |
+| `record_page.sections[].components[].display_type` | `key_value_grid`, `tile_grid`, `metric_row`, `balance_card`, `plan_card` (только `data_list`); `action_rows` (только `actions`); `flow_steps`, `flow_card`, `check_list`, `progress` (только `status_timeline`); `card_rail`, `readiness_rows`, `progress_rows` (только `record_carousel`) |
+| `record_page.sections[].components[].main_ratio`, `.thumb_ratio` | `square`, `portrait`, `landscape`, `tall` |
 | `action.variant` | `default`, `primary`, `secondary`, `success`, `warning`, `danger` |
-| `action.placement` | `full`, `half`, `filter_footer`, `badge`, `head`, `menu`; пустое значение — позиция по умолчанию |
+| `action.placement` | `full`, `half`, `filter_footer`, `badge`, `head`, `menu`, `composer`, `thread`; пустое значение — позиция по умолчанию |
 | `action.appearance`, `action.active_appearance` | open token. Гарантированные UI kit варианты: `solid`, `outline`, `outline-fill`, `ghost`, `soft`, `link`; integration может передать свой string token. |
 | `action.control` | `""` \| `switch` | Чем нарисовать действие вместо кнопки. `switch` — подписанный переключатель: включён, пока поле из `active` истинно; нажатие выполняет действие. Пара действий (одно видно, пока выключено, другое — пока включено) даёт один переключатель. Неизвестное значение отклоняется. |
+| `tips[].device` | `desktop`, `mobile` |
+| `tips[].presentation` | `""`, `story` |
+| `tips[].demo.kind` | `media_item`, `people` |
+| `tips[].cast`, `tips[].demo.people[].role` | `client`, `model`, `agency`, `manager` |
+| `tips[].demo.people[].relation` | `""`, `follower`, `mutual` |
 
-Generator отклоняет неизвестные значения `action.placement`, pill
-`presentation`, `display_type` и `media_visibility_states[].value` при
+Generator отклоняет неизвестные значения `action.placement`,
+`action.control`, pill `presentation`, `display_type`, `format`,
+`media_visibility_states[].value` и значения `tips[]` при
 `Universal.Validate()`. Для остальных полей таблицы неизвестное значение
 остаётся нарушением contract, даже если generator его не отклоняет.
 
@@ -2203,6 +2361,10 @@ Filters являются server-driven:
 - multi-value filters передаются повторением query value или согласованным serialized array;
 - search query передается отдельным search parameter, если list action поддерживает search;
 - reset не должен сбрасывать scope страницы, если scope описан в `list_page.filters.reset.preserve`.
+- `list_page.filters.defaults` — фильтры, с которыми список открывается, когда у читателя нет своих: стартовое значение в контролах, которое читатель может изменить или сбросить, а не условие, которое нельзя снять. Каждый ключ должен быть фильтром, доступным текущему запросу, иначе list отвечает ошибкой;
+- `list_page.filters.disclosure` (`{label, open}`) складывает все контролы фильтров под один заголовок (`label` — translation key), чтобы список с многими фильтрами открывался на записях; `open` — начать раскрытым;
+- `list_page.filters.groups[].visible_if` предлагает группу, только пока список запрошен о том, что она сужает: условие читает активные фильтры как `filters.<key>` (фильтры одного вида результата стоят в ряду, пока pill переключил список на этот вид);
+- `pill_rows[][].icon` помечает pill, который переключает список на свой вид результата, отделяя его от обычных вариантов рядом.
 
 Sort format: `field:asc` или `field:desc`.
 
@@ -2423,9 +2585,16 @@ renderer.DisplayComponent{
 поля строки. `icon.marker` задаёт нетекстовый индикатор и его условие видимости
 относительно текущей строки. `meta` является дополнительным коротким текстом; `relative_time`
 разрешён для date-like значения и форматируется UI kit согласно locale браузера.
+`format: handle` (`TextFormatHandle`) у любой `TextBinding` говорит, что
+текст — handle аккаунта (`@name`): клиент читает его как handle — в его цвете
+и с копированием по нажатию, как на странице профиля.
 
 `leading_accent` опционально добавляет линию по ведущему краю карточки. `tone`
 передаёт расширяемый presentation token; без `leading_accent` линия не рисуется.
+`leading_accent.tone` может связать значение строки (`"{{field}}"`); строка с
+пустым значением тогда линии не несёт. `leading_accent.wash` (bool) ещё и
+подкрашивает карточку от этого края — для строк, которые должны выделяться
+среди соседних, а не только быть помечены.
 
 `chips` опционально выводит под `subtitle` отдельной строкой набор коротких
 значений как одну группу: `{"field": "countries", "icon": "pin", "tone": "pink",
@@ -2435,10 +2604,22 @@ JSON-текст. Иконка стоит только в первой плашк
 сводит в «+N»; наведение или нажатие открывает весь список. `label` —
 translation key: подпись группы для screen reader и заголовок списка.
 
+`segments` (`CardSegments`) кладёт вдоль нижнего края карточки ряд равных
+меток — по одной на элемент поля-списка `field` (обязателен), каждая в тоне,
+который `tone_map` даёт её значению: сколько попыток потрачено и сколько
+осталось. Значения из `pulse` — те, что идут сейчас. `label` — translation key:
+что считают метки, для того, кто их не видит.
+
 `badges[].visible_if` использует тот же `Condition` и позволяет producer-у
 показывать badge только для записей, где он несёт полезный визуальный сигнал.
 `badges[].variant` передаёт нейтральный renderer-token конкретного варианта
 отображения; его интерпретацию определяет UI kit.
+
+`badges[].action` (`Badge.Action`, у любого `Badge`, в том числе в workspace и
+в block overlays) — что делает нажатие бейджа, когда оно что-то делает: бейдж,
+который называет жалобу, открывает её. Действие копируется вместе с бейджем и
+переводится вместе с ним. Это не то же, что `placement: "badge"` ниже: там
+действие объявлено в `actions[]`, здесь оно внутри бейджа.
 
 Карточка может сделать badge интерактивным без отдельной кнопки, объявив в
 `actions[]` обычное typed действие с тем же `id` и `placement: "badge"`:
@@ -2522,6 +2703,7 @@ keys и локализуются.
 | `Media.MarkerField` | `media.marker_field` | Поле-истина для маленькой метки в углу картинки (закреплено, закрыто). |
 | `Media.MarkerIcon` | `media.marker_icon` | Icon key: что рисовать в этой метке. |
 | `Media.FallbackField` | `media.fallback_field` | Значение записи, которое заменяет отсутствующую картинку: карточка без фото всё равно показывает, какого она вида. В отличие от статического `fallback`. |
+| `Media.MoreField` | `media.more_field` | Поле с числом «+N»: сколько их ещё сверх картинок ряда лиц. |
 | `Badge.IconOnly` | `badges[].icon_only` (и любой другой `Badge`) | `*bool`. Бейдж — только иконка: галочка сама говорит «доставлено», и значение за ней не выводится словом. |
 
 Как и у action с `icon_only`, текст бейджа (`label` или значение из
@@ -2579,7 +2761,7 @@ selected record; producer не дублирует identity поля в detail re
 `description`, `description_key`, `icon_only`, `variant`, `appearance`,
 `placement`, `active_appearance`, `active`, `active_if`, `value_field`,
 `value_icon`, `block`, `visible_if`, `hidden_if`, `disabled_if`,
-`attention_key`. Обычный `Action` встраивает этот тип
+`attention_key`, `countdown_field`, `screen`, `control`. Обычный `Action` встраивает этот тип
 и сериализует его плоско. `WorkspaceCommand` использует тот же тип вложенным
 `presentation`, как описано в разделе глобального widget. Нельзя создавать
 параллельную модель visual-state для workspace-команд.
@@ -2689,6 +2871,13 @@ type ClientActionArgument struct {
 подменять его локальным состоянием. Все изменения данных после capability
 делаются только через обычный typed `action.api` и серверные permissions.
 
+### Подтверждение
+
+| Go | JSON | Тип | Назначение |
+|---|---|---|---|
+| `Confirm.MessageField` | `confirm.message_field` | string | Поле записи, текст которого и есть вопрос, когда вопрос зависит от записи (сколько шансов осталось, чего стоит этот). Пустое поле — говорится `message`. |
+| `Confirm.Next` | `confirm.next` | `*Confirm` | Второй вопрос, который задаётся сразу после «да» на первый; действие выполняется после последнего ответа. Проверяется, копируется и локализуется вместе с первым. |
+
 ### Выход после отказа
 
 | Go | JSON | Тип | Назначение |
@@ -2718,6 +2907,35 @@ type ClientActionArgument struct {
 AfterSuccess: &renderer.ActionResult{Reload: "record", NextAction: "save_template"}
 ```
 
+### Статус отказа
+
+Отказ `BeforeAction` (list, view, add, update, delete, defrec) и role hook-а
+(`RoleBeforeHook`) отвечает 400, если ошибка не называет свой статус.
+`actions.NewStatusError(status, message)` называет 4xx — например, 404 для
+записи, которую читателю видеть нельзя; статус вне 4xx становится 400, пустое
+сообщение — `http.StatusText(status)`. `actions.ErrorStatus(err, fallback)`
+читает статус у `StatusError` и у `AtomicCommittedRejection` (через
+`errors.As`) и иначе отдаёт `fallback`. Shape ошибки прежний. Текст уходит как
+есть, без перевода: переводит producer.
+
+```go
+BeforeAction: func(c *gin.Context) error {
+    if !recordVisible(c) {
+        return actions.NewStatusError(http.StatusNotFound, module.Translate(c, "records.not_found", "Not found"))
+    }
+    return nil
+},
+```
+
+### Слова, заменённые во время работы
+
+`Generator.SetTranslationOverrides(lang, words)` заменяет для одного языка
+слова, которые приложение меняет во время работы, например тексты, которые
+правит администратор. Они читаются раньше файлов переводов — в `Translate` и в
+`GET /api/lang/:key`, где сливаются с файлом; ключи, которых нет в наборе,
+снова читаются из файлов. Каждый вызов публикует новый набор языка целиком;
+читатели не блокируются.
+
 ## Typed Renderer Tokens
 
 Producer code must build UniversalRenderer metadata with typed renderer structs and token types, not by assembling ad-hoc `map[string]interface{}` trees or stringly typed renderer fields.
@@ -2727,13 +2945,17 @@ Core renderer package owns only stable universal values:
 - renderer keys: `RendererUniversalDisplay`, `RendererUniversalSection`, `RendererUniversalFilters`, `RendererUniversalPagination`, `RendererMediaGallery`, `RendererCollectionManager`;
 - record layout slots: `LayoutSlotLeft`, `LayoutSlotCenter`, `LayoutSlotRight`;
 - display component types: `DisplayMediaGallery`, `DisplayActions`, `DisplayIdentity`, `DisplayDataList`, `DisplayBadgeList`, `DisplayAccordionGroups`, `DisplayStatusTimeline`, `DisplayRecordCarousel`;
-- display types, each valid only for its own component type: `ComponentDisplayKeyValueGrid`, `ComponentDisplayTileGrid`, `ComponentDisplayActionRows`, `ComponentDisplayFlowSteps`, `ComponentDisplayCardRail`;
-- component ratios: `ComponentRatioSquare`, `ComponentRatioPortrait`, `ComponentRatioTall` (an image grid reads as columns of tall tiles, whatever the shape of the images);
+- display types, each valid only for its own component type: `ComponentDisplayKeyValueGrid`, `ComponentDisplayTileGrid`, `ComponentDisplayMetricRow`, `ComponentDisplayBalanceCard`, `ComponentDisplayPlanCard`, `ComponentDisplayActionRows`, `ComponentDisplayFlowSteps`, `ComponentDisplayFlowCard`, `ComponentDisplayCheckList`, `ComponentDisplayProgress`, `ComponentDisplayCardRail`, `ComponentDisplayReadinessRows`, `ComponentDisplayProgressRows`;
+- component ratios: `ComponentRatioSquare`, `ComponentRatioPortrait`, `ComponentRatioLandscape` (a picture cut to 3:2 when it was chosen, shown whole), `ComponentRatioTall` (an image grid reads as columns of tall tiles, whatever the shape of the images);
 - media: `MediaRatioSquare`, `MediaRatioPortrait`, `MediaRatioLandscape`, `MediaRatioWide`, `MediaRatioNatural`; `MediaSizeThumb`, `MediaSizeCard`, `MediaSizeHero`, `MediaSizeOriginal`; `MediaUsageGallery`, `MediaUsageAvatar`, `MediaUsagePoster`, `MediaUsageCover`;
-- action placements: `ActionPlacementFull`, `ActionPlacementHalf`, `ActionPlacementFilterFooter`, `ActionPlacementBadge`, `ActionPlacementHead`, `ActionPlacementMenu`;
+- action placements: `ActionPlacementFull`, `ActionPlacementHalf`, `ActionPlacementFilterFooter`, `ActionPlacementBadge`, `ActionPlacementHead`, `ActionPlacementMenu`, `ActionPlacementComposer`, `ActionPlacementThread`;
+- action control: `ActionControlSwitch`;
 - filter pill presentations: `FilterPillPresentationTabs`, `FilterPillPresentationToggle`, `FilterPillPresentationSummary`, `FilterPillPresentationMenu`;
 - block decoration variants: `BlockDecorationCornerWide`, `BlockDecorationCornerSquare`, `BlockDecorationCornerFloating`, `BlockDecorationLeadingBanner`, `BlockDecorationBackground`, `BlockDecorationInline`, `BlockDecorationCornerHero`;
 - block disclosure: `DisclosureOpen`, `DisclosureClosed`;
+- choice renderer keys: `RendererSwitchList`, `RendererSegmented`;
+- text formats: `TextFormatRelativeTime`, `TextFormatHandle`;
+- tips: `TipDeviceDesktop`, `TipDeviceMobile`, `TipPresentationStory`, `TipDemoMediaItem`, `TipDemoPeople` and the set `TipCasts`;
 - generic tokens: spacing, inset, radius, alignment, semantic tones, separator appearance.
 
 Application-specific values, especially visual color names such as `cyan`, `violet`, `magenta`, shell variants, section IDs, business IDs and translation keys, must be declared by the application as typed constants when reused. The renderer package should not try to maintain every project's color or shell catalog.
@@ -2770,6 +2992,8 @@ Supported operators:
 | `not_empty` | `{"path": "record.owner_id", "not_empty": true}` |
 | `truthy` | `{"path": "context.can_edit", "truthy": true}` |
 | `falsy` | `{"path": "context.can_edit", "falsy": true}` |
+| `future` | `{"path": "record.window_ends_at", "future": true}` — значение по `path` читается как момент и сравнивается с часами читателя: условие меняется со временем (кнопка стоит, пока окно открыто). |
+| `past` | `{"path": "record.window_ends_at", "past": true}` — то же для момента, который уже прошёл. |
 | `all` | `{"all": [condition, condition]}` |
 | `any` | `{"any": [condition, condition]}` |
 | `not` | `{"not": condition}` |
@@ -2945,6 +3169,10 @@ Generator behavior:
 Действия входят в `Universal.Actions()`, поэтому их `after_success.widget` и
 `after_error.widget` проверяются при `Generator.Run()`.
 
+`resource_grid_page.tips` (`ResourceGridPage.Tips`) — временные подсказки
+страницы, как у `list_page.tips`: сетку карточек тоже показывают читателю по
+шагам. Проверяются, копируются и локализуются вместе со страницей.
+
 ## Form Page
 
 `form_page` описывает универсальную form/edit page metadata. В Go API это `renderer.Universal.Form`. Этот блок не привязан к бизнес-сущности settings и может использоваться для profile settings, entity edit, wizard step или admin edit page.
@@ -3016,6 +3244,13 @@ target action убирается), разрешает `matrix.source` и лок�
   ]
 }
 ```
+
+### Условная секция
+
+`form_page.sections[].visible_if` (`FormSection.VisibleIf`, `Condition`)
+показывает секцию, только пока запись подходит: шаг, который уже сделан или
+ещё не открыт, не стоит пустым, а уходит. Это presentation: серверные проверки
+action прежние. `form_page.sections[].info` описан в «Пояснение «i»».
 
 ### Галерея в form-секции
 
@@ -3147,6 +3382,16 @@ target action убирается), разрешает `matrix.source` и лок�
 (полоса узких карточек с горизонтальной прокруткой); `progress_rows` — для
 `record_carousel` (строки записей, каждая на своём пути по одному ряду шагов).
 Generator отклоняет неизвестное значение и значение не своего типа.
+Кроме того: `metric_row`, `balance_card` и `plan_card` — для `data_list`;
+`flow_card`, `check_list` и `progress` — для `status_timeline`;
+`readiness_rows` — для `record_carousel`. `check_list` читает набор как список
+того, что включено и что нет — метка и строка друг под другом, без рельса,
+который говорил бы о последовательности. `progress` на телефоне читает ряд
+шагов одной линией меток с названием достигнутого шага под ней; широкий экран
+показывает все шаги. `plan_card` — план отдельной карточкой: вид плана, его
+название, цена одной большой цифрой с тем, что она покупает, строка о том, как
+он оплачивается, что входит и что нет, и один шаг внизу; карточка сама
+поверхность и стоит в секции без панели.
 
 `components[].mobile_fold` (`DisplayComponent.MobileFold`, string) — на
 телефоне компонент свёрнут под заголовок, который его открывает. Соседние
@@ -3155,6 +3400,33 @@ Generator отклоняет неизвестное значение и знач
 первый заголовок на телефоне не повторяется. Длинная запись на телефоне
 читается как список заголовков, каждый в одно касание. Широкий экран
 показывает компоненты как есть. Поле сериализуется только непустым.
+
+`record_page.sections[].mobile_fold` (`RecordSection.MobileFold`, string) — на
+телефоне секция свёрнута под заголовок с этим текстом вместе со всеми
+секциями с тем же значением: страница открывается на главном, остальное — в
+одно касание. Заголовок стоит там, где первая свёрнутая секция. У секции это
+подпись (translation key, локализуется), а `mobile_fold` компонента — только
+имя группы: её заголовок читает `title` первого компонента. Широкий экран
+показывает все секции.
+
+`components[].mobile_columns` (int, 0–4) — сколько ячеек стоит в ряду на
+телефоне; `0` оставляет решение renderer-у, который складывает широкую сетку в
+две. `components[].form_look` (bool) читает заполненную форму так, как её
+заполняли: подписи в тоне набора, значения цветом текста, как в полях формы;
+ячейка со своим тоном его сохраняет.
+
+`components[].head_actions` — id действий из `record_page.actions`, которые
+карточка рисует в своей голове как единственный выбор, о котором она
+(например, период оплаты плана рядом с видом плана); каждый id объявлен в
+`record_page.actions`, generator это проверяет. `components[].kicker` —
+короткое слово над названием того, что показывает компонент (вид плана,
+состояние набора); `components[].highlight` — одна строка, сказанная громче
+остальных (что экономит год плана). `kicker` и `highlight` библиотека не
+переводит: producer передаёт готовый текст.
+
+`items[].badge_corner` (`DisplayFieldRef.BadgeCorner`) ставит слово
+`badge_field` в угол карточки, на линию подписей, а не рядом с цифрой:
+состояние плана принадлежит карточке, а не одной её цифре.
 
 `accordion_groups` использует `collection_groups`: `source_field` указывает поле-коллекцию записи, а каждая группа задает уникальный `id`, локализуемую подпись, необязательный renderer-token `tone` для элементов группы и `item_condition`. `tone` является строкой: библиотека не ограничивает палитру конкретного приложения. Условие вычисляется относительно каждого элемента этой коллекции, а не относительно корневой записи.
 
@@ -3376,8 +3648,9 @@ Generator отклоняет `prompts` без элементов, `prompts` у �
 `renderer.InfoHint` — постоянное пояснение, которое читатель открывает рядом с
 тем, что оно объясняет. Оно стоит у подписи поля (`presentation.info`), у
 заголовка record-секции (`record_page.sections[].info`), у заголовка секции
-формы (`form_page.sections[].info`) и у заголовка display component
-(`components[].info`). Переключатель несёт свою подпись внутри кнопки, поэтому
+формы (`form_page.sections[].info`), у заголовка display component
+(`components[].info`) и у заголовка страницы списка (`list_page.info`).
+Переключатель несёт свою подпись внутри кнопки, поэтому
 пояснение к группе переключателей ставится на секцию формы, а не на поле.
 
 | Go | JSON | Тип | Назначение |
@@ -3404,7 +3677,8 @@ Generator отклоняет `prompts` без элементов, `prompts` у �
 
 `renderer.Tip` — временная подсказка страницы: её говорят читателю один раз, у
 места страницы, и она уходит, когда читатель ответил. Её несут
-`list_page.tips`, `record_page.tips` и `form_page.tips`.
+`list_page.tips`, `record_page.tips`, `form_page.tips` и
+`resource_grid_page.tips`.
 
 | Go | JSON | Тип | Назначение |
 |---|---|---|---|
@@ -3419,11 +3693,17 @@ Generator отклоняет `prompts` без элементов, `prompts` у �
 | `Tip.NextLabel`, `Tip.SkipLabel`, `Tip.DoneLabel`, `Tip.BackLabel` | `tips[].next_label` … | string | Подписи кнопок знакомства; `next_label` и `done_label` обязательны при шагах; `back_label` — кнопка «назад» истории. |
 | `Tip.Presentation` | `tips[].presentation` | `""` \| `story` | Как подсказку говорят: по умолчанию у мест страницы; `story` — окно из шагов, над словами каждого шага играет сцена `steps[].scene`. История без шагов отклоняется. |
 | `TipStep.Scene` | `tips[].steps[].scene` | string | Имя движущейся картинки шага в истории; consumer рисует сцены, которые знает по этим именам, и шаг без знакомой сцены — просто словами. |
-| `Tip.Demo` | `tips[].demo` | `{kind, label, menu[]}` | Образец, который страница показывает, пока подсказку рассказывают: `media_item` — пример фото первым в медиагалерее, с бейджем `label` и пунктами меню `menu` (только слова, ничего не выполняют). Элементы образца отвечают на странице и никуда не отправляются; после ответа на подсказку образец исчезает. Неизвестный `kind` отклоняется. |
+| `Tip.Demo` | `tips[].demo` | `{kind, label, menu[], people[], picture}` | Образец, который страница показывает, пока подсказку рассказывают: `media_item` — пример фото первым в медиагалерее, с бейджем `label` и пунктами меню `menu` (только слова, ничего не выполняют). Элементы образца отвечают на странице и никуда не отправляются; после ответа на подсказку образец исчезает. Неизвестный `kind` отклоняется. |
 | `Tip.Brand` | `tips[].brand` | bool | Знак приложения над открывающей карточкой: приветствие говорит, куда читатель пришёл. Какой знак, решает consumer (у каждой роли свой бренд). |
+| `TipDemo.Picture` | `tips[].demo.picture` | string | Какая из картинок-образцов приложения стоит в `media_item`: файлы, вместе с близнецом со скрытым лицом, держит приложение. Без него kit рисует свою. |
+| `TipDemo.People[]` | `tips[].demo.people[]` | `{name, role, relation}` | Для `kind: people`: нарисованные люди в голове списка людей, пока рассказывают подсказку; это ничьи профили, и они ни на что не отвечают. `name` — translation key; `role` — `client`, `model`, `agency` или `manager`; `relation` — `follower` (человек подписан на читателя) или `mutual` (оба). |
+| `Tip.Cast` | `tips[].cast` | string | Кем читатель нарисован в сценах истории: `client`, `model`, `agency` или `manager` (`renderer.TipCasts`) — агентство, которое отправляет заказ, не рисуется клиентом. |
 
 `Validate()` отклоняет подсказку без id, текста, известного экрана или
-ответа, одну подсказку дважды на одном экране и шаг без текста. Подсказки
+ответа, одну подсказку дважды на одном экране, шаг без текста, знакомство без
+`next_label` и `done_label`, историю без шагов, неизвестные `presentation`,
+`demo.kind` и `cast`, образец `people` без людей и человека образца с
+неизвестными `role` или `relation`. Подсказки
 копируются и локализуются вместе со страницей.
 
 Consumer говорит одну подсказку за раз и только на экране, который она
