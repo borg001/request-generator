@@ -313,3 +313,20 @@ func TestCardMediaPreviewIsSaid(t *testing.T) {
 	require.NoError(t, err)
 	require.JSONEq(t, `{"field":"avatar"}`, string(encoded))
 }
+
+func TestFieldPresentationCalendarMarks(t *testing.T) {
+	presentation := &FieldPresentation{Renderer: RendererKey("calendar"), CalendarMarks: []CalendarMark{
+		{Field: "expected_arrival_date", Label: "tours.calendar.expected_arrival", Tone: "cyan"},
+		{Field: "other_tour_starts", Label: "tours.calendar.other_tours", Tone: "amber"},
+	}}
+	require.NoError(t, presentation.Validate())
+	encoded, err := json.Marshal(presentation)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"renderer":"calendar","calendar_marks":[{"field":"expected_arrival_date","label":"tours.calendar.expected_arrival","tone":"cyan"},{"field":"other_tour_starts","label":"tours.calendar.other_tours","tone":"amber"}]}`, string(encoded))
+
+	cloned := CloneFieldPresentation(presentation)
+	cloned.CalendarMarks[0].Label = "changed"
+	require.Equal(t, "tours.calendar.expected_arrival", presentation.CalendarMarks[0].Label)
+
+	require.ErrorContains(t, (&FieldPresentation{CalendarMarks: []CalendarMark{{Label: "x"}}}).Validate(), "calendar mark 0 needs a field")
+}

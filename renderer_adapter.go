@@ -15,6 +15,13 @@ func (generator *Generator) localizeFieldPresentation(lang locale.Lang, value *r
 		*field = resolver(*field, "")
 	}
 	renderer.LocalizeInfoHint(localized.Info, resolver)
+	if len(localized.CalendarMarks) > 0 {
+		marks := append([]renderer.CalendarMark(nil), localized.CalendarMarks...)
+		for index := range marks {
+			marks[index].Label = resolver(marks[index].Label, "")
+		}
+		localized.CalendarMarks = marks
+	}
 	if len(localized.NoticeByValue) > 0 {
 		notices := append([]renderer.FieldValueNotice(nil), localized.NoticeByValue...)
 		for index := range notices {

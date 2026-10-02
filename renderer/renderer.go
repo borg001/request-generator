@@ -1666,6 +1666,19 @@ type FieldPresentation struct {
 	// Info is the lasting explanation a reader opens beside the field's
 	// label, wherever the field is read: in a form and in a record.
 	Info *InfoHint `json:"info,omitempty"`
+	// CalendarMarks set days apart on a calendar control, each kind in its
+	// own colour and named in a legend under it: the arrival a model is
+	// expected on circled, the starts of her other tours in another colour
+	// (theGHub1/api#411).
+	CalendarMarks []CalendarMark `json:"calendar_marks,omitempty"`
+}
+
+// CalendarMark is one kind of marked day: the field of the record that holds
+// a date or a list of dates, the legend's words for them and their colour.
+type CalendarMark struct {
+	Field string `json:"field"`
+	Label string `json:"label,omitempty"`
+	Tone  string `json:"tone,omitempty"`
 }
 
 // FieldInputMode hints which virtual keyboard a text control should open.
@@ -1695,6 +1708,11 @@ func (mode FieldInputMode) Valid() bool {
 func (presentation *FieldPresentation) Validate() error {
 	if presentation == nil {
 		return nil
+	}
+	for index, mark := range presentation.CalendarMarks {
+		if strings.TrimSpace(mark.Field) == "" {
+			return fmt.Errorf("renderer.FieldPresentation: calendar mark %d needs a field", index)
+		}
 	}
 	if !presentation.InputMode.Valid() {
 		return fmt.Errorf("renderer.FieldPresentation: unsupported input mode %q", presentation.InputMode)

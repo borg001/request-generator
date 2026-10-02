@@ -551,6 +551,7 @@ func CloneFieldPresentation(v *FieldPresentation) *FieldPresentation {
 	cp.RequiredIf = cloneCondition(v.RequiredIf)
 	cp.DisabledIf = cloneCondition(v.DisabledIf)
 	cp.ToneByValue = cloneSlice(v.ToneByValue)
+	cp.CalendarMarks = cloneSlice(v.CalendarMarks)
 	cp.Info = CloneInfoHint(v.Info)
 	if v.Suggest != nil {
 		suggest := *v.Suggest
