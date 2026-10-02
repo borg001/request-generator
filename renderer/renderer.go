@@ -2608,6 +2608,9 @@ type MediaGalleryItem struct {
 	// that was published has a place of its own - the place its publication
 	// took - so it is not reordered by hand.
 	PostCount int `json:"post_count,omitempty"`
+	// Set is every file of the publication a tile stands for, in the
+	// publication's order, so they can be looked through where the tile is.
+	Set []MediaGalleryItem `json:"set,omitempty"`
 }
 
 type MediaGalleryLabels struct {
