@@ -103,7 +103,8 @@ required keys, CRUD route mapping и error shape прежние.
   и `brand`. См. «Пояснение «i»» и «Временные подсказки и знакомство».
 - Поля: `presentation.suggest` (с `optional`), `presentation.min_field` /
   `max_field`, `media.capture`, `media.actions.open`,
-  `media.item.original_src` / `original_thumbnail`, `media.labels.view_mine` /
+  `media.item.original_src` / `original_thumbnail`, `media.item.set`,
+  `media.labels.view_mine` /
   `view_others`; у вариантов — `group` и `exclusive`; renderer keys
   `switch_list` и `segmented`. Go: `ModuleField.PresentationFunc` и
   `MediaFunc`; `TitleFunc` теперь действует и во `view`.
@@ -1363,6 +1364,7 @@ frontend использует обычный список. `query` содерж�
 | `media.item.open_action` | Typed `Action`: что открывает тап по элементу, если это больше, чем картинка (публикация, запись). Без него элемент открывается как картинка. Обязан иметь `type` и проходит обычную проверку `Action`. |
 | `media.item.cover` | bool. Картинка — «лицо» всего набора (обложка профиля): показывается как обложка и не считается одним из элементов. |
 | `media.item.post_count` | int. В скольких публикациях участвует картинка. Опубликованная картинка занимает место своей публикации и не переставляется вручную. |
+| `media.item.set` | Optional массив `MediaGalleryItem`: все файлы публикации, которую представляет элемент, в её порядке. Consumer с двумя и больше файлами даёт пролистать их на месте, а `open_action` оставляет переходом в публикацию. Producer отдаёт элементы набора без `actions`, `badges`, `open_action` и вложенного `set`. |
 | `display_component.media_items` | Упорядоченные элементы для `media_gallery`; не требует дублировать их в module fields. |
 | `media.item.usage` | Назначение media: `gallery`, `avatar`, `poster`, `cover` (картинка, которую несёт карточка). |
 | `media.item.src` | URI значения. В `view` request-generator может подставить сюда `item[field].value`, если producer не указал `src` явно. |
