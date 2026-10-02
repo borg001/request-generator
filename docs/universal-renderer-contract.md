@@ -3652,7 +3652,11 @@ Generator отклоняет `prompts` без элементов, `prompts` у �
 тем, что оно объясняет. Оно стоит у подписи поля (`presentation.info`), у
 заголовка record-секции (`record_page.sections[].info`), у заголовка секции
 формы (`form_page.sections[].info`), у заголовка display component
-(`components[].info`) и у заголовка страницы списка (`list_page.info`).
+(`components[].info`), у заголовка страницы списка (`list_page.info`) и рядом
+с действием или командой рабочего пространства (`ActionPresentation.Info`,
+`actions[].info`, `workspace.commands[].presentation.info`): почему действие
+ждёт и что оно сделает. Consumer рисует «i» рядом с кнопкой, и нажатие на «i»
+не запускает действие.
 Переключатель несёт свою подпись внутри кнопки, поэтому
 пояснение к группе переключателей ставится на секцию формы, а не на поле.
 

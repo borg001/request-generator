@@ -3282,6 +3282,9 @@ type ActionPresentation struct {
 	// truthy; pressing it runs the action. Two actions - one shown while off,
 	// the other while on - make one switch.
 	Control ActionControl `json:"control,omitempty"`
+	// Info explains the action beside it with an «i»: why it waits, what it
+	// will do. It is checked, copied and translated with the action.
+	Info *InfoHint `json:"info,omitempty"`
 }
 
 // ActionControl is the kind of control an action is drawn as.
@@ -3310,6 +3313,9 @@ func (presentation ActionPresentation) Validate() error {
 	}
 	if presentation.Control != "" && presentation.Control != ActionControlSwitch {
 		return fmt.Errorf("unsupported control %q", presentation.Control)
+	}
+	if err := presentation.Info.Validate(); err != nil {
+		return err
 	}
 	return nil
 }

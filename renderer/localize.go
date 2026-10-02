@@ -78,6 +78,7 @@ func (localizer textLocalizer) localizeRendererAction(action *Action) {
 	action.TitleKey = ""
 	localizer.localizeTextField(&action.Description, action.DescriptionKey)
 	action.DescriptionKey = ""
+	localizer.localizeInfoHint(action.Info)
 	localizer.localizeTextFields(&action.SavingLabel, &action.SavedLabel)
 	if action.Modal != nil {
 		localizer.localizeTextFields(&action.Modal.Title)

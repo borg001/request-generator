@@ -10,6 +10,8 @@
   `ListPage.Info` (заголовок страницы списка). `{id, title, text, action}`;
   без `text` отклоняется. Проверяется, копируется и локализуется вместе со
   страницей (`CloneInfoHint`, `LocalizeInfoHint`).
+  `ActionPresentation.Info` — «i» рядом с действием и командой рабочего
+  пространства: почему действие ждёт, что оно сделает (theGHub1/api#403).
 
 - **`renderer.Tip` (`tips`)** — временные подсказки страницы, по одной на
   экран (`device`: `desktop` | `mobile`): `ListPage.Tips`, `RecordPage.Tips`,

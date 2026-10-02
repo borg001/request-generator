@@ -54,6 +54,10 @@ func LocalizeGlobalWidget(widget GlobalWidget, resolve TextResolver) GlobalWidge
 		if label := localized.Workspace.Commands[index].MultiLabel; label != "" {
 			localized.Workspace.Commands[index].MultiLabel = resolve(label, "")
 		}
+		if presentation := localized.Workspace.Commands[index].Presentation; presentation != nil {
+			localizer := textLocalizer{resolve: resolve}
+			localizer.localizeInfoHint(presentation.Info)
+		}
 		if confirm := localized.Workspace.Commands[index].MultiConfirm; confirm != nil {
 			localizer := textLocalizer{resolve: resolve}
 			localizer.localizeTextFields(&confirm.Title, &confirm.Message, &confirm.CancelLabel, &confirm.ConfirmLabel)
@@ -583,6 +587,11 @@ func (command WorkspaceCommand) Validate() error {
 	}
 	if !command.Multi && (command.MultiLabel != "" || command.MultiConfirm != nil) {
 		return fmt.Errorf("multi_label and multi_confirm need a multi command")
+	}
+	if command.Presentation != nil {
+		if err := command.Presentation.Info.Validate(); err != nil {
+			return fmt.Errorf("presentation: %w", err)
+		}
 	}
 	if command.MultiConfirm != nil {
 		if err := command.MultiConfirm.Validate(); err != nil {

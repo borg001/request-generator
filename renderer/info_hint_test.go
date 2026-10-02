@@ -168,3 +168,32 @@ func TestBlockOverlayCarriesItsOwnInfoHint(t *testing.T) {
 	empty.Record.Sections[0].Block.Overlays[0].Info.Text = " "
 	require.ErrorContains(t, empty.Validate(), "text is required")
 }
+
+// An action may explain itself beside it - a workspace command that waits, a
+// button of a page; the explanation is checked, copied and translated with it.
+func TestActionPresentationCarriesItsOwnInfoHint(t *testing.T) {
+	hint := func() *InfoHint {
+		return &InfoHint{ID: "chat_delete_wait", Title: "hints.chat_delete_wait.title", Text: "hints.chat_delete_wait.text"}
+	}
+	action := Action{ID: "delete", Type: ActionAPI, ActionPresentation: ActionPresentation{Info: hint()}}
+	require.NoError(t, action.ActionPresentation.Validate())
+	encoded, err := json.Marshal(action)
+	require.NoError(t, err)
+	require.Contains(t, string(encoded), `"info":{"id":"chat_delete_wait","title":"hints.chat_delete_wait.title","text":"hints.chat_delete_wait.text"}`)
+
+	page := Universal{List: &ListPage{Actions: []Action{action}}}
+	localized := Localize(page, func(value, key string) string { return "ru:" + value })
+	require.Equal(t, "ru:hints.chat_delete_wait.text", localized.List.Actions[0].Info.Text)
+	require.Equal(t, "hints.chat_delete_wait.text", page.List.Actions[0].Info.Text)
+	cloned := page.Clone()
+	cloned.List.Actions[0].Info.Text = "changed"
+	require.Equal(t, "hints.chat_delete_wait.text", page.List.Actions[0].Info.Text)
+
+	empty := ActionPresentation{Info: &InfoHint{ID: "chat_delete_wait", Text: " "}}
+	require.ErrorContains(t, empty.Validate(), "text is required")
+
+	widget := GlobalWidget{Workspace: &WorkspaceWidget{Commands: []WorkspaceCommand{{ID: "delete_wait", Label: "chat.delete", Presentation: &ActionPresentation{Info: hint()}}}}}
+	localizedWidget := LocalizeGlobalWidget(widget, func(value, key string) string { return "ru:" + value })
+	require.Equal(t, "ru:hints.chat_delete_wait.title", localizedWidget.Workspace.Commands[0].Presentation.Info.Title)
+	require.Equal(t, "hints.chat_delete_wait.title", widget.Workspace.Commands[0].Presentation.Info.Title)
+}
