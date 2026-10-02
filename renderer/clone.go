@@ -502,10 +502,22 @@ func cloneFieldMatrix(v *FieldMatrix) *FieldMatrix {
 	if v.Table != nil {
 		cp.Table = &FieldMatrixTable{Heads: cloneSlice(v.Table.Heads), Rows: make([]FieldMatrixRow, len(v.Table.Rows)), Presentation: v.Table.Presentation, Source: cloneFieldMatrixDataSource(v.Table.Source)}
 		for i, row := range v.Table.Rows {
-			cp.Table.Rows[i] = FieldMatrixRow{ID: row.ID, Label: row.Label, Description: row.Description, Icon: row.Icon, Tone: row.Tone, Cells: cloneSlice(row.Cells)}
+			cp.Table.Rows[i] = FieldMatrixRow{ID: row.ID, Label: row.Label, Description: row.Description, Icon: row.Icon, Tone: row.Tone, Cells: cloneFieldMatrixCells(row.Cells)}
 		}
 	}
 	return &cp
+}
+
+func cloneFieldMatrixCells(values []FieldMatrixCell) []FieldMatrixCell {
+	if values == nil {
+		return nil
+	}
+	out := make([]FieldMatrixCell, len(values))
+	for i, cell := range values {
+		out[i] = cell
+		out[i].EnabledIf = cloneCondition(cell.EnabledIf)
+	}
+	return out
 }
 
 func cloneFieldMatrixDataSource(v *FieldMatrixDataSource) *FieldMatrixDataSource {
@@ -524,7 +536,7 @@ func cloneFieldMatrixDataSource(v *FieldMatrixDataSource) *FieldMatrixDataSource
 			DescriptionField: v.Row.DescriptionField,
 			IconField:        v.Row.IconField,
 			ToneField:        v.Row.ToneField,
-			Cells:            cloneSlice(v.Row.Cells),
+			Cells:            cloneFieldMatrixCells(v.Row.Cells),
 		}
 	}
 	return &cp

@@ -4,6 +4,11 @@
 
 ### Added
 
+- **`FieldMatrixCell.EnabledIf` (`enabled_if`)** — cell матрицы зависит от
+  самой формы: пока condition не выполняется для её record (черновика), cell
+  выключена и заблокирована. Глобально выключенный канал гаснет у всех типов
+  сразу (theGHub1/api#405). Без `field` отклоняется; копируется глубоко.
+
 - **`renderer.InfoHint` (`info`)** — постоянное пояснение «i» рядом с тем,
   что оно объясняет: `FieldPresentation.Info` (подпись поля в форме и в
   записи), `RecordSection.Info`, `FormSection.Info`, `DisplayComponent.Info` и

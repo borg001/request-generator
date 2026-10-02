@@ -274,3 +274,33 @@ func TestFieldMatrixSourceCloneAndJSON(t *testing.T) {
 	require.Equal(t, "/api/groups/:bykey/:value", source.Form.Sections[0].Matrix.Table.Source.Load.Update.Request.Endpoint)
 	require.Equal(t, "Messages", source.Form.Sections[0].Matrix.Table.Rows[0].Description)
 }
+
+func TestFieldMatrixCellEnabledIf(t *testing.T) {
+	on := true
+	source := Universal{Form: &FormPage{Sections: []FormSection{{
+		ID: "notifications",
+		Matrix: &FieldMatrix{Type: FieldMatrixTypeTable, Table: &FieldMatrixTable{
+			Heads: []string{"Type", "Push"},
+			Source: &FieldMatrixDataSource{
+				IDField: "id", KeyField: "group_code",
+				List: ActionResource{Module: "groups", Action: "list"}, Update: ActionResource{Module: "groups", Action: "update"},
+				Row: &FieldMatrixDataRow{LabelField: "label_key", Cells: []FieldMatrixCell{{
+					Field: "push_enabled", AvailableField: "push_available",
+					EnabledIf: &Condition{Path: "record.push_enabled", Truthy: &on},
+				}}},
+			},
+		}},
+	}}}}
+
+	encoded, err := json.Marshal(source.Form.Sections[0].Matrix.Table.Source.Row.Cells[0])
+	require.NoError(t, err)
+	require.JSONEq(t, `{"field":"push_enabled","available_field":"push_available","enabled_if":{"path":"record.push_enabled","truthy":true}}`, string(encoded))
+
+	cloned := source.Clone()
+	cloned.Form.Sections[0].Matrix.Table.Source.Row.Cells[0].EnabledIf.Path = "record.changed"
+	require.Equal(t, "record.push_enabled", source.Form.Sections[0].Matrix.Table.Source.Row.Cells[0].EnabledIf.Path)
+
+	// A condition is about a cell's value, so a text cell may not carry one.
+	err = validateFieldMatrixCells("notifications", 0, 2, true, []FieldMatrixCell{{Text: "matrix.note", EnabledIf: &Condition{Path: "record.push_enabled", Truthy: &on}}})
+	require.ErrorContains(t, err, "enabled condition requires field")
+}

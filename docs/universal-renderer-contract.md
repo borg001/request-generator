@@ -810,6 +810,12 @@ selector и editable boolean fields, а затем публикует `source.lo
 связывает response list с `rows[].id`, а `available_field` отключает channel,
 который недоступен для данной строки.
 
+`enabled_if` связывает cell с самой формой: пока condition не выполняется для
+record формы (в том виде, в каком его сейчас правят), cell читается
+выключенной и не меняется. Так channel, выключенный глобально, сразу гаснет в
+строке каждого типа, ещё до сохранения формы (theGHub1/api#405). Condition
+требует `field`.
+
 ```go
 renderer.FormSection{
     ID:       "delivery-rules",

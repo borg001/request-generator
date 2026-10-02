@@ -2423,6 +2423,11 @@ type FieldMatrixCell struct {
 	Text           string `json:"text,omitempty"`
 	Icon           string `json:"icon,omitempty"`
 	AvailableField string `json:"available_field,omitempty"`
+	// EnabledIf ties a cell to the form around it: while the condition does
+	// not hold for the form's record as it is being edited, the cell reads off
+	// and cannot be changed. A channel turned off for every notification
+	// reads off in the row of each type at once (theGHub1/api#405).
+	EnabledIf *Condition `json:"enabled_if,omitempty"`
 }
 
 // FieldMatrixDataSource connects a table layout to a standard list/update
@@ -2545,6 +2550,9 @@ func validateFieldMatrixCells(sectionID string, rowIndex, heads int, hasLabel bo
 		}
 		if cell.AvailableField != "" && cell.Field == "" {
 			return fmt.Errorf("renderer.Universal: matrix section %q row %d cell %d availability requires field", sectionID, rowIndex, cellIndex)
+		}
+		if cell.EnabledIf != nil && cell.Field == "" {
+			return fmt.Errorf("renderer.Universal: matrix section %q row %d cell %d enabled condition requires field", sectionID, rowIndex, cellIndex)
 		}
 	}
 	return nil
