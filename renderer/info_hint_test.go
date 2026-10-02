@@ -136,3 +136,35 @@ func TestMediaGalleryItemCarriesItsOriginal(t *testing.T) {
 	require.NoError(t, err)
 	require.JSONEq(t, `{"view_mine":"As I see it","view_others":"As others see it"}`, string(labels))
 }
+
+// An overlay of badges may explain them beside them; the explanation is
+// checked, copied and translated with the page.
+func TestBlockOverlayCarriesItsOwnInfoHint(t *testing.T) {
+	page := func() Universal {
+		return Universal{Record: &RecordPage{Sections: []RecordSection{{
+			ID: "gallery",
+			Block: &Block{Overlays: []BlockOverlay{{
+				Position: MediaOverlayTopRight,
+				Badges:   []Badge{{ID: "affiliation", Field: "model_affiliation"}},
+				Info:     &InfoHint{ID: "model_types", Title: "hints.model_types.title", Text: "hints.model_types.text"},
+			}}},
+		}}}}
+	}
+	source := page()
+	require.NoError(t, source.Validate())
+	encoded, err := json.Marshal(source.Record.Sections[0].Block.Overlays[0])
+	require.NoError(t, err)
+	require.Contains(t, string(encoded), `"info":{"id":"model_types","title":"hints.model_types.title","text":"hints.model_types.text"}`)
+
+	localized := Localize(source, func(value, key string) string { return "ru:" + value })
+	require.Equal(t, "ru:hints.model_types.text", localized.Record.Sections[0].Block.Overlays[0].Info.Text)
+	require.Equal(t, "hints.model_types.text", source.Record.Sections[0].Block.Overlays[0].Info.Text)
+
+	cloned := source.Clone()
+	cloned.Record.Sections[0].Block.Overlays[0].Info.Text = "changed"
+	require.Equal(t, "hints.model_types.text", source.Record.Sections[0].Block.Overlays[0].Info.Text)
+
+	empty := page()
+	empty.Record.Sections[0].Block.Overlays[0].Info.Text = " "
+	require.ErrorContains(t, empty.Validate(), "text is required")
+}

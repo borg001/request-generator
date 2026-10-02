@@ -487,6 +487,9 @@ func (block *Block) Validate() error {
 		if len(overlay.Badges) == 0 {
 			return fmt.Errorf("block overlay %q badges are required", overlay.Position)
 		}
+		if err := overlay.Info.Validate(); err != nil {
+			return fmt.Errorf("block overlay %q: %w", overlay.Position, err)
+		}
 	}
 	return nil
 }
@@ -2905,6 +2908,8 @@ type BlockOverlay struct {
 	Badges   []Badge              `json:"badges"`
 	Size     SizeToken            `json:"size,omitempty"`
 	Wrap     *bool                `json:"wrap,omitempty"`
+	// Info explains what the badges of the overlay mean, beside them.
+	Info *InfoHint `json:"info,omitempty"`
 }
 
 type Stack struct {

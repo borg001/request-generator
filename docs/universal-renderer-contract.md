@@ -104,6 +104,7 @@ required keys, CRUD route mapping и error shape прежние.
 - Поля: `presentation.suggest` (с `optional`), `presentation.min_field` /
   `max_field`, `media.capture`, `media.actions.open`,
   `media.item.original_src` / `original_thumbnail`, `media.item.set`,
+  `block.overlays[].info`,
   `media.labels.view_mine` /
   `view_others`; у вариантов — `group` и `exclusive`; renderer keys
   `switch_list` и `segmented`. Go: `ModuleField.PresentationFunc` и
@@ -3432,7 +3433,7 @@ Generator отклоняет неизвестное значение и знач
 
 `accordion_groups` использует `collection_groups`: `source_field` указывает поле-коллекцию записи, а каждая группа задает уникальный `id`, локализуемую подпись, необязательный renderer-token `tone` для элементов группы и `item_condition`. `tone` является строкой: библиотека не ограничивает палитру конкретного приложения. Условие вычисляется относительно каждого элемента этой коллекции, а не относительно корневой записи.
 
-`block.overlays` задает поверхностный слой для любого визуального блока. Каждый overlay имеет одну из фиксированных позиций `top-left`, `top-right`, `bottom-left`, `bottom-right` и типизированный список `badges`. Используется существующая структура `Badge`, поэтому доступны привязка к полю, `tone`, `tone_map`, `marker` и условные `if_field` / `then` / `else`. Значения бейджей renderer получает из текущей записи; библиотека не задает визуальные токены приложения.
+`block.overlays` задает поверхностный слой для любого визуального блока. Каждый overlay имеет одну из фиксированных позиций `top-left`, `top-right`, `bottom-left`, `bottom-right` и типизированный список `badges`. Optional `info` (`InfoHint`) — пояснение «i» рядом с бейджами overlay: что они значат; consumer рисует его рядом с ними, и нажатие на него не открывает сам блок. Используется существующая структура `Badge`, поэтому доступны привязка к полю, `tone`, `tone_map`, `marker` и условные `if_field` / `then` / `else`. Значения бейджей renderer получает из текущей записи; библиотека не задает визуальные токены приложения.
 
 ```json
 {

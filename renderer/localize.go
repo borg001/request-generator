@@ -536,6 +536,7 @@ func (localizer textLocalizer) localizeBlock(block *Block) {
 		for badgeIndex := range block.Overlays[overlayIndex].Badges {
 			localizer.localizeBadge(&block.Overlays[overlayIndex].Badges[badgeIndex])
 		}
+		localizer.localizeInfoHint(block.Overlays[overlayIndex].Info)
 	}
 }
 

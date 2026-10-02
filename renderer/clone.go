@@ -797,6 +797,7 @@ func cloneBlockOverlays(values []BlockOverlay) []BlockOverlay {
 		out[index] = overlay
 		out[index].Badges = cloneBadges(overlay.Badges)
 		out[index].Wrap = clonePtr(overlay.Wrap)
+		out[index].Info = CloneInfoHint(overlay.Info)
 	}
 	return out
 }
