@@ -1601,6 +1601,10 @@ type Media struct {
 	// FallbackField names a value on the record that stands in for a missing
 	// picture, so a card without one can still show what kind of profile it is.
 	FallbackField string `json:"fallback_field,omitempty"`
+	// Preview opens the picture or video, and the others of its field, in a
+	// viewer when it is pressed, whatever the card itself opens: a moderator
+	// watches a verification from its card (theGHub1/api#409).
+	Preview bool `json:"preview,omitempty"`
 }
 
 // FieldSuggest names where a field's value can be proposed from the values of

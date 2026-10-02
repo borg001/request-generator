@@ -304,3 +304,12 @@ func TestFieldMatrixCellEnabledIf(t *testing.T) {
 	err = validateFieldMatrixCells("notifications", 0, 2, true, []FieldMatrixCell{{Text: "matrix.note", EnabledIf: &Condition{Path: "record.push_enabled", Truthy: &on}}})
 	require.ErrorContains(t, err, "enabled condition requires field")
 }
+
+func TestCardMediaPreviewIsSaid(t *testing.T) {
+	encoded, err := json.Marshal(Media{Field: "identity_video_media", Size: MediaSizeThumb, Preview: true})
+	require.NoError(t, err)
+	require.JSONEq(t, `{"field":"identity_video_media","size":"thumb","preview":true}`, string(encoded))
+	encoded, err = json.Marshal(Media{Field: "avatar"})
+	require.NoError(t, err)
+	require.JSONEq(t, `{"field":"avatar"}`, string(encoded))
+}
