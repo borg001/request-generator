@@ -896,6 +896,11 @@ func validateMediaActions(actions *MediaGalleryActions) error {
 			return err
 		}
 	}
+	for i := range actions.Under {
+		if err := validateAction("media under", &actions.Under[i]); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -2709,6 +2714,10 @@ type MediaGalleryActions struct {
 	// Open leads from one picture to the place that holds all of them - from
 	// the face a profile shows to its gallery.
 	Open *Action `json:"open,omitempty"`
+	// Under stands below the way to the gallery: the profile's next step with
+	// what it shows - sending it for review, say - beside the pictures review
+	// looks at (theGHub1/api#427).
+	Under []Action `json:"under,omitempty"`
 }
 
 type CollectionConfig struct {

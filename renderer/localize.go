@@ -430,6 +430,9 @@ func (localizer textLocalizer) localizeMediaActions(actions *MediaGalleryActions
 		localizer.localizeRendererAction(actions.Crop)
 		localizer.localizeRendererAction(actions.Remove)
 		localizer.localizeRendererAction(actions.Open)
+		for i := range actions.Under {
+			localizer.localizeRendererAction(&actions.Under[i])
+		}
 	}
 }
 
