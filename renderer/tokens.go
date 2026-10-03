@@ -338,11 +338,15 @@ const (
 	// command about the one thread being read - removing it - stands in the
 	// strip that chooses threads, and acts on the thread that is open.
 	ActionPlacementThread ActionPlacement = "thread"
+	// Held over a list under its filters, staying in sight while the list
+	// scrolls: the one thing the page is for, within reach from any row of
+	// it - an order, from the catalogue of whom to order (theGHub1/api#429).
+	ActionPlacementSticky ActionPlacement = "sticky"
 )
 
 func (placement ActionPlacement) Valid() bool {
 	switch placement {
-	case "", ActionPlacementFull, ActionPlacementHalf, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu, ActionPlacementComposer, ActionPlacementThread:
+	case "", ActionPlacementFull, ActionPlacementHalf, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu, ActionPlacementComposer, ActionPlacementThread, ActionPlacementSticky:
 		return true
 	default:
 		return false

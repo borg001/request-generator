@@ -75,3 +75,21 @@ func containsJSONFragment(value, fragment string) bool {
 	}
 	return false
 }
+
+// A list may hold one action in sight under its filters (theGHub1/api#429).
+func TestActionPlacementStickyIsValid(t *testing.T) {
+	action := Action{ID: "give_order", Type: ActionRoute, Label: "Order", ActionPresentation: ActionPresentation{Placement: ActionPlacementSticky}, Route: RouteAction{Path: "/orders/create"}}
+	if err := action.Validate(); err != nil {
+		t.Fatalf("validate sticky action: %v", err)
+	}
+	payload, err := json.Marshal(action)
+	if err != nil {
+		t.Fatalf("marshal action: %v", err)
+	}
+	if !containsJSONFragment(string(payload), `"placement":"sticky"`) {
+		t.Fatalf("expected the sticky placement in %s", payload)
+	}
+	if !ActionPlacementSticky.Valid() || ActionPlacement("floating").Valid() {
+		t.Fatal("only the declared placements are valid")
+	}
+}
