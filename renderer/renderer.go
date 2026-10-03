@@ -1799,6 +1799,11 @@ type MediaCaptureConfig struct {
 	// needed."
 	DoneTitle string `json:"done_title,omitempty"`
 	DoneText  string `json:"done_text,omitempty"`
+	// SubmitOnUse sends the section the field stands in once what was taken
+	// is kept: UseLabel names that send ("Send for verification"), and after
+	// the file is attached the section's send is pressed for the person, its
+	// confirmation and its checks included.
+	SubmitOnUse bool `json:"submit_on_use,omitempty"`
 	// The ask before the camera opens: what it is for and the button that
 	// lets the browser ask for it. Without PermissionLabel the camera opens at
 	// once. RetryLabel asks again after a refusal.
@@ -1816,6 +1821,15 @@ type MediaCaptureStep struct {
 	Props   []MediaCaptureProp `json:"props,omitempty"`
 	Hint    string             `json:"hint"`
 	Seconds int                `json:"seconds"`
+	// Intro is what the step asks for, said on a card of its own before it
+	// starts: the recording waits, paused, until the person has read it and
+	// pressed ConfirmLabel. A step without it follows the one before at once.
+	Intro        string `json:"intro,omitempty"`
+	ConfirmLabel string `json:"confirm_label,omitempty"`
+	// Countdown is the count before the step is recorded, the time to take
+	// one's place; the recording stays paused through it. Zero counts
+	// nothing, except before the first step, which counts TimerSeconds.
+	Countdown int `json:"countdown,omitempty"`
 }
 
 // MediaCaptureProp is one thing the person does in a step besides standing in
@@ -1952,6 +1966,12 @@ func (capture *MediaCaptureConfig) Validate() error {
 		}
 		if strings.TrimSpace(step.Hint) == "" || step.Seconds <= 0 {
 			return fmt.Errorf("renderer.MediaCaptureConfig: step %d needs a hint and its seconds", index+1)
+		}
+		if step.Countdown < 0 {
+			return fmt.Errorf("renderer.MediaCaptureConfig: step %d counts down a negative time", index+1)
+		}
+		if strings.TrimSpace(step.Intro) != "" && strings.TrimSpace(step.ConfirmLabel) == "" {
+			return fmt.Errorf("renderer.MediaCaptureConfig: step %d says what it asks but has no button to go on", index+1)
 		}
 	}
 	return nil

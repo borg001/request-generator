@@ -465,7 +465,7 @@ func (localizer textLocalizer) localizeMediaCapture(capture *MediaCaptureConfig)
 	}
 	localizer.localizeTextFields(&capture.OpenLabel, &capture.Title, &capture.Hint, &capture.ShootLabel, &capture.StopLabel, &capture.RetakeLabel, &capture.UseLabel, &capture.SwitchLabel, &capture.TimerLabel, &capture.CloseLabel, &capture.DeniedText, &capture.PhoneLabel, &capture.PhoneTitle, &capture.PhoneText, &capture.StepLabel, &capture.NextStepLabel, &capture.DoneTitle, &capture.DoneText, &capture.PermissionTitle, &capture.PermissionText, &capture.PermissionLabel, &capture.RetryLabel)
 	for index := range capture.Steps {
-		localizer.localizeTextFields(&capture.Steps[index].Hint)
+		localizer.localizeTextFields(&capture.Steps[index].Hint, &capture.Steps[index].Intro, &capture.Steps[index].ConfirmLabel)
 	}
 }
 

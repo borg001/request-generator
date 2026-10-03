@@ -116,6 +116,23 @@ func TestMediaCaptureSteps(t *testing.T) {
 	require.Equal(t, "T:capture.retry", localized.Capture.RetryLabel)
 	require.Equal(t, "capture.back", media.Capture.Steps[1].Hint)
 
+	// A step may stop to say what it asks; its words and its button are
+	// translated, and words without a button to go on are refused.
+	media.Capture.Steps[1].Intro, media.Capture.Steps[1].ConfirmLabel, media.Capture.Steps[1].Countdown = "capture.sheet_intro", "capture.got_it", 5
+	media.Capture.SubmitOnUse = true
+	require.NoError(t, media.Capture.Validate())
+	localized = LocalizeFieldMedia(media, func(value, _ string) string { return "T:" + value })
+	require.Equal(t, "T:capture.sheet_intro", localized.Capture.Steps[1].Intro)
+	require.Equal(t, "T:capture.got_it", localized.Capture.Steps[1].ConfirmLabel)
+	require.Equal(t, 5, localized.Capture.Steps[1].Countdown)
+	require.True(t, localized.Capture.SubmitOnUse)
+	require.Equal(t, "capture.sheet_intro", media.Capture.Steps[1].Intro)
+	capture.Steps[1].ConfirmLabel = " "
+	require.EqualError(t, capture.Validate(), "renderer.MediaCaptureConfig: step 2 says what it asks but has no button to go on")
+	capture.Steps[1].ConfirmLabel, capture.Steps[1].Countdown = "capture.got_it", -1
+	require.EqualError(t, capture.Validate(), "renderer.MediaCaptureConfig: step 2 counts down a negative time")
+	capture.Steps[1].Countdown = 5
+
 	capture.Steps[2].Props = []MediaCaptureProp{MediaCapturePropSign, "dance"}
 	require.EqualError(t, capture.Validate(), `renderer.MediaCaptureConfig: step 3 has unsupported prop "dance"`)
 	capture.Steps[2].Props, capture.Steps[2].Seconds = []MediaCaptureProp{MediaCapturePropSpeech}, 0
