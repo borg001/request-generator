@@ -93,3 +93,19 @@ func TestActionPlacementStickyIsValid(t *testing.T) {
 		t.Fatal("only the declared placements are valid")
 	}
 }
+
+// A list's one action may float in the corner of the screen
+// (theGHub1/api#440).
+func TestActionPlacementCornerIsValid(t *testing.T) {
+	action := Action{ID: "give_order", Type: ActionRoute, Label: "Order", ActionPresentation: ActionPresentation{Placement: ActionPlacementCorner, Icon: "plus"}, Route: RouteAction{Path: "/orders/create"}}
+	if err := action.Validate(); err != nil {
+		t.Fatalf("validate corner action: %v", err)
+	}
+	payload, err := json.Marshal(action)
+	if err != nil {
+		t.Fatalf("marshal action: %v", err)
+	}
+	if !containsJSONFragment(string(payload), `"placement":"corner"`) {
+		t.Fatalf("expected the corner placement in %s", payload)
+	}
+}

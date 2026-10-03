@@ -342,11 +342,16 @@ const (
 	// scrolls: the one thing the page is for, within reach from any row of
 	// it - an order, from the catalogue of whom to order (theGHub1/api#429).
 	ActionPlacementSticky ActionPlacement = "sticky"
+	// Floating in the bottom right corner of the screen over a list: on a
+	// phone a large round button with the action's icon, on a wide screen a
+	// button with its words - the one thing the page is for, the way the
+	// feed's «+» publishes (theGHub1/api#440).
+	ActionPlacementCorner ActionPlacement = "corner"
 )
 
 func (placement ActionPlacement) Valid() bool {
 	switch placement {
-	case "", ActionPlacementFull, ActionPlacementHalf, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu, ActionPlacementComposer, ActionPlacementThread, ActionPlacementSticky:
+	case "", ActionPlacementFull, ActionPlacementHalf, ActionPlacementFilterFooter, ActionPlacementBadge, ActionPlacementHead, ActionPlacementMenu, ActionPlacementComposer, ActionPlacementThread, ActionPlacementSticky, ActionPlacementCorner:
 		return true
 	default:
 		return false
