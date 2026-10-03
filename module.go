@@ -28,10 +28,14 @@ type NavigationEntry struct {
 	// Account marks the entry that leads to the actor's own profile. A
 	// phone's menu draws it as the account: its avatar in place of the icon,
 	// and under it the availability switch the account menu holds.
-	Account bool                   `json:"account,omitempty"`
-	Target  NavigationTarget       `json:"target,omitempty"`
-	Roles   []actions.Role         `json:"roles,omitempty"`
-	Query   map[string]interface{} `json:"query,omitempty"`
+	Account bool `json:"account,omitempty"`
+	// Floating draws the entry on a wide screen as a small round button in
+	// the bottom right corner instead of a menu line; a phone keeps it in
+	// its menu.
+	Floating bool                   `json:"floating,omitempty"`
+	Target   NavigationTarget       `json:"target,omitempty"`
+	Roles    []actions.Role         `json:"roles,omitempty"`
+	Query    map[string]interface{} `json:"query,omitempty"`
 }
 
 type NavigationTarget struct {

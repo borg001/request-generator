@@ -147,3 +147,31 @@ func TestConfigDiscoveryValidatesHookAndFieldReferences(t *testing.T) {
 		})
 	}
 }
+
+// A wide screen draws a floating entry as a corner button; the flag reaches
+// the browser with the entry (theGHub1/api#439).
+func TestConfigNavigationCarriesFloating(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	m := &BaseModule{
+		Name: "items", Path: "/api",
+		Render: renderer.Universal{List: &renderer.ListPage{ID: "items"}},
+		Navigation: []NavigationEntry{
+			{ActionName: "list", ID: "items.list", Path: "/items", Show: true},
+			{ActionName: "list", ID: "items.corner", Path: "/items-corner", Show: true, Floating: true},
+		},
+		Actions: []actions.ModuleAction{actions.ListModuleAction{}},
+	}
+	g := &Generator{Modules: []*BaseModule{m}, Locales: []locale.Lang{locale.EN}, DefaultLocale: locale.EN}
+	c, w := discoveryContext("reader", "en")
+	g.actionConfigEndpoint()(c)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	var response ConfigResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	require.Len(t, response.Navigation, 2)
+	floating := map[string]bool{}
+	for _, entry := range response.Navigation {
+		floating[entry.ID] = entry.Floating
+	}
+	require.Equal(t, map[string]bool{"items.list": false, "items.corner": true}, floating)
+	require.NotContains(t, w.Body.String(), `"floating":false`)
+}
