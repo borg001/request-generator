@@ -40,3 +40,20 @@ func TestLocalizingARecordPageLeavesTheProducersFilterAsItWas(t *testing.T) {
 	require.Equal(t, "list.all", page.Sections[0].Components[0].ItemFilter.AllLabel)
 	require.Equal(t, "picked.count", page.Sections[0].Components[0].ItemSelection.CountLabel)
 }
+
+// The words that open and fold the hidden items are the reader's too (#434).
+func TestTheWordsThatShowHiddenItemsAreTranslated(t *testing.T) {
+	page := &RecordPage{Sections: []RecordSection{{ID: "people", Components: []DisplayComponent{{
+		ID: "participants", HiddenShowLabel: "tours.show_hidden", HiddenHideLabel: "tours.fold_hidden",
+	}}}}}
+	localized := Localize(Universal{Record: page}, func(value, key string) string {
+		if key == "" {
+			key = value
+		}
+		return "ru:" + key
+	})
+	component := localized.Record.Sections[0].Components[0]
+	require.Equal(t, "ru:tours.show_hidden", component.HiddenShowLabel)
+	require.Equal(t, "ru:tours.fold_hidden", component.HiddenHideLabel)
+	require.Equal(t, "tours.show_hidden", page.Sections[0].Components[0].HiddenShowLabel)
+}

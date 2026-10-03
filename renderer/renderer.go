@@ -3065,7 +3065,12 @@ type DisplayComponent struct {
 	ValueFallback   string                   `json:"value_fallback,omitempty"`
 	MatrixLabel     string                   `json:"matrix_label,omitempty"`
 	MatrixLabelIcon string                   `json:"matrix_label_icon,omitempty"`
-	Block           *Block                   `json:"block,omitempty"`
+	// HiddenShowLabel and HiddenHideLabel fold away the items marked hidden:
+	// they stay out of sight until the reader opens them with the first
+	// label, and fold back with the second (theGHub1/api#434).
+	HiddenShowLabel string `json:"hidden_show_label,omitempty"`
+	HiddenHideLabel string `json:"hidden_hide_label,omitempty"`
+	Block           *Block `json:"block,omitempty"`
 	// Preview declares that this component's picture can be opened: it names
 	// the dialog and the page actions that belong to the picture rather than
 	// to the page. A long press is the gesture for it on a touch screen.

@@ -502,7 +502,7 @@ func (localizer textLocalizer) localizeRecordPage(page *RecordPage) {
 		localizer.localizeInfoHint(section.Info)
 		for j := range section.Components {
 			component := &section.Components[j]
-			localizer.localizeTextFields(&component.ValueLabel, &component.ValueFallback, &component.MatrixLabel, &component.Title, &component.TitleFallback, &component.Subtitle, &component.SubtitleFallback)
+			localizer.localizeTextFields(&component.ValueLabel, &component.ValueFallback, &component.MatrixLabel, &component.Title, &component.TitleFallback, &component.Subtitle, &component.SubtitleFallback, &component.HiddenShowLabel, &component.HiddenHideLabel)
 			for index := range component.Items {
 				item := &component.Items[index]
 				localizer.localizeFallbackField(&item.Label, item.LabelFallback)
