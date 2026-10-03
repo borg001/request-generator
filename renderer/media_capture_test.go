@@ -133,6 +133,15 @@ func TestMediaCaptureSteps(t *testing.T) {
 	require.EqualError(t, capture.Validate(), "renderer.MediaCaptureConfig: step 2 counts down a negative time")
 	capture.Steps[1].Countdown = 5
 
+	// The counts may be heard; their switch is named and translated (#433).
+	capture.CountdownSound = true
+	require.EqualError(t, capture.Validate(), "renderer.MediaCaptureConfig: a heard countdown needs the label of its switch")
+	capture.SoundLabel = "capture.sound"
+	require.NoError(t, capture.Validate())
+	localized = LocalizeFieldMedia(media, func(value, _ string) string { return "T:" + value })
+	require.Equal(t, "T:capture.sound", localized.Capture.SoundLabel)
+	require.True(t, localized.Capture.CountdownSound)
+
 	capture.Steps[2].Props = []MediaCaptureProp{MediaCapturePropSign, "dance"}
 	require.EqualError(t, capture.Validate(), `renderer.MediaCaptureConfig: step 3 has unsupported prop "dance"`)
 	capture.Steps[2].Props, capture.Steps[2].Seconds = []MediaCaptureProp{MediaCapturePropSpeech}, 0

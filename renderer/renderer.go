@@ -1804,6 +1804,11 @@ type MediaCaptureConfig struct {
 	// the file is attached the section's send is pressed for the person, its
 	// confirmation and its checks included.
 	SubmitOnUse bool `json:"submit_on_use,omitempty"`
+	// CountdownSound lets the counts be heard: a short tone each second and
+	// a longer one as the take starts, for a person standing back from the
+	// screen. SoundLabel names the switch that turns it off (theGHub1/api#433).
+	CountdownSound bool   `json:"countdown_sound,omitempty"`
+	SoundLabel     string `json:"sound_label,omitempty"`
 	// The ask before the camera opens: what it is for and the button that
 	// lets the browser ask for it. Without PermissionLabel the camera opens at
 	// once. RetryLabel asks again after a refusal.
@@ -1947,6 +1952,9 @@ func (capture *MediaCaptureConfig) Validate() error {
 		if strings.TrimSpace(label.value) == "" {
 			return fmt.Errorf("renderer.MediaCaptureConfig: %s is required", label.name)
 		}
+	}
+	if capture.CountdownSound && strings.TrimSpace(capture.SoundLabel) == "" {
+		return fmt.Errorf("renderer.MediaCaptureConfig: a heard countdown needs the label of its switch")
 	}
 	if capture.Kind == MediaCaptureKindVideo && strings.TrimSpace(capture.StopLabel) == "" {
 		return fmt.Errorf("renderer.MediaCaptureConfig: stop label is required for a video")
