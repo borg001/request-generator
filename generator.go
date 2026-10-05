@@ -1651,6 +1651,9 @@ func (generator *Generator) actionDelete(module *BaseModule, action actions.Dele
 		ctx := c.Request.Context()
 		l, _ := icontext.GetLogger(ctx)
 		role := actions.GetRoleFromContext(c)
+		// A refusal says why in the language of the request, as every other
+		// action does (theGHub1/api#449).
+		generator.setTranslationContext(c, generator.getLang(c))
 
 		if hook := actions.ResolveRoleHook(module.RoleBeforeHook, role); hook != nil {
 			if err := hook(c); err != nil {
