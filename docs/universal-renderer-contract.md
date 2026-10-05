@@ -102,7 +102,7 @@ required keys, CRUD route mapping и error shape прежние.
   `back_label`, `cast`), образец (`demo`: `media_item` с `picture`, `people`)
   и `brand`. См. «Пояснение «i»» и «Временные подсказки и знакомство».
 - Поля: `presentation.suggest` (с `optional`), `presentation.min_field` /
-  `max_field`, `media.capture`, `media.actions.open`,
+  `max_field` / `min_field_notice`, `media.capture`, `media.actions.open`,
   `media.item.original_src` / `original_thumbnail`, `media.item.set`,
   `block.overlays[].info`,
   `media.labels.view_mine` /
@@ -1139,6 +1139,7 @@ Typed field metadata нужна для одиночных полей, где б�
 | `presentation.info` | `renderer.InfoHint`: постоянное пояснение «i» у подписи поля, в форме и в записи. См. «Пояснение «i»». |
 | `presentation.suggest` | `FieldSuggest`: значение поля предлагается из других полей той же формы. `endpoint` — адрес, который спрашивают; `params` — query-параметр → поле формы, чьё значение он несёт; `value_field` — поле ответа с предложением; `optional` — параметры, которые могут быть пустыми: пустой не попадает в запрос и не держит вопрос, остальные должны быть заполнены. Предложение заполняет поле, пока человек не написал своё; ответ без значения оставляет поле ему. |
 | `presentation.min_field`, `presentation.max_field` | Число связано с другим полем той же формы как концы одного диапазона: верхний конец называет нижний в `min_field` и не опускается ниже него, нижний называет верхний в `max_field` и не поднимается выше. Control держит значение внутри этой границы так же, как внутри своего диапазона. |
+| `presentation.min_field_notice` | Ключ перевода (или текст) с `{value}`: что сказать под полем, когда control поднял введенное число до `min_field`. Встает вместо подсказки, пока введенное число ниже границы; `{value}` - граница. Локализуется на языке читателя (theGHub1/api#454). |
 
 `placeholder` локализуется вместе с `prefix`, `suffix`, `hint` и
 `description`. Тексты `notice_by_value[]` (`title`, `message`,
