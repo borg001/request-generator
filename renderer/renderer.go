@@ -2670,6 +2670,10 @@ type MediaGalleryItem struct {
 	// Cover marks the picture that stands for the whole set - a profile's
 	// cover. It is shown as the set's face and is not one of its items.
 	Cover bool `json:"cover,omitempty"`
+	// RemoveRefusal is said instead of removing an item that cannot go - the
+	// photo that is a person's face and cover, which is replaced, never taken
+	// away (theGHub1/api#449). Empty means the item is removed as any other.
+	RemoveRefusal string `json:"remove_refusal,omitempty"`
 	// PostCount is how many publications this picture stands in. A picture
 	// that was published has a place of its own - the place its publication
 	// took - so it is not reordered by hand.

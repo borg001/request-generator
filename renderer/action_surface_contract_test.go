@@ -109,3 +109,15 @@ func TestActionPlacementCornerIsValid(t *testing.T) {
 		t.Fatalf("expected the corner placement in %s", payload)
 	}
 }
+
+// An item that cannot be removed says why (theGHub1/api#449).
+func TestMediaGalleryItemCarriesItsRemoveRefusal(t *testing.T) {
+	plain, _ := json.Marshal(MediaGalleryItem{ID: "a"})
+	if containsJSONFragment(string(plain), `"remove_refusal"`) {
+		t.Fatalf("an item that can be removed says nothing: %s", plain)
+	}
+	kept, _ := json.Marshal(MediaGalleryItem{ID: "b", Cover: true, RemoveRefusal: "Replace it first"})
+	if !containsJSONFragment(string(kept), `"remove_refusal":"Replace it first"`) {
+		t.Fatalf("expected the refusal in %s", kept)
+	}
+}
