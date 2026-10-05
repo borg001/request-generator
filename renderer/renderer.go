@@ -1668,6 +1668,11 @@ type FieldPresentation struct {
 	// inside that bound as it holds one inside its own accepted range.
 	MinField string `json:"min_field,omitempty"`
 	MaxField string `json:"max_field,omitempty"`
+	// MinFieldNotice is said under a number the control raised to its
+	// MinField: the person wrote less, and the form changed it - an order's
+	// price lifted to the rate of its models. {value} is the number it was
+	// raised to.
+	MinFieldNotice string `json:"min_field_notice,omitempty"`
 	// Info is the lasting explanation a reader opens beside the field's
 	// label, wherever the field is read: in a form and in a record.
 	Info *InfoHint `json:"info,omitempty"`
