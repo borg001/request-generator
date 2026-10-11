@@ -22,7 +22,7 @@ func TestReadOnly(t *testing.T) {
 			t.Errorf("read rejected: %s", q)
 		}
 	}
-	for _, q := range []string{"UPDATE x SET a=1 RETURNING *", "WITH changed AS (DELETE FROM x RETURNING *) SELECT * FROM changed", "SELECT * FROM x FOR UPDATE", "SELECT * FROM x FOR SHARE", "SELECT 1; DELETE FROM x", "SELECT nextval('seq')", "SELECT \"nextval\"('seq')", "SELECT pg_advisory_lock(1)", "SELECT set_config('role','x',false)", "SELECT 1 INTO new_table", "SELECT $$ a $$", "SELECT 'unterminated", "SELECT E'\\'; UPDATE x SET a=1; --'", "SELECT random()"} {
+	for _, q := range []string{"UPDATE x SET a=1 RETURNING *", "WITH changed AS (DELETE FROM x RETURNING *) SELECT * FROM changed", "SELECT * FROM x FOR UPDATE", "SELECT * FROM x FOR SHARE", "SELECT 1; DELETE FROM x", "SELECT nextval('seq')", "SELECT \"nextval\"('seq')", "SELECT pg_advisory_lock(1)", "SELECT set_config('role','x',false)", "SELECT 1 INTO new_table", "SELECT $$ a $$", "SELECT 'unterminated", "SELECT random()"} {
 		if readOnly(q) {
 			t.Errorf("unsafe query accepted: %s", q)
 		}
@@ -235,4 +235,31 @@ func TestPostgresPoolReadsWritesTransactionsAndTypes(t *testing.T) {
 	}
 	c.SetTTL(0)
 	read("after", pool.QueryRow(q, 1))
+}
+
+// A read containing a regex must not permanently disable caching on the pool
+// connection. Feed queries use this ordinary PostgreSQL string syntax.
+func TestRegexReadDoesNotChangeSession(t *testing.T) {
+	for _, query := range []string{
+		`SELECT value FROM records WHERE value ~ '^[0-9]+(\\.[0-9]+)?$'`,
+		`SELECT E'escaped\'quote'`,
+	} {
+		if !readOnly(query) {
+			t.Fatalf("read bypassed: %s", query)
+		}
+		c := &conn{}
+		c.trackSession(query)
+		c.trackSession("UPDATE records SET value=$1")
+		if c.sessionChanged {
+			t.Fatalf("read/write marked session dirty: %s", query)
+		}
+	}
+	if readOnly(`SELECT E'escaped\'quote'; DELETE FROM records`) {
+		t.Fatal("escaped literal hid a second statement")
+	}
+	c := &conn{}
+	c.trackSession(`SELECT set_config('search_path','other',false)`)
+	if !c.sessionChanged {
+		t.Fatal("session change not tracked")
+	}
 }

@@ -66,12 +66,20 @@ func sqlTokens(s string) ([]string, bool) {
 		}
 		if c == '\'' || c == '"' {
 			quote := c
+			// PostgreSQL standard_conforming_strings=on: backslashes in
+			// ordinary strings (notably regular expressions) are literal.
+			// Only E'...' uses backslash escaping for quote delimiters.
+			escaped := quote == '\'' && i > 0 && (s[i-1] == 'E' || s[i-1] == 'e')
+			if i > 0 && s[i-1] == '&' {
+				return nil, false
+			}
 			i++
 			var value strings.Builder
 			closed := false
 			for i < len(s) {
-				if s[i] == '\\' {
-					return nil, false
+				if s[i] == '\\' && escaped {
+					i += 2
+					continue
 				}
 				if s[i] == quote {
 					i++
