@@ -39,6 +39,17 @@ func (db *DB) queryView(query string, args ...interface{}) (*sql.Rows, error) {
 	return db.QueryContext(db.queryContext(), query, args...)
 }
 
+func (db *DB) queryList(query string, args ...interface{}) (selectRows, error) {
+	if db.listSelectCache != nil {
+		return db.queryCachedList(query, args...)
+	}
+	return db.queryListSQL(query, args...)
+}
+
+func (db *DB) queryListSQL(query string, args ...interface{}) (*sql.Rows, error) {
+	return db.QueryContext(db.queryContext(), query, args...)
+}
+
 // QueryContext executes a parameterized read using the same bounded statement
 // cache as generated reads when enabled by NewDBWithPreparedReads. It never caches rows or
 // argument values. Callers must close the returned rows.

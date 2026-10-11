@@ -32,10 +32,11 @@ func SafeSQLIdentifier(name string) bool {
 
 type DB struct {
 	DBExecutor
-	sql           *sql.DB
-	Debug         bool
-	preparedViews *preparedViewCache
-	readContext   context.Context
+	sql             *sql.DB
+	Debug           bool
+	preparedViews   *preparedViewCache
+	listSelectCache *listSelectCache
+	readContext     context.Context
 }
 type Tx struct {
 	sql *sql.Tx
@@ -540,7 +541,7 @@ func (db *DB) List(
 
 	// Reuse the SQL shape when this executor has a prepared-read cache. Values
 	// and rows remain request-specific; the uncached path is unchanged.
-	rows, err := db.QueryContext(db.queryContext(), query, args...)
+	rows, err := db.queryList(query, args...)
 	if err != nil {
 		log.Errorln("LIST ERR: ", err)
 		return nil, 0, err
@@ -676,7 +677,7 @@ func (db *DB) List(
 	result = append(result, results...)
 
 	// COUNT uses the same request context and bounded cache as the list query.
-	countResult, err := db.QueryContext(db.queryContext(), countQuery, countArgs...)
+	countResult, err := db.queryList(countQuery, countArgs...)
 	if err != nil {
 		log.Errorln("COUNT ERR: ", err)
 		return nil, 0, err
