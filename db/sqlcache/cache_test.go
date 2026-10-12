@@ -135,6 +135,12 @@ func TestBoundsStreamingAndDisabledTTL(t *testing.T) {
 }
 
 func TestPostgresPoolReadsWritesTransactionsAndTypes(t *testing.T) {
+	for _, above := range []bool{false, true} {
+		t.Run(fmt.Sprintf("above_pool_%t", above), func(t *testing.T) { testPostgresPoolReadsWritesTransactionsAndTypes(t, above) })
+	}
+}
+
+func testPostgresPoolReadsWritesTransactionsAndTypes(t *testing.T, above bool) {
 	dsn := os.Getenv("PREPARED_TEST_DATABASE_URL")
 	if dsn == "" {
 		t.Skip("PREPARED_TEST_DATABASE_URL not set")
@@ -144,9 +150,17 @@ func TestPostgresPoolReadsWritesTransactionsAndTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := New(Options{TTL: 250 * time.Millisecond, MaxEntries: 64, MaxBytes: 1 << 20, MaxResultBytes: 1 << 16})
-	pool := sql.OpenDB(c.Connector(base))
+	var pool *sql.DB
+	if above {
+		backend := sql.OpenDB(base)
+		backend.SetMaxOpenConns(4)
+		defer backend.Close()
+		pool = c.WrapDB(backend)
+	} else {
+		pool = sql.OpenDB(c.Connector(base))
+		pool.SetMaxOpenConns(4)
+	}
 	defer pool.Close()
-	pool.SetMaxOpenConns(4)
 	table := fmt.Sprintf("sqlcache_test_%d", time.Now().UnixNano())
 	if _, err := pool.Exec("CREATE TABLE " + table + " (id bigint primary key, value text, data bytea, nums bigint[], stamp timestamptz, amount numeric(8,2))"); err != nil {
 		t.Fatal(err)
