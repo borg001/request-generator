@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -47,11 +48,12 @@ type flight struct {
 
 // Cache is shared by connections in one pool, never across databases.
 type Cache struct {
-	mu      sync.Mutex
-	options Options
-	entries map[[32]byte]entry
-	flights map[[32]byte]*flight
-	stats   Stats
+	mu                             sync.RWMutex
+	options                        Options
+	entries                        map[[32]byte]entry
+	flights                        map[[32]byte]*flight
+	hits, misses, shared, bypassed atomic.Uint64
+	bytes                          int64
 }
 
 func New(options Options) *Cache {
@@ -59,12 +61,10 @@ func New(options Options) *Cache {
 }
 
 func (c *Cache) Stats() Stats {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	s := c.stats
-	s.TTL = c.options.TTL
-	s.Entries = len(c.entries)
-	return s
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return Stats{TTL: c.options.TTL, Hits: c.hits.Load(), Misses: c.misses.Load(),
+		Shared: c.shared.Load(), Bypassed: c.bypassed.Load(), Entries: len(c.entries), Bytes: c.bytes}
 }
 
 // SetTTL changes the global window. Existing entries keep their original expiry;
@@ -86,22 +86,69 @@ func key(query string, args []driver.NamedValue) ([32]byte, error) {
 	for i, arg := range args {
 		values[i] = argument{arg.Name, fmt.Sprintf("%T", arg.Value), arg.Ordinal, arg.Value}
 	}
-	encoded, err := json.Marshal(struct {
-		SQL  string
-		Args []argument
-	}{query, values})
-	return sha256.Sum256(encoded), err
+	encoded, err := json.Marshal(values)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	// Hash exact SQL bytes separately: quoting/escaping a large SQL string as
+	// JSON made every cache hit allocate another copy of the whole statement.
+	queryHash, argsHash := hashSQL(query), sha256.Sum256(encoded)
+	var combined [64]byte
+	copy(combined[:32], queryHash[:])
+	copy(combined[32:], argsHash[:])
+	return sha256.Sum256(combined[:]), nil
+}
+
+func hashSQL(query string) [32]byte {
+	// A fixed scratch buffer avoids allocating len(query) bytes just to pass
+	// a string to SHA-256. Small statements fit entirely on the stack.
+	var block [1024]byte
+	if len(query) <= len(block) {
+		return sha256.Sum256(block[:copy(block[:], query)])
+	}
+	h := sha256.New()
+	for len(query) > 0 {
+		n := copy(block[:], query)
+		h.Write(block[:n])
+		query = query[n:]
+	}
+	var result [32]byte
+	h.Sum(result[:0])
+	return result
 }
 
 func (c *Cache) query(ctx context.Context, query string, args []driver.NamedValue, eligible bool, run func() (driver.Rows, error)) (driver.Rows, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	if !eligible || ctx.Value(bypassKey{}) == true {
+		c.bypassed.Add(1)
+		return run()
+	}
 	k, keyErr := key(query, args)
-	c.mu.Lock()
+	if keyErr != nil {
+		c.bypassed.Add(1)
+		return run()
+	}
+	// The common hit path neither sweeps unrelated entries nor takes an
+	// exclusive lock. Expired entries are reclaimed on the bounded miss path.
+	c.mu.RLock()
 	opts := c.options
-	if !eligible || ctx.Value(bypassKey{}) == true || keyErr != nil || opts.TTL <= 0 || opts.MaxEntries <= 0 || opts.MaxBytes <= 0 || opts.MaxResultBytes <= 0 {
-		c.stats.Bypassed++
+	if opts.TTL > 0 {
+		if e, ok := c.entries[k]; ok {
+			now := time.Now()
+			if now.Before(e.expires) && now.Before(e.data.completed.Add(opts.TTL)) {
+				c.hits.Add(1)
+				c.mu.RUnlock()
+				return e.data.reader(), nil
+			}
+		}
+	}
+	c.mu.RUnlock()
+	c.mu.Lock()
+	opts = c.options
+	if opts.TTL <= 0 || opts.MaxEntries <= 0 || opts.MaxBytes <= 0 || opts.MaxResultBytes <= 0 {
+		c.bypassed.Add(1)
 		c.mu.Unlock()
 		return run()
 	}
@@ -109,16 +156,16 @@ func (c *Cache) query(ctx context.Context, query string, args []driver.NamedValu
 	for k, e := range c.entries {
 		if !now.Before(e.expires) || !now.Before(e.data.completed.Add(opts.TTL)) {
 			delete(c.entries, k)
-			c.stats.Bytes -= e.data.bytes
+			c.bytes -= e.data.bytes
 		}
 	}
 	if e, ok := c.entries[k]; ok {
-		c.stats.Hits++
+		c.hits.Add(1)
 		c.mu.Unlock()
 		return e.data.reader(), nil
 	}
 	if f := c.flights[k]; f != nil {
-		c.stats.Shared++
+		c.shared.Add(1)
 		c.mu.Unlock()
 		select {
 		case <-ctx.Done():
@@ -134,13 +181,13 @@ func (c *Cache) query(ctx context.Context, query string, args []driver.NamedValu
 		return run()
 	}
 	if len(c.flights) >= opts.MaxEntries {
-		c.stats.Bypassed++
+		c.bypassed.Add(1)
 		c.mu.Unlock()
 		return run()
 	}
 	f := &flight{done: make(chan struct{})}
 	c.flights[k] = f
-	c.stats.Misses++
+	c.misses.Add(1)
 	c.mu.Unlock()
 	rows, err := run()
 	var data *snapshot
@@ -151,14 +198,14 @@ func (c *Cache) query(ctx context.Context, query string, args []driver.NamedValu
 	delete(c.flights, k)
 	f.data, f.err = data, err
 	if err == nil && data != nil {
-		if len(c.entries) < opts.MaxEntries && c.stats.Bytes+data.bytes <= opts.MaxBytes {
+		if len(c.entries) < opts.MaxEntries && c.bytes+data.bytes <= opts.MaxBytes {
 			c.entries[k] = entry{data, data.completed.Add(opts.TTL)}
-			c.stats.Bytes += data.bytes
+			c.bytes += data.bytes
 		} else {
-			c.stats.Bypassed++
+			c.bypassed.Add(1)
 		}
 	} else if err == nil {
-		c.stats.Bypassed++
+		c.bypassed.Add(1)
 	}
 	close(f.done)
 	c.mu.Unlock()
