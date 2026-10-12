@@ -54,6 +54,14 @@ func (db *DB) debugLog(log *log.Entry, args ...interface{}) {
 	}
 }
 
+// Formatting SQL with its arguments is expensive and may contain sensitive
+// values. Do it only when explicitly requested, before entering the formatter.
+func (db *DB) debugQuery(entry *log.Entry, label, query string, args []interface{}) {
+	if db.Debug {
+		entry.Infoln(label, interpolateQuery(query, args))
+	}
+}
+
 func interpolateQuery(query string, args []interface{}) string {
 	for i := len(args); i >= 1; i-- {
 		placeholder := fmt.Sprintf("$%d", i)
@@ -536,8 +544,8 @@ func (db *DB) List(
 	query, args := stmt.Sql()
 	countQuery, countArgs := countStmt.Sql()
 
-	db.debugLog(log, "[DEBUG] LIST QUERY: ", interpolateQuery(query, args))
-	db.debugLog(log, "[DEBUG] LIST COUNT QUERY: ", interpolateQuery(countQuery, countArgs))
+	db.debugQuery(log, "[DEBUG] LIST QUERY: ", query, args)
+	db.debugQuery(log, "[DEBUG] LIST COUNT QUERY: ", countQuery, countArgs)
 
 	// Reuse the SQL shape when this executor has a prepared-read cache. Values
 	// and rows remain request-specific; the uncached path is unchanged.
@@ -786,7 +794,7 @@ func (db *DB) View(
 	stmt = stmt.GROUP_BY(groupByPrimaryAndJoinedFields(primaryKey, moduleFields, tableRef)...).LIMIT(1)
 
 	query, args := stmt.Sql()
-	db.debugLog(log, "[DEBUG] VIEW QUERY: ", interpolateQuery(query, args))
+	db.debugQuery(log, "[DEBUG] VIEW QUERY: ", query, args)
 
 	rows, err := db.queryView(query, args...)
 	if err != nil {
@@ -955,7 +963,7 @@ func (db *DB) Add(log *log.Entry, table pg.Table, primaryKey pg.Column, moduleFi
 			primaryKey.Name(),
 		)
 
-		db.debugLog(log, "[DEBUG] ADD QUERY: ", interpolateQuery(query, values))
+		db.debugQuery(log, "[DEBUG] ADD QUERY: ", query, values)
 
 		err = tx.QueryRow(query, values...).Scan(&output.Value)
 		if err != nil {
@@ -1057,7 +1065,7 @@ func (db *DB) Update(log *log.Entry, table pg.Table, primaryKey pg.Column, modul
 			whereClause,
 		)
 
-		db.debugLog(log, "[DEBUG] UPDATE QUERY: ", interpolateQuery(query, values))
+		db.debugQuery(log, "[DEBUG] UPDATE QUERY: ", query, values)
 
 		result, err := tx.Exec(query, values...)
 		if err != nil {
@@ -1165,7 +1173,7 @@ func (db *DB) Delete(log *log.Entry, table pg.Table, where pg.BoolExpression, tc
 	stmt := table.DELETE().WHERE(where)
 	query, args := stmt.Sql()
 
-	db.debugLog(log, "[DEBUG] DELETE QUERY: ", interpolateQuery(query, args))
+	db.debugQuery(log, "[DEBUG] DELETE QUERY: ", query, args)
 
 	result, err := tx.Exec(query, args...)
 	if err != nil {
