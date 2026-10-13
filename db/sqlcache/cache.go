@@ -148,6 +148,15 @@ retry:
 				return e.data.reader(), nil
 			}
 		}
+		if f := c.flights[k]; f != nil {
+			c.shared.Add(1)
+			c.mu.RUnlock()
+			rows, err, canceledLeader := awaitFlight(ctx, f, run)
+			if canceledLeader {
+				goto retry
+			}
+			return rows, err
+		}
 	}
 	c.mu.RUnlock()
 	c.mu.Lock()
@@ -158,13 +167,7 @@ retry:
 		return run()
 	}
 	now := time.Now()
-	for k, e := range c.entries {
-		if !now.Before(e.expires) || !now.Before(e.data.completed.Add(opts.TTL)) {
-			delete(c.entries, k)
-			c.bytes -= e.data.bytes
-		}
-	}
-	if e, ok := c.entries[k]; ok {
+	if e, ok := c.entries[k]; ok && now.Before(e.expires) && now.Before(e.data.completed.Add(opts.TTL)) {
 		c.hits.Add(1)
 		c.mu.Unlock()
 		return e.data.reader(), nil
@@ -172,23 +175,19 @@ retry:
 	if f := c.flights[k]; f != nil {
 		c.shared.Add(1)
 		c.mu.Unlock()
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-f.done:
+		rows, err, canceledLeader := awaitFlight(ctx, f, run)
+		if canceledLeader {
+			goto retry
 		}
-		if f.err != nil {
-			// The leader owns its driver context. Its cancellation must not fail
-			// live waiters; retry with their own connection/context and coalesce again.
-			if f.canceled {
-				goto retry
-			}
-			return nil, f.err
+		return rows, err
+	}
+	// Reclaim only when starting a real miss. Hundreds of waiters for one
+	// expired key must not each sweep the entire cache under its write lock.
+	for k, e := range c.entries {
+		if !now.Before(e.expires) || !now.Before(e.data.completed.Add(opts.TTL)) {
+			delete(c.entries, k)
+			c.bytes -= e.data.bytes
 		}
-		if f.data != nil {
-			return f.data.reader(), nil
-		}
-		return run()
 	}
 	if len(c.flights) >= opts.MaxEntries {
 		c.bypassed.Add(1)
@@ -218,7 +217,27 @@ retry:
 	} else if err == nil {
 		c.bypassed.Add(1)
 	}
-	close(f.done)
 	c.mu.Unlock()
+	// Waking a large group can reschedule the leader. Unrelated cache hits
+	// must be able to proceed while the waiters become runnable.
+	close(f.done)
 	return rows, err
+}
+
+func awaitFlight(ctx context.Context, f *flight, run func() (driver.Rows, error)) (driver.Rows, error, bool) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err(), false
+	case <-f.done:
+	}
+	if f.err != nil {
+		// An ordinary database error is shared; a canceled leader is retried
+		// by live waiters under their own context, preserving request coalescing.
+		return nil, f.err, f.canceled
+	}
+	if f.data != nil {
+		return f.data.reader(), nil, false
+	}
+	rows, err := run()
+	return rows, err, false
 }
