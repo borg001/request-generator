@@ -60,6 +60,9 @@ func TestLocalizeRenderer_LocalizesPublicTextOnly(t *testing.T) {
 			"media.upload":       "Загрузить файл",
 			"media.empty":        "Нет файлов",
 			"media.publish":      "Опубликовать",
+			"media.select":       "Выбрать",
+			"media.select_count": "Выбрано: {count}",
+			"media.select_note":  "Отправленное туда стоит и здесь",
 			"record.title":       "Профиль",
 			"record.section":     "О пользователе",
 			"component.value":    "Значение",
@@ -138,6 +141,10 @@ func TestLocalizeRenderer_LocalizesPublicTextOnly(t *testing.T) {
 					Actions: []renderer.Action{{ID: "publish", Label: "media.publish", Type: renderer.ActionEmit}},
 				}},
 				MediaLabels: &renderer.MediaGalleryLabels{Empty: "media.empty"},
+				MediaSelection: &renderer.MediaGallerySelection{
+					Actions:    []renderer.Action{{ID: "publish_all", Label: "media.publish", Type: renderer.ActionEmit}},
+					StartLabel: "media.select", CountLabel: "media.select_count", Note: "media.select_note",
+				},
 			}},
 		},
 		Record: &renderer.RecordPage{
@@ -213,6 +220,10 @@ func TestLocalizeRenderer_LocalizesPublicTextOnly(t *testing.T) {
 	require.Equal(t, "Нет файлов", section.MediaLabels.Empty)
 	require.Equal(t, "User supplied title", section.MediaItems[0].Title)
 	require.Equal(t, "Опубликовать", section.MediaItems[0].Actions[0].Label)
+	require.Equal(t, "Опубликовать", section.MediaSelection.Actions[0].Label)
+	require.Equal(t, "Выбрать", section.MediaSelection.StartLabel)
+	require.Equal(t, "Выбрано: {count}", section.MediaSelection.CountLabel)
+	require.Equal(t, "Отправленное туда стоит и здесь", section.MediaSelection.Note)
 
 	require.Equal(t, "Профиль", localized.Record.Title)
 	require.Equal(t, "Проверен", localized.Record.Badge)

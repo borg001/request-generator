@@ -1373,6 +1373,8 @@ frontend использует обычный список. `query` содерж�
 | `media.item.cover` | bool. Картинка — «лицо» всего набора (обложка профиля): показывается как обложка и не считается одним из элементов. |
 | `media.item.post_count` | int. В скольких публикациях участвует картинка. Опубликованная картинка занимает место своей публикации и не переставляется вручную. |
 | `media.item.set` | Optional массив `MediaGalleryItem`: все файлы публикации, которую представляет элемент, в её порядке. Consumer с двумя и больше файлами даёт пролистать их на месте, а `open_action` оставляет переходом в публикацию. Producer отдаёт элементы набора без `actions`, `badges`, `open_action` и вложенного `set`. |
+| `media.item.tone` | Optional string. Цветовой token рамки плитки, когда о картинке важнее всего её состояние (например, она ещё ждёт проверки). Пусто — рамку рисует consumer как обычно. Это application token, как `tone` у `Badge`: библиотека не держит списка значений. |
+| `media.item.select_actions` | Optional массив id. Действия выбора галереи (`media_selection.actions`), для которых этот элемент можно выбрать. Элемент без id не выбирается. Каждый id обязан быть объявлен в `media_selection.actions`. |
 | `display_component.media_items` | Упорядоченные элементы для `media_gallery`; не требует дублировать их в module fields. |
 | `media.item.usage` | Назначение media: `gallery`, `avatar`, `poster`, `cover` (картинка, которую несёт карточка). |
 | `media.item.src` | URI значения. В `view` request-generator может подставить сюда `item[field].value`, если producer не указал `src` явно. |
@@ -1390,6 +1392,49 @@ frontend использует обычный список. `query` содерж�
 | `media.item.original_src`, `media.item.original_thumbnail` | Картинка такой, какой её снял владелец, рядом с `src`, когда `src` показывает её так, как видят другие (с замаскированным лицом). Consumer, который предлагает владельцу оба вида, переключается между ними; остальные показывают `src`. |
 | `media.labels.view_mine`, `media.labels.view_others` | Подписи двух видов галереи, элементы которой несут оригиналы: «как вижу я» и «как видят другие». Эти две подписи библиотека не переводит (их нет в `localizeMediaLabels`): producer передаёт готовый текст. |
 | `media.actions.open` | Typed `Action`: переход от одной картинки к месту, где лежат все (от лица профиля к его галерее). Локализуется вместе с остальными действиями. |
+
+#### Выбор Нескольких Элементов
+
+Form-секция галереи может объявить `media_selection` (`MediaGallerySelection`):
+несколько элементов выбираются разом, и выбор целиком отправляется в одно из
+объявленных действий. Без `media_selection` галерея работает с одним элементом
+за раз, как раньше.
+
+| Path | Назначение |
+|------|------------|
+| `media_selection.actions` | Typed `Action[]`: куда можно отправить выбор. У каждого действия обязателен уникальный `id`. Действие получает выбранные элементы в порядке выбора. |
+| `media_selection.limit` | Optional int: сколько элементов вмещает один выбор. `0` — без ограничения, отрицательное значение не допускается. |
+| `media_selection.start_label`, `media_selection.cancel_label` | Подписи входа в режим выбора и выхода из него без отправки. |
+| `media_selection.count_label` | Сколько выбрано; `{count}` заменяется числом. |
+| `media_selection.limit_label` | Что сказать, когда ещё один элемент превысил бы `limit`. |
+| `media_selection.note` | Строка рядом с действиями: что ещё делает отправка выбора. |
+
+Какие действия доступны элементу, говорит сам элемент
+(`media.item.select_actions`): producer решает это после проверки прав и
+состояния. Consumer предлагает действие, пока его называет хотя бы один
+выбранный элемент, и отправляет в него весь выбор. Подписи и действия выбора
+локализуются как остальные тексты секции; действия попадают в
+`Universal.Actions()`.
+
+Проверки: действие без `id`, повтор `id`, отрицательный `limit` и элемент,
+выбранный для необъявленного действия, отклоняются `Validate()`.
+
+```json
+{
+  "media_selection": {
+    "actions": [{"id": "send_all", "type": "emit", "label": "Send"}],
+    "limit": 10,
+    "start_label": "Select",
+    "cancel_label": "Cancel",
+    "count_label": "Selected: {count}",
+    "note": "What is sent there also stands here"
+  },
+  "media_items": [
+    {"id": "one", "tone": "amber", "select_actions": ["send_all"]},
+    {"id": "two"}
+  ]
+}
+```
 
 Producer задает labels как translation keys. Request-generator возвращает во внешнем JSON уже локализованные labels согласно `lang`/`Accept-Language`.
 
@@ -3275,6 +3320,9 @@ action прежние. `form_page.sections[].info` описан в «Поясн�
 | `FormSection.MediaCropper` | `media_cropper` | `MediaCropperConfig` | Как кадрировать картинку галереи, когда ей дают роль со своей формой (прежде всего круглый аватар). Shape совпадает с `media.cropper` (см. «Media Cropper»). |
 | `FormSection.MediaPresets` | `media_presets` | `MediaPresetsConfig` | Галерее предлагаются готовые картинки для старта. Producer решает, предлагать ли их и как это назвать; сами картинки отдаёт приложение. |
 | `MediaPresetsConfig.Title`, `Subtitle`, `ShowLabel`, `HideLabel`, `AddLabel` | `media_presets.title`, `subtitle`, `show_label`, `hide_label`, `add_label` | string | Локализуемые подписи. |
+| `FormSection.MediaSelection` | `media_selection` | `MediaGallerySelection` | Выбор нескольких элементов галереи и действия для выбора целиком (см. «Выбор Нескольких Элементов»). Без объявления галерея работает с одним элементом за раз. |
+| `MediaGalleryItem.Tone` | `media_items[].tone` | string | Цветовой token рамки плитки; application token без списка в библиотеке. |
+| `MediaGalleryItem.SelectActions` | `media_items[].select_actions` | `[]string` | Id действий `media_selection.actions`, для которых элемент можно выбрать. |
 
 Для `media_visibility_states` generator проверяет, что `value` входит в
 известный набор, `label` не пуст и `value` не повторяется.

@@ -1025,6 +1025,9 @@ func (render Universal) Actions() []Action {
 					}
 				}
 			}
+			if section.MediaSelection != nil {
+				appendActions(section.MediaSelection.Actions)
+			}
 		}
 	}
 	if render.Record != nil {

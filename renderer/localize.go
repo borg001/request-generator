@@ -347,6 +347,7 @@ func (localizer textLocalizer) localizeFormSection(section *FormSection) {
 		localizer.localizeTextFields(&section.MediaPresets.Title, &section.MediaPresets.Subtitle, &section.MediaPresets.ShowLabel, &section.MediaPresets.HideLabel, &section.MediaPresets.AddLabel)
 	}
 	localizer.localizeMediaActions(section.MediaActions)
+	localizer.localizeMediaSelection(section.MediaSelection)
 	localizer.localizeMediaVisibilityStates(section.MediaVisibilityStates)
 	localizer.localizeMediaGalleryItems(section.MediaItems)
 	localizer.localizeDateRange(section.DateRange)
@@ -433,6 +434,16 @@ func (localizer textLocalizer) localizeMediaActions(actions *MediaGalleryActions
 		for i := range actions.Under {
 			localizer.localizeRendererAction(&actions.Under[i])
 		}
+	}
+}
+
+func (localizer textLocalizer) localizeMediaSelection(selection *MediaGallerySelection) {
+	if selection == nil {
+		return
+	}
+	localizer.localizeTextFields(&selection.StartLabel, &selection.CancelLabel, &selection.CountLabel, &selection.LimitLabel, &selection.Note)
+	for index := range selection.Actions {
+		localizer.localizeRendererAction(&selection.Actions[index])
 	}
 }
 

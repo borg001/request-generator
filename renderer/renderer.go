@@ -157,6 +157,9 @@ func (r Universal) Validate() error {
 			if err := validateMediaVisibilityStates(fmt.Sprintf("form section %q", section.ID), section.MediaVisibilityStates); err != nil {
 				return err
 			}
+			if err := validateMediaSelection(fmt.Sprintf("form section %q", section.ID), section.MediaSelection, section.MediaItems); err != nil {
+				return err
+			}
 			if section.Collection == nil {
 				if err := validateMediaActions(section.MediaActions); err != nil {
 					return err
@@ -899,6 +902,39 @@ func validateMediaActions(actions *MediaGalleryActions) error {
 	for i := range actions.Under {
 		if err := validateAction("media under", &actions.Under[i]); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// validateMediaSelection holds a gallery's selection to what a consumer can
+// draw: every action is named, named once and valid, the limit is not
+// negative, and an item is picked only for actions the selection declares.
+func validateMediaSelection(scope string, selection *MediaGallerySelection, items []MediaGalleryItem) error {
+	declared := map[string]struct{}{}
+	if selection != nil {
+		if selection.Limit < 0 {
+			return fmt.Errorf("renderer.Universal: %s media selection limit must not be negative", scope)
+		}
+		for index := range selection.Actions {
+			action := &selection.Actions[index]
+			if action.ID == "" {
+				return fmt.Errorf("renderer.Universal: %s media selection action must define id", scope)
+			}
+			if _, exists := declared[action.ID]; exists {
+				return fmt.Errorf("renderer.Universal: %s media selection action %q is declared twice", scope, action.ID)
+			}
+			declared[action.ID] = struct{}{}
+			if err := validateAction(scope+" media selection", action); err != nil {
+				return err
+			}
+		}
+	}
+	for index := range items {
+		for _, id := range items[index].SelectActions {
+			if _, exists := declared[id]; !exists {
+				return fmt.Errorf("renderer.Universal: %s media item %q is picked for selection action %q the gallery does not declare", scope, items[index].ID, id)
+			}
 		}
 	}
 	return nil
@@ -2297,8 +2333,12 @@ type FormSection struct {
 	// a role that has a shape of its own - a round avatar, most of all.
 	MediaCropper *MediaCropperConfig `json:"media_cropper,omitempty"`
 	MediaPresets *MediaPresetsConfig `json:"media_presets,omitempty"`
-	Prompts      *PromptList         `json:"prompts,omitempty"`
-	DateRange    *DateRangeConfig    `json:"date_range,omitempty"`
+	// MediaSelection lets several items of this gallery be picked at once and
+	// says what the pick can be sent to. A gallery that declares none is
+	// worked with one item at a time, as every gallery was before.
+	MediaSelection *MediaGallerySelection `json:"media_selection,omitempty"`
+	Prompts        *PromptList            `json:"prompts,omitempty"`
+	DateRange      *DateRangeConfig       `json:"date_range,omitempty"`
 	// Info explains the section beside its title: what its controls do that
 	// the words on them cannot say.
 	Info *InfoHint `json:"info,omitempty"`
@@ -2686,6 +2726,36 @@ type MediaGalleryItem struct {
 	// Set is every file of the publication a tile stands for, in the
 	// publication's order, so they can be looked through where the tile is.
 	Set []MediaGalleryItem `json:"set,omitempty"`
+	// Tone is the colour token the item's tile wears on its frame while its
+	// state is the first thing to read about it - an item still waiting to be
+	// let through, say. Empty leaves the frame as the consumer draws it. It
+	// is an application token, like a badge's tone: the library keeps no list.
+	Tone string `json:"tone,omitempty"`
+	// SelectActions names, by id, the actions of the gallery's selection
+	// this item may be picked for. An item that names none is not picked.
+	SelectActions []string `json:"select_actions,omitempty"`
+}
+
+// MediaGallerySelection lets several items of a gallery be picked at once and
+// says what the pick can be sent to. Each action receives the picked items in
+// the order they were picked. An item says which of the actions it may be
+// picked for (MediaGalleryItem.SelectActions); a consumer offers an action
+// while at least one picked item names it, and sends the whole pick with it.
+type MediaGallerySelection struct {
+	Actions []Action `json:"actions,omitempty"`
+	// Limit is how many items one pick holds. Zero is no limit.
+	Limit int `json:"limit,omitempty"`
+	// StartLabel opens the picking and CancelLabel leaves it with nothing
+	// sent.
+	StartLabel  string `json:"start_label,omitempty"`
+	CancelLabel string `json:"cancel_label,omitempty"`
+	// CountLabel says how many items are picked; {count} stands for the
+	// number.
+	CountLabel string `json:"count_label,omitempty"`
+	// LimitLabel is said when one more item would pass Limit.
+	LimitLabel string `json:"limit_label,omitempty"`
+	// Note is a line read with the actions: what sending the pick also does.
+	Note string `json:"note,omitempty"`
 }
 
 type MediaGalleryLabels struct {
