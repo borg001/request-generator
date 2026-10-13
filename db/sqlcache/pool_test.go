@@ -222,3 +222,50 @@ func TestPoolStreamsLargeAndMultipleResults(t *testing.T) {
 		t.Fatal(fmt.Sprint(n), err)
 	}
 }
+
+func TestPoolCanceledLeaderRetriesOnLiveConnection(t *testing.T) {
+	cache, front, backend := postgresPool(t, 1)
+	ctx, stop := context.WithTimeout(context.Background(), 5*time.Second)
+	defer stop()
+	_, err := backend.ExecContext(ctx, `CREATE OR REPLACE FUNCTION cache_cancel_slow() RETURNS integer LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(0.3); RETURN 42; END $$`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backend.Exec("DROP FUNCTION cache_cancel_slow()")
+	leader, cancel := context.WithCancel(ctx)
+	defer cancel()
+	finished := make(chan error, 9)
+	read := func(ctx context.Context) {
+		var n int
+		err := front.QueryRowContext(ctx, "SELECT cache_cancel_slow()").Scan(&n)
+		if err == nil && n != 42 {
+			err = fmt.Errorf("unexpected value %d", n)
+		}
+		finished <- err
+	}
+	go read(leader)
+	deadline := time.Now().Add(time.Second)
+	for cache.Stats().Misses < 1 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	for i := 0; i < 8; i++ {
+		go read(ctx)
+	}
+	for cache.Stats().Shared < 8 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	shared := cache.Stats().Shared
+	cancel()
+	failures := 0
+	for i := 0; i < 9; i++ {
+		if err := <-finished; err != nil {
+			failures++
+		}
+	}
+	if shared != 8 || failures != 1 {
+		t.Fatalf("shared=%d failures=%d; only the canceled caller must fail", shared, failures)
+	}
+	if cache.Stats().Misses != 2 || backend.Stats().OpenConnections > 1 {
+		t.Fatalf("retry did not coalesce within physical limit: %+v %+v", cache.Stats(), backend.Stats())
+	}
+}

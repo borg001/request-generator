@@ -41,9 +41,10 @@ type entry struct {
 	expires time.Time
 }
 type flight struct {
-	done chan struct{}
-	data *snapshot
-	err  error
+	done     chan struct{}
+	data     *snapshot
+	err      error
+	canceled bool
 }
 
 // Cache is shared by connections in one pool, never across databases.
@@ -130,6 +131,10 @@ func (c *Cache) query(ctx context.Context, query string, args []driver.NamedValu
 		c.bypassed.Add(1)
 		return run()
 	}
+retry:
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	// The common hit path neither sweeps unrelated entries nor takes an
 	// exclusive lock. Expired entries are reclaimed on the bounded miss path.
 	c.mu.RLock()
@@ -173,6 +178,11 @@ func (c *Cache) query(ctx context.Context, query string, args []driver.NamedValu
 		case <-f.done:
 		}
 		if f.err != nil {
+			// The leader owns its driver context. Its cancellation must not fail
+			// live waiters; retry with their own connection/context and coalesce again.
+			if f.canceled {
+				goto retry
+			}
 			return nil, f.err
 		}
 		if f.data != nil {
@@ -197,6 +207,7 @@ func (c *Cache) query(ctx context.Context, query string, args []driver.NamedValu
 	c.mu.Lock()
 	delete(c.flights, k)
 	f.data, f.err = data, err
+	f.canceled = err != nil && ctx.Err() != nil
 	if err == nil && data != nil {
 		if len(c.entries) < opts.MaxEntries && c.bytes+data.bytes <= opts.MaxBytes {
 			c.entries[k] = entry{data, data.completed.Add(opts.TTL)}
