@@ -55,10 +55,13 @@ func (g *Generator) LoadTranslationsFile(lang locale.Lang, path string) error {
 	flat := make(map[string]string)
 	flattenJSON(raw, "", flat)
 
+	g.overridesMu.Lock()
+	defer g.overridesMu.Unlock()
 	if g.translations == nil {
 		g.translations = make(map[locale.Lang]map[string]string)
 	}
 	g.translations[lang] = flat
+	g.invalidateTranslationResponse(lang)
 	return nil
 }
 
@@ -87,6 +90,9 @@ func (g *Generator) SetTranslationOverrides(lang locale.Lang, overrides map[stri
 	g.overridesMu.Lock()
 	defer g.overridesMu.Unlock()
 	current, _ := g.translationOverrides.Load().(map[locale.Lang]map[string]string)
+	if sameTranslations(current[lang], overrides) {
+		return
+	}
 	next := make(map[locale.Lang]map[string]string, len(current)+1)
 	for existing, words := range current {
 		next[existing] = words
@@ -97,6 +103,73 @@ func (g *Generator) SetTranslationOverrides(lang locale.Lang, overrides map[stri
 	}
 	next[lang] = copied
 	g.translationOverrides.Store(next)
+	g.invalidateTranslationResponse(lang)
+}
+
+func sameTranslations(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for key, value := range a {
+		if other, ok := b[key]; !ok || other != value {
+			return false
+		}
+	}
+	return true
+}
+
+// Caller holds overridesMu. Readers retain an immutable response already in
+// flight; requests after publication see the replacement words immediately.
+func (g *Generator) invalidateTranslationResponse(lang locale.Lang) {
+	current, _ := g.translationResponses.Load().(map[locale.Lang][]byte)
+	if _, ok := current[lang]; !ok {
+		return
+	}
+	next := make(map[locale.Lang][]byte, len(current))
+	for key, value := range current {
+		if key != lang {
+			next[key] = value
+		}
+	}
+	g.translationResponses.Store(next)
+}
+
+func (g *Generator) translationResponse(lang locale.Lang) ([]byte, bool) {
+	current, _ := g.translationResponses.Load().(map[locale.Lang][]byte)
+	if value, ok := current[lang]; ok {
+		return value, true
+	}
+	g.overridesMu.Lock()
+	defer g.overridesMu.Unlock()
+	current, _ = g.translationResponses.Load().(map[locale.Lang][]byte)
+	if value, ok := current[lang]; ok {
+		return value, true
+	}
+	words, ok := g.translations[lang]
+	if !ok {
+		return nil, false
+	}
+	overrides, _ := g.translationOverrides.Load().(map[locale.Lang]map[string]string)
+	if len(overrides[lang]) > 0 {
+		merged := make(map[string]string, len(words)+len(overrides[lang]))
+		for key, value := range words {
+			merged[key] = value
+		}
+		for key, value := range overrides[lang] {
+			merged[key] = value
+		}
+		words = merged
+	}
+	// map[string]string always has a JSON representation, including invalid
+	// UTF-8 replacement. No request-specific data enters this dictionary.
+	encoded, _ := json.Marshal(words)
+	next := make(map[locale.Lang][]byte, len(current)+1)
+	for key, value := range current {
+		next[key] = value
+	}
+	next[lang] = encoded
+	g.translationResponses.Store(next)
+	return encoded, true
 }
 
 func (g *Generator) translationOverride(lang locale.Lang, key string) (string, bool) {
@@ -254,23 +327,11 @@ func (g *Generator) handleLangTranslations() gin.HandlerFunc {
 			return
 		}
 
-		langMap, ok := g.translations[key]
+		encoded, ok := g.translationResponse(key)
 		if !ok {
 			c.JSON(http.StatusNotFound, gin.H{"message": fmt.Sprintf("locale %q not found", string(key))})
 			return
 		}
-		overrides, _ := g.translationOverrides.Load().(map[locale.Lang]map[string]string)
-		if len(overrides[key]) > 0 {
-			merged := make(map[string]string, len(langMap)+len(overrides[key]))
-			for word, text := range langMap {
-				merged[word] = text
-			}
-			for word, text := range overrides[key] {
-				merged[word] = text
-			}
-			langMap = merged
-		}
-
-		c.JSON(http.StatusOK, langMap)
+		c.Data(http.StatusOK, "application/json; charset=utf-8", encoded)
 	}
 }
