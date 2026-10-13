@@ -53,22 +53,16 @@ func (c *conn) ExecContext(ctx context.Context, q string, args []driver.NamedVal
 	return c.Conn.(driver.ExecerContext).ExecContext(ctx, q, args)
 }
 func (c *conn) trackSession(q string) {
-	tokens, ok := sqlTokens(q)
-	if !ok {
-		c.sessionChanged = true
-		return
-	}
-	if len(tokens) == 0 {
-		return
-	}
-	switch tokens[0] {
-	case "SET", "RESET", "DISCARD", "BEGIN", "START", "COMMIT", "ROLLBACK", "DO":
-		c.sessionChanged = true
-	}
-	for _, t := range tokens {
-		if t == "SET_CONFIG" || t == "TEMP" || t == "TEMPORARY" {
+	first := true
+	valid := scanSQLTokens(q, func(token string) {
+		flags := tokenFlags(token)
+		if flags&sessionToken != 0 || first && flags&sessionHead != 0 {
 			c.sessionChanged = true
 		}
+		first = false
+	})
+	if !valid {
+		c.sessionChanged = true
 	}
 }
 func (c *conn) Prepare(q string) (driver.Stmt, error) {

@@ -2,28 +2,75 @@ package sqlcache
 
 import "strings"
 
-// Conservative PostgreSQL token scan. Quoted identifiers are also inspected so
-// quoting a sequence/lock function cannot turn it into a cacheable read. Unknown
-// syntax bypasses caching; this is not a SQL authorization/parser boundary.
-func readOnly(query string) bool {
-	tokens, ok := sqlTokens(query)
-	if !ok || len(tokens) == 0 || (tokens[0] != "SELECT" && tokens[0] != "WITH") {
-		return false
-	}
-	for _, token := range tokens {
-		switch token {
-		case "INSERT", "UPDATE", "DELETE", "MERGE", "INTO", "FOR", "LOCK", "COPY", "CALL", "DO", "SET", "RESET", "DISCARD", "BEGIN", "COMMIT", "ROLLBACK", "NEXTVAL", "SETVAL", "CURRVAL", "LASTVAL", "SET_CONFIG", "CURRENT_SETTING", "RANDOM", "CLOCK_TIMESTAMP", "TXID_CURRENT", "GEN_RANDOM_UUID", "UUID_GENERATE_V4":
-			return false
+const (
+	readHead = 1 << iota
+	unsafeRead
+	sessionHead
+	sessionToken
+)
+
+// Classify one identifier using stack space. Most SQL contains thousands of
+// ordinary ASCII identifiers; neither those nor string literals need copies.
+func tokenFlags(token string) int {
+	var upper [32]byte
+	if len(token) > len(upper) {
+		if strings.EqualFold(token[:3], "PG_") {
+			return unsafeRead
 		}
-		if strings.HasPrefix(token, "PG_") {
-			return false
-		}
+		return 0
 	}
-	return true
+	for i := range len(token) {
+		c := token[i]
+		if c >= 128 {
+			return upperTokenFlags(strings.ToUpper(token))
+		}
+		if c >= 'a' && c <= 'z' {
+			c -= 'a' - 'A'
+		}
+		upper[i] = c
+	}
+	return upperTokenFlags(string(upper[:len(token)]))
 }
 
-func sqlTokens(s string) ([]string, bool) {
-	var tokens []string
+func upperTokenFlags(token string) int {
+	switch token {
+	case "SELECT", "WITH":
+		return readHead
+	case "SET", "RESET", "DISCARD", "BEGIN", "COMMIT", "ROLLBACK", "DO":
+		return unsafeRead | sessionHead
+	case "START":
+		return sessionHead
+	case "SET_CONFIG":
+		return unsafeRead | sessionToken
+	case "TEMP", "TEMPORARY":
+		return sessionToken
+	case "INSERT", "UPDATE", "DELETE", "MERGE", "INTO", "FOR", "LOCK", "COPY", "CALL", "NEXTVAL", "SETVAL", "CURRVAL", "LASTVAL", "CURRENT_SETTING", "RANDOM", "CLOCK_TIMESTAMP", "TXID_CURRENT", "GEN_RANDOM_UUID", "UUID_GENERATE_V4":
+		return unsafeRead
+	}
+	if strings.HasPrefix(token, "PG_") {
+		return unsafeRead
+	}
+	return 0
+}
+
+// Conservative PostgreSQL scan with the same exclusions for both direct and
+// prepared queries. No token slice or copy of literal contents is retained.
+func readOnly(query string) bool {
+	first, readable := true, false
+	valid := scanSQLTokens(query, func(token string) {
+		flags := tokenFlags(token)
+		if first {
+			readable = flags&readHead != 0
+			first = false
+		}
+		if flags&unsafeRead != 0 {
+			readable = false
+		}
+	})
+	return valid && readable
+}
+
+func scanSQLTokens(s string, emit func(string)) bool {
 	ended := false
 	for i := 0; i < len(s); {
 		c := s[i]
@@ -52,12 +99,12 @@ func sqlTokens(s string) ([]string, bool) {
 				}
 			}
 			if depth != 0 {
-				return nil, false
+				return false
 			}
 			continue
 		}
 		if ended {
-			return nil, false
+			return false
 		}
 		if c == ';' {
 			ended = true
@@ -71,10 +118,11 @@ func sqlTokens(s string) ([]string, bool) {
 			// Only E'...' uses backslash escaping for quote delimiters.
 			escaped := quote == '\'' && i > 0 && (s[i-1] == 'E' || s[i-1] == 'e')
 			if i > 0 && s[i-1] == '&' {
-				return nil, false
+				return false
 			}
 			i++
-			var value strings.Builder
+			start := i
+			doubled := false
 			closed := false
 			for i < len(s) {
 				if s[i] == '\\' && escaped {
@@ -84,28 +132,31 @@ func sqlTokens(s string) ([]string, bool) {
 				if s[i] == quote {
 					i++
 					if i < len(s) && s[i] == quote {
-						value.WriteByte(quote)
+						doubled = true
 						i++
 						continue
 					}
 					closed = true
 					break
 				}
-				value.WriteByte(s[i])
 				i++
 			}
 			if !closed {
-				return nil, false
+				return false
 			}
 			if quote == '"' {
-				tokens = append(tokens, strings.ToUpper(value.String()))
+				value := s[start : i-1]
+				if doubled {
+					value = strings.ReplaceAll(value, `""`, `"`)
+				}
+				emit(value)
 			}
 			continue
 		}
 		if c == '$' {
 			i++
 			if i == len(s) || s[i] < '0' || s[i] > '9' {
-				return nil, false
+				return false
 			}
 			for i < len(s) && s[i] >= '0' && s[i] <= '9' {
 				i++
@@ -118,13 +169,13 @@ func sqlTokens(s string) ([]string, bool) {
 			for i < len(s) && (s[i] == '_' || s[i] >= 'a' && s[i] <= 'z' || s[i] >= 'A' && s[i] <= 'Z' || s[i] >= '0' && s[i] <= '9') {
 				i++
 			}
-			tokens = append(tokens, strings.ToUpper(s[start:i]))
+			emit(s[start:i])
 			continue
 		}
 		if c >= 128 {
-			return nil, false
+			return false
 		}
 		i++
 	}
-	return tokens, true
+	return true
 }
