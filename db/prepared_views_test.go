@@ -69,6 +69,37 @@ func TestPreparedViewsOptIn(t *testing.T) {
 	require.Nil(t, NewDB(nil).preparedViews)
 }
 
+func TestPreparedListAndCountReuseStatementsButNotResults(t *testing.T) {
+	pool, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer pool.Close()
+	executor := NewDBWithPreparedReads(pool, 2)
+	id, owner := pg.IntegerColumn("id"), pg.IntegerColumn("owner_id")
+	table := pg.NewTable("", "items", "", id, owner)
+	moduleFields := []fields.ModuleField{{Column: owner, Type: fields.ModuleFieldTypeInt}}
+	list := mock.ExpectPrepare("SELECT")
+	list.ExpectQuery().WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}).AddRow(1, 10)).RowsWillBeClosed()
+	count := mock.ExpectPrepare("SELECT")
+	count.ExpectQuery().WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1)).RowsWillBeClosed()
+	list.ExpectQuery().WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}).AddRow(2, 20)).RowsWillBeClosed()
+	count.ExpectQuery().WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1)).RowsWillBeClosed()
+	for _, test := range []struct {
+		viewer int64
+		id     int64
+		count  int64
+	}{{10, 1, 1}, {20, 2, 1}} {
+		result, total, err := executor.List(log.NewEntry(log.New()), table, id, moduleFields, nil,
+			0, 10, nil, "", nil, owner.EQ(pg.Int(test.viewer)), nil, nil, nil)
+		require.NoError(t, err)
+		require.Equal(t, test.count, total)
+		require.Len(t, result, 1)
+		require.Equal(t, test.viewer, result[0].(map[string]interface{})["owner_id"], "%#v", result)
+	}
+	require.Len(t, executor.preparedViews.statements, 2)
+	require.NoError(t, mock.ExpectationsWereMet())
+	require.NoError(t, executor.ClosePreparedViews())
+}
+
 func preparedTestPool(t *testing.T) *sql.DB {
 	t.Helper()
 	dsn := os.Getenv("PREPARED_TEST_DATABASE_URL")
@@ -119,6 +150,43 @@ func TestPreparedViewsPostgresReadsFreshData(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "blur_faces", view(10, 1))
 	require.Equal(t, "original", view(30, 1))
+}
+
+func TestPreparedListPostgresKeepsFiltersAndFreshCounts(t *testing.T) {
+	pool := preparedTestPool(t)
+	_, err := pool.Exec(`CREATE TEMP TABLE prepared_list_items (id bigint PRIMARY KEY, owner_id bigint, mode text);
+	 INSERT INTO prepared_list_items VALUES (1,10,'private'),(2,20,'public');`)
+	require.NoError(t, err)
+	executor := NewDBWithPreparedReads(pool, 2)
+	defer executor.ClosePreparedViews()
+	id, owner, mode := pg.IntegerColumn("id"), pg.IntegerColumn("owner_id"), pg.StringColumn("mode")
+	table := pg.NewTable("pg_temp", "prepared_list_items", "", id, owner, mode)
+	list := func(viewer int64) ([]interface{}, int64) {
+		rows, count, err := executor.List(log.NewEntry(log.New()), table, id,
+			[]fields.ModuleField{{Column: mode, Type: fields.ModuleFieldTypeString}}, nil,
+			0, 10, nil, "", nil, owner.EQ(pg.Int(viewer)), nil, nil, nil)
+		require.NoError(t, err)
+		return rows, count
+	}
+	for i := 0; i < 8; i++ {
+		rows, count := list(10)
+		require.EqualValues(t, 1, count)
+		require.Equal(t, "private", rows[0].(map[string]interface{})["mode"])
+		rows, count = list(20)
+		require.EqualValues(t, 1, count)
+		require.Equal(t, "public", rows[0].(map[string]interface{})["mode"])
+	}
+	require.Len(t, executor.preparedViews.statements, 2)
+	_, err = pool.Exec("UPDATE prepared_list_items SET owner_id=20, mode='updated' WHERE id=1")
+	require.NoError(t, err)
+	rows, count := list(10)
+	require.Empty(t, rows)
+	require.Zero(t, count)
+	rows, count = list(20)
+	require.Len(t, rows, 2)
+	require.EqualValues(t, 2, count)
+	modes := []string{rows[0].(map[string]interface{})["mode"].(string), rows[1].(map[string]interface{})["mode"].(string)}
+	require.ElementsMatch(t, []string{"updated", "public"}, modes)
 }
 
 func TestPreparedViewsPostgresConcurrentAndReconnect(t *testing.T) {

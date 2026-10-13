@@ -32,10 +32,11 @@ func SafeSQLIdentifier(name string) bool {
 
 type DB struct {
 	DBExecutor
-	sql           *sql.DB
-	Debug         bool
-	preparedViews *preparedViewCache
-	readContext   context.Context
+	sql             *sql.DB
+	Debug           bool
+	preparedViews   *preparedViewCache
+	listSelectCache *listSelectCache
+	readContext     context.Context
 }
 type Tx struct {
 	sql *sql.Tx
@@ -50,6 +51,14 @@ func NewDB(sql *sql.DB) *DB {
 func (db *DB) debugLog(log *log.Entry, args ...interface{}) {
 	if db.Debug {
 		log.Infoln(args...)
+	}
+}
+
+// Formatting SQL with its arguments is expensive and may contain sensitive
+// values. Do it only when explicitly requested, before entering the formatter.
+func (db *DB) debugQuery(entry *log.Entry, label, query string, args []interface{}) {
+	if db.Debug {
+		entry.Infoln(label, interpolateQuery(query, args))
 	}
 }
 
@@ -535,16 +544,12 @@ func (db *DB) List(
 	query, args := stmt.Sql()
 	countQuery, countArgs := countStmt.Sql()
 
-	db.debugLog(log, "[DEBUG] LIST QUERY: ", interpolateQuery(query, args))
-	db.debugLog(log, "[DEBUG] LIST COUNT QUERY: ", interpolateQuery(countQuery, countArgs))
+	db.debugQuery(log, "[DEBUG] LIST QUERY: ", query, args)
+	db.debugQuery(log, "[DEBUG] LIST COUNT QUERY: ", countQuery, countArgs)
 
-	// Execute main query
-	var rows *sql.Rows
-	if len(args) > 0 {
-		rows, err = db.sql.QueryContext(db.queryContext(), query, args...)
-	} else {
-		rows, err = db.sql.QueryContext(db.queryContext(), query)
-	}
+	// Reuse the SQL shape when this executor has a prepared-read cache. Values
+	// and rows remain request-specific; the uncached path is unchanged.
+	rows, err := db.queryList(query, args...)
 	if err != nil {
 		log.Errorln("LIST ERR: ", err)
 		return nil, 0, err
@@ -679,13 +684,8 @@ func (db *DB) List(
 
 	result = append(result, results...)
 
-	// Execute count query
-	var countResult *sql.Rows
-	if len(countArgs) > 0 {
-		countResult, err = db.sql.QueryContext(db.queryContext(), countQuery, countArgs...)
-	} else {
-		countResult, err = db.sql.QueryContext(db.queryContext(), countQuery)
-	}
+	// COUNT uses the same request context and bounded cache as the list query.
+	countResult, err := db.queryList(countQuery, countArgs...)
 	if err != nil {
 		log.Errorln("COUNT ERR: ", err)
 		return nil, 0, err
@@ -794,7 +794,7 @@ func (db *DB) View(
 	stmt = stmt.GROUP_BY(groupByPrimaryAndJoinedFields(primaryKey, moduleFields, tableRef)...).LIMIT(1)
 
 	query, args := stmt.Sql()
-	db.debugLog(log, "[DEBUG] VIEW QUERY: ", interpolateQuery(query, args))
+	db.debugQuery(log, "[DEBUG] VIEW QUERY: ", query, args)
 
 	rows, err := db.queryView(query, args...)
 	if err != nil {
@@ -963,7 +963,7 @@ func (db *DB) Add(log *log.Entry, table pg.Table, primaryKey pg.Column, moduleFi
 			primaryKey.Name(),
 		)
 
-		db.debugLog(log, "[DEBUG] ADD QUERY: ", interpolateQuery(query, values))
+		db.debugQuery(log, "[DEBUG] ADD QUERY: ", query, values)
 
 		err = tx.QueryRow(query, values...).Scan(&output.Value)
 		if err != nil {
@@ -1065,7 +1065,7 @@ func (db *DB) Update(log *log.Entry, table pg.Table, primaryKey pg.Column, modul
 			whereClause,
 		)
 
-		db.debugLog(log, "[DEBUG] UPDATE QUERY: ", interpolateQuery(query, values))
+		db.debugQuery(log, "[DEBUG] UPDATE QUERY: ", query, values)
 
 		result, err := tx.Exec(query, values...)
 		if err != nil {
@@ -1173,7 +1173,7 @@ func (db *DB) Delete(log *log.Entry, table pg.Table, where pg.BoolExpression, tc
 	stmt := table.DELETE().WHERE(where)
 	query, args := stmt.Sql()
 
-	db.debugLog(log, "[DEBUG] DELETE QUERY: ", interpolateQuery(query, args))
+	db.debugQuery(log, "[DEBUG] DELETE QUERY: ", query, args)
 
 	result, err := tx.Exec(query, args...)
 	if err != nil {

@@ -40,6 +40,7 @@ type Generator struct {
 	Locales              []locale.Lang
 	DefaultLocale        locale.Lang
 	translations         map[locale.Lang]map[string]string
+	translationResponses atomic.Value // immutable map[locale.Lang][]byte, guarded for publication by overridesMu
 	// translationOverrides are words the application replaces while it runs,
 	// read before the files; see SetTranslationOverrides.
 	translationOverrides atomic.Value

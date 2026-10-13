@@ -14,14 +14,14 @@ type preparedViewCache struct {
 	pending    map[string]chan struct{}
 }
 
-// NewDBWithPreparedViews opts this executor into reusing prepared View queries.
+// NewDBWithPreparedReads opts this executor into reusing prepared read queries.
 // It shares the supplied connection pool; other operations are unchanged.
 // Keys are the exact parameterized SQL, never argument values or query results.
 // At most maxStatements statements are retained. Additional SQL shapes use the
 // ordinary query path without evicting statements that may be in use.
 // A nonpositive limit disables preparation. The executor should be long-lived;
 // call ClosePreparedViews after its requests have drained to release statements.
-func NewDBWithPreparedViews(pool *sql.DB, maxStatements int) *DB {
+func NewDBWithPreparedReads(pool *sql.DB, maxStatements int) *DB {
 	db := NewDB(pool)
 	if maxStatements > 0 {
 		db.preparedViews = &preparedViewCache{limit: maxStatements, statements: make(map[string]*sql.Stmt), pending: make(map[string]chan struct{})}
@@ -29,12 +29,29 @@ func NewDBWithPreparedViews(pool *sql.DB, maxStatements int) *DB {
 	return db
 }
 
+// NewDBWithPreparedViews is kept for existing callers. Prepared reads now
+// include generated View, List, and COUNT queries.
+func NewDBWithPreparedViews(pool *sql.DB, maxStatements int) *DB {
+	return NewDBWithPreparedReads(pool, maxStatements)
+}
+
 func (db *DB) queryView(query string, args ...interface{}) (*sql.Rows, error) {
 	return db.QueryContext(db.queryContext(), query, args...)
 }
 
+func (db *DB) queryList(query string, args ...interface{}) (selectRows, error) {
+	if db.listSelectCache != nil {
+		return db.queryCachedList(query, args...)
+	}
+	return db.queryListSQL(query, args...)
+}
+
+func (db *DB) queryListSQL(query string, args ...interface{}) (*sql.Rows, error) {
+	return db.QueryContext(db.queryContext(), query, args...)
+}
+
 // QueryContext executes a parameterized read using the same bounded statement
-// cache as View when enabled by NewDBWithPreparedViews. It never caches rows or
+// cache as generated reads when enabled by NewDBWithPreparedReads. It never caches rows or
 // argument values. Callers must close the returned rows.
 func (db *DB) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	if db.preparedViews == nil {

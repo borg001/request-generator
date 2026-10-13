@@ -2,8 +2,11 @@ package module
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -57,6 +60,7 @@ func TestTranslationOverridesCanBeReplacedWhileRead(t *testing.T) {
 			defer wait.Done()
 			for i := 0; i < 200; i++ {
 				_ = g.Translate(locale.RU, "k")
+				_, _ = g.translationResponse(locale.RU)
 			}
 		}()
 	}
@@ -65,4 +69,62 @@ func TestTranslationOverridesCanBeReplacedWhileRead(t *testing.T) {
 	}
 	wait.Wait()
 	require.Equal(t, "w", g.Translate(locale.RU, "k"))
+}
+
+func TestTranslationResponseRefreshAndIsolation(t *testing.T) {
+	g := &Generator{translations: map[locale.Lang]map[string]string{
+		locale.RU: {"word": "файл <&>"}, locale.EN: {"word": "file"},
+	}}
+	first, ok := g.translationResponse(locale.RU)
+	require.True(t, ok)
+	english, _ := g.translationResponse(locale.EN)
+	for _, value := range []string{"новое", "", "ещё"} {
+		overrides := map[string]string{"word": value}
+		g.SetTranslationOverrides(locale.RU, overrides)
+		overrides["word"] = "caller mutation"
+		body, _ := g.translationResponse(locale.RU)
+		var decoded map[string]string
+		require.NoError(t, json.Unmarshal(body, &decoded))
+		require.Equal(t, value, decoded["word"])
+		again, _ := g.translationResponse(locale.EN)
+		require.Equal(t, &english[0], &again[0], "unrelated language is retained")
+		g.SetTranslationOverrides(locale.RU, map[string]string{"word": value})
+		again, _ = g.translationResponse(locale.RU)
+		require.Equal(t, &body[0], &again[0], "identical refresh does not re-encode")
+	}
+	g.SetTranslationOverrides(locale.RU, nil)
+	body, _ := g.translationResponse(locale.RU)
+	require.Equal(t, first, body)
+	path := filepath.Join(t.TempDir(), "ru.json")
+	require.NoError(t, os.WriteFile(path, []byte(`{"word":"reloaded"}`), 0600))
+	require.NoError(t, g.LoadTranslationsFile(locale.RU, path))
+	body, _ = g.translationResponse(locale.RU)
+	require.JSONEq(t, `{"word":"reloaded"}`, string(body))
+	for i := 0; i < 100; i++ {
+		_, ok = g.translationResponse(locale.Lang(fmt.Sprint(i)))
+		require.False(t, ok)
+	}
+	responses := g.translationResponses.Load().(map[locale.Lang][]byte)
+	require.Len(t, responses, 2, "unknown languages cannot grow the response cache")
+}
+
+func BenchmarkTranslationResponse(b *testing.B) {
+	words := make(map[string]string, 10000)
+	for i := 0; i < 10000; i++ {
+		words[fmt.Sprintf("section.field.%d", i)] = "Перевод названия поля"
+	}
+	g := &Generator{translations: map[locale.Lang]map[string]string{locale.RU: words}}
+	_, _ = g.translationResponse(locale.RU)
+	b.Run("marshal", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = json.Marshal(words)
+		}
+	})
+	b.Run("published", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_, _ = g.translationResponse(locale.RU)
+		}
+	})
 }
