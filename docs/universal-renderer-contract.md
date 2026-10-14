@@ -1419,6 +1419,33 @@ Form-секция галереи может объявить `media_selection` (
 Проверки: действие без `id`, повтор `id`, отрицательный `limit` и элемент,
 выбранный для необъявленного действия, отклоняются `Validate()`.
 
+#### Фильтры галереи: видимость, тип, отметки
+
+Галерея, которой даны `media_labels.filter_visibility` и
+`media_labels.filter_type`, читается двумя выборами вместо частей
+(`filter_all` / `filter_public` / …):
+
+- **Видимость** (`filter_visibility`): всё (`filter_all`), публичные
+  (`filter_public`), приватные (`filter_private`), скрытые (`filter_hidden`)
+  — по `media.item.visibility`.
+- **Тип** (`filter_type`): всё (`filter_all`), фото (`filter_photo`), видео
+  (`filter_video`) — по `media.item.kind`.
+
+Form-секция галереи может объявить `media_badge_filter`
+(`MediaGalleryBadgeFilter`) — отбор по отметкам элементов:
+
+| Поле | Значение |
+|---|---|
+| `media_badge_filter.label` | Optional string: название фильтра для читателя страницы. |
+| `media_badge_filter.all_label` | Required string: «всё», с которого фильтр начинается. |
+| `media_badge_filter.options` | Required массив `{badge_id, label, icon?, tone?}`: отметка элемента (`media.item.badges[].id`), по которой его выбирают. `badge_id` уникален. |
+
+Сначала не выбрано ничего, и галерея показана целиком. Выбор показывает
+элементы, у которых есть хотя бы одна из выбранных отметок; снятие
+последней возвращает галерею целиком. Фильтры складываются. Пустые
+`all_label`, `options`, `badge_id`, `label` и повтор `badge_id`
+отклоняются `Validate()`; подписи локализуются.
+
 ```json
 {
   "media_selection": {

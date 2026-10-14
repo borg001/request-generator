@@ -160,6 +160,9 @@ func (r Universal) Validate() error {
 			if err := validateMediaSelection(fmt.Sprintf("form section %q", section.ID), section.MediaSelection, section.MediaItems); err != nil {
 				return err
 			}
+			if err := validateMediaBadgeFilter(fmt.Sprintf("form section %q", section.ID), section.MediaBadgeFilter); err != nil {
+				return err
+			}
 			if section.Collection == nil {
 				if err := validateMediaActions(section.MediaActions); err != nil {
 					return err
@@ -903,6 +906,50 @@ func validateMediaActions(actions *MediaGalleryActions) error {
 		if err := validateAction("media under", &actions.Under[i]); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// MediaGalleryBadgeFilter narrows a gallery to the items that carry one of
+// the chosen badges. Nothing is chosen at first, and the whole gallery shows
+// under AllLabel; a choice shows the items carrying any of the chosen
+// badges, and letting the last one go shows the whole gallery again.
+type MediaGalleryBadgeFilter struct {
+	// Label names the filter as a whole, for a reader of the page.
+	Label    string                          `json:"label,omitempty"`
+	AllLabel string                          `json:"all_label"`
+	Options  []MediaGalleryBadgeFilterOption `json:"options"`
+}
+
+// MediaGalleryBadgeFilterOption is one badge an item may be chosen by.
+type MediaGalleryBadgeFilterOption struct {
+	BadgeID string `json:"badge_id"`
+	Label   string `json:"label"`
+	Icon    string `json:"icon,omitempty"`
+	Tone    string `json:"tone,omitempty"`
+}
+
+// validateMediaBadgeFilter holds a badge filter to what a consumer can draw:
+// named, with options of their own badges and words.
+func validateMediaBadgeFilter(scope string, filter *MediaGalleryBadgeFilter) error {
+	if filter == nil {
+		return nil
+	}
+	if filter.AllLabel == "" {
+		return fmt.Errorf("renderer.Universal: %s media badge filter must define all_label", scope)
+	}
+	if len(filter.Options) == 0 {
+		return fmt.Errorf("renderer.Universal: %s media badge filter must define options", scope)
+	}
+	seen := make(map[string]struct{}, len(filter.Options))
+	for _, option := range filter.Options {
+		if option.BadgeID == "" || option.Label == "" {
+			return fmt.Errorf("renderer.Universal: %s media badge filter option must define badge_id and label", scope)
+		}
+		if _, exists := seen[option.BadgeID]; exists {
+			return fmt.Errorf("renderer.Universal: %s media badge filter option %q is declared twice", scope, option.BadgeID)
+		}
+		seen[option.BadgeID] = struct{}{}
 	}
 	return nil
 }
@@ -2337,8 +2384,11 @@ type FormSection struct {
 	// says what the pick can be sent to. A gallery that declares none is
 	// worked with one item at a time, as every gallery was before.
 	MediaSelection *MediaGallerySelection `json:"media_selection,omitempty"`
-	Prompts        *PromptList            `json:"prompts,omitempty"`
-	DateRange      *DateRangeConfig       `json:"date_range,omitempty"`
+	// MediaBadgeFilter narrows the gallery to the items that carry one of
+	// the badges chosen: where a picture is published, most of all.
+	MediaBadgeFilter *MediaGalleryBadgeFilter `json:"media_badge_filter,omitempty"`
+	Prompts          *PromptList              `json:"prompts,omitempty"`
+	DateRange        *DateRangeConfig         `json:"date_range,omitempty"`
 	// Info explains the section beside its title: what its controls do that
 	// the words on them cannot say.
 	Info *InfoHint `json:"info,omitempty"`
@@ -2782,8 +2832,16 @@ type MediaGalleryLabels struct {
 	FilterHidden      string `json:"filter_hidden,omitempty"`
 	FilterVideo       string `json:"filter_video,omitempty"`
 	FilterUnpublished string `json:"filter_unpublished,omitempty"`
-	Hidden            string `json:"hidden,omitempty"`
-	HiddenHint        string `json:"hidden_hint,omitempty"`
+	// A gallery read by who sees a picture and by what it is names the two
+	// choices: by FilterVisibility over all, public, private and hidden, and
+	// by FilterType over all, photos (FilterPhoto) and videos (FilterVideo).
+	// A consumer given these reads the gallery by the two choices instead of
+	// its parts.
+	FilterVisibility string `json:"filter_visibility,omitempty"`
+	FilterType       string `json:"filter_type,omitempty"`
+	FilterPhoto      string `json:"filter_photo,omitempty"`
+	Hidden           string `json:"hidden,omitempty"`
+	HiddenHint       string `json:"hidden_hint,omitempty"`
 	// A gallery beside a profile shows the first few pictures and says how to
 	// see the rest. Without these it shows everything it was given.
 	More    string `json:"more,omitempty"`

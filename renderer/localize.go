@@ -348,6 +348,12 @@ func (localizer textLocalizer) localizeFormSection(section *FormSection) {
 	}
 	localizer.localizeMediaActions(section.MediaActions)
 	localizer.localizeMediaSelection(section.MediaSelection)
+	if filter := section.MediaBadgeFilter; filter != nil {
+		localizer.localizeTextFields(&filter.Label, &filter.AllLabel)
+		for index := range filter.Options {
+			localizer.localizeTextFields(&filter.Options[index].Label)
+		}
+	}
 	localizer.localizeMediaVisibilityStates(section.MediaVisibilityStates)
 	localizer.localizeMediaGalleryItems(section.MediaItems)
 	localizer.localizeDateRange(section.DateRange)
@@ -410,7 +416,7 @@ func (localizer textLocalizer) localizeMediaUpload(upload *MediaUploadConfig) *M
 
 func (localizer textLocalizer) localizeMediaLabels(labels *MediaGalleryLabels) *MediaGalleryLabels {
 	if labels != nil {
-		localizer.localizeTextFields(&labels.Public, &labels.Private, &labels.Empty, &labels.CoverBadge, &labels.Remove, &labels.Reorder, &labels.FirstIsCover, &labels.PrivateHint, &labels.HideFace, &labels.HideFaceHint, &labels.FilterAll, &labels.FilterPublic, &labels.FilterPrivate, &labels.FilterHidden, &labels.FilterVideo, &labels.FilterUnpublished, &labels.Hidden, &labels.HiddenHint)
+		localizer.localizeTextFields(&labels.Public, &labels.Private, &labels.Empty, &labels.CoverBadge, &labels.Remove, &labels.Reorder, &labels.FirstIsCover, &labels.PrivateHint, &labels.HideFace, &labels.HideFaceHint, &labels.FilterAll, &labels.FilterPublic, &labels.FilterPrivate, &labels.FilterHidden, &labels.FilterVideo, &labels.FilterUnpublished, &labels.FilterVisibility, &labels.FilterType, &labels.FilterPhoto, &labels.Hidden, &labels.HiddenHint)
 	}
 	return labels
 }

@@ -108,3 +108,47 @@ func TestMediaGallerySelectionIsClonedAndListedWithTheActions(t *testing.T) {
 		t.Fatal("the selection's actions must be listed among the renderer's actions")
 	}
 }
+
+// A gallery narrowed by badges names the filter, the reading of everything and
+// options of their own badges and words; the options are copied deeply and
+// their words localized like the rest of the page.
+func TestMediaBadgeFilterIsAValidContract(t *testing.T) {
+	filter := &MediaGalleryBadgeFilter{
+		Label:    "Where",
+		AllLabel: "All",
+		Options: []MediaGalleryBadgeFilterOption{
+			{BadgeID: "place_gallery", Label: "Gallery", Icon: "image", Tone: "violet"},
+			{BadgeID: "place_feed", Label: "Feed", Icon: "gi-publish", Tone: "pink"},
+		},
+	}
+	page := Universal{Form: &FormPage{ID: "gallery", Sections: []FormSection{{ID: "media", Renderer: RendererMediaGallery, MediaBadgeFilter: filter}}}}
+	if err := page.Validate(); err != nil {
+		t.Fatalf("a named filter with options is valid: %v", err)
+	}
+	for name, broken := range map[string]*MediaGalleryBadgeFilter{
+		"no all_label": {Options: filter.Options},
+		"no options":   {AllLabel: "All"},
+		"no badge_id":  {AllLabel: "All", Options: []MediaGalleryBadgeFilterOption{{Label: "Gallery"}}},
+		"no label":     {AllLabel: "All", Options: []MediaGalleryBadgeFilterOption{{BadgeID: "place_gallery"}}},
+		"twice":        {AllLabel: "All", Options: []MediaGalleryBadgeFilterOption{filter.Options[0], filter.Options[0]}},
+	} {
+		page.Form.Sections[0].MediaBadgeFilter = broken
+		if err := page.Validate(); err == nil {
+			t.Fatalf("%s: expected a refusal", name)
+		}
+	}
+	copied := cloneMediaGalleryBadgeFilter(filter)
+	copied.Options[0].Label = "changed"
+	if filter.Options[0].Label != "Gallery" {
+		t.Fatal("the options are copied deeply")
+	}
+	raw, err := json.Marshal(FormSection{ID: "media", MediaBadgeFilter: filter, MediaLabels: &MediaGalleryLabels{FilterVisibility: "Visibility", FilterType: "Type", FilterPhoto: "Photos"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"media_badge_filter":{"label":"Where","all_label":"All","options":[{"badge_id":"place_gallery"`, `"filter_visibility":"Visibility"`, `"filter_type":"Type"`, `"filter_photo":"Photos"`} {
+		if !strings.Contains(string(raw), want) {
+			t.Fatalf("%s is missing from %s", want, raw)
+		}
+	}
+}

@@ -469,6 +469,7 @@ func cloneFormSections(values []FormSection) []FormSection {
 		out[i].MediaLabels = clonePtr(v.MediaLabels)
 		out[i].MediaActions = cloneMediaGalleryActions(v.MediaActions)
 		out[i].MediaSelection = cloneMediaGallerySelection(v.MediaSelection)
+		out[i].MediaBadgeFilter = cloneMediaGalleryBadgeFilter(v.MediaBadgeFilter)
 		out[i].Prompts = clonePromptList(v.Prompts)
 		out[i].DateRange = cloneDateRangeConfig(v.DateRange)
 		out[i].VisibleIf = cloneCondition(v.VisibleIf)
@@ -635,6 +636,15 @@ func cloneMediaGalleryItem(v *MediaGalleryItem) *MediaGalleryItem {
 	cp.Actions = cloneActions(v.Actions)
 	cp.OpenAction = cloneAction(v.OpenAction)
 	cp.SelectActions = cloneSlice(v.SelectActions)
+	return &cp
+}
+
+func cloneMediaGalleryBadgeFilter(v *MediaGalleryBadgeFilter) *MediaGalleryBadgeFilter {
+	if v == nil {
+		return nil
+	}
+	cp := *v
+	cp.Options = cloneSlice(v.Options)
 	return &cp
 }
 
