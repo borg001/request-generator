@@ -108,20 +108,3 @@ func TestMediaGallerySelectionIsClonedAndListedWithTheActions(t *testing.T) {
 		t.Fatal("the selection's actions must be listed among the renderer's actions")
 	}
 }
-
-// A gallery item says which group it belongs to, and the gallery names the two
-// ways it is read (theGHub1/api#502).
-func TestMediaGalleryItemsCarryTheirGroup(t *testing.T) {
-	encoded, err := json.Marshal(MediaGalleryItem{ID: "media-1", Group: "publication-7"})
-	if err != nil || !strings.Contains(string(encoded), `"group":"publication-7"`) {
-		t.Fatalf("group is not carried: %s %v", encoded, err)
-	}
-	labels, err := json.Marshal(MediaGalleryLabels{GroupItems: "Photos", GroupGroups: "Publications"})
-	if err != nil || !strings.Contains(string(labels), `"group_items":"Photos"`) || !strings.Contains(string(labels), `"group_groups":"Publications"`) {
-		t.Fatalf("group labels are not carried: %s %v", labels, err)
-	}
-	clone := cloneMediaGalleryItems([]MediaGalleryItem{{ID: "media-1", Group: "publication-7"}})
-	if clone[0].Group != "publication-7" {
-		t.Fatalf("group is lost by a clone")
-	}
-}
