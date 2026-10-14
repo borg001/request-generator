@@ -2734,6 +2734,11 @@ type MediaGalleryItem struct {
 	// SelectActions names, by id, the actions of the gallery's selection
 	// this item may be picked for. An item that names none is not picked.
 	SelectActions []string `json:"select_actions,omitempty"`
+	// Group names what the item belongs to beside itself - a publication of
+	// several files, say. A consumer that shows a gallery by its groups shows
+	// a group as the one item of it that carries Set and leaves the rest out;
+	// shown item by item, every item stands on its own.
+	Group string `json:"group,omitempty"`
 }
 
 // MediaGallerySelection lets several items of a gallery be picked at once and
@@ -2773,6 +2778,10 @@ type MediaGalleryLabels struct {
 	// pictures as their owner sees them, and as everyone else does.
 	ViewMine   string `json:"view_mine,omitempty"`
 	ViewOthers string `json:"view_others,omitempty"`
+	// The two ways a gallery whose items carry a Group is read: item by item,
+	// or a group as one item. Without them it is read item by item.
+	GroupItems  string `json:"group_items,omitempty"`
+	GroupGroups string `json:"group_groups,omitempty"`
 	// A gallery large enough to be a page of its own is read in parts. These
 	// name the parts; a consumer that is given none of them shows the gallery
 	// whole, as before.

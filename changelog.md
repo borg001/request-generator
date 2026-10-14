@@ -4,6 +4,12 @@
 
 ### Added
 
+- **`MediaGalleryItem.Group` (`group`) и `MediaGalleryLabels.GroupItems` /
+  `GroupGroups` (`group_items`, `group_groups`)** — галерея, элементы которой
+  принадлежат публикациям из нескольких файлов, читается по одному или
+  группами: группа — одним элементом, тем, что несёт `set`
+  (theGHub1/api#502).
+
 - **`FormSection.MediaSelection` (`media_selection`)** — галерея даёт выбрать
   несколько элементов сразу и сделать с ними одно действие: `actions` (что
   предлагается для выбранного), `limit`, подписи `start_label`,
