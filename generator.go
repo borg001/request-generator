@@ -1093,7 +1093,10 @@ func (generator *Generator) actionAdd(module *BaseModule, action actions.AddModu
 					response.ErrorResponse(l, c, rejection.StatusCode(), rejection.Error(), []string{rejection.Error()})
 					return
 				}
-				response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), []string{err.Error()})
+				// A refusal that names its status - a record not found, a plan
+				// that does not include the step - answers with it, as a
+				// refusal of a hook does; the transaction is rolled back.
+				response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), []string{err.Error()})
 				return
 			}
 			if output.PrimaryKey == "" {
@@ -1563,7 +1566,10 @@ func (generator *Generator) actionUpdate(module *BaseModule, action actions.Upda
 					response.ErrorResponse(l, c, rejection.StatusCode(), rejection.Error(), []string{rejection.Error()})
 					return
 				}
-				response.ErrorResponse(l, c, http.StatusBadRequest, err.Error(), []string{err.Error()})
+				// A refusal that names its status - a record not found, a plan
+				// that does not include the step - answers with it, as a
+				// refusal of a hook does; the transaction is rolled back.
+				response.ErrorResponse(l, c, actions.ErrorStatus(err, http.StatusBadRequest), err.Error(), []string{err.Error()})
 				return
 			}
 			if output.PrimaryKey == "" {
