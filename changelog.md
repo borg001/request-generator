@@ -4,6 +4,11 @@
 
 ### Added
 
+- **`NavigationEntry.Tag` (`navigation[].tag`, theGHub1/api#531).** Короткое
+  слово рядом с пунктом меню — например, «soon» у раздела, который скоро
+  откроется. Ключ перевода; в `/api/config` приходит переведённым, у пункта
+  без него поля нет.
+
 - **Фильтры галереи (theGHub1/api#514).** `MediaGalleryLabels.FilterVisibility`
   (`filter_visibility`), `FilterType` (`filter_type`) и `FilterPhoto`
   (`filter_photo`): галерея читается выбором видимости и выбором типа вместо

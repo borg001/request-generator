@@ -54,6 +54,8 @@ type ConfigNavigationEntry struct {
 	// Floating marks the entry a wide screen draws as a corner button.
 	Floating bool                   `json:"floating,omitempty"`
 	Query    map[string]interface{} `json:"query,omitempty"`
+	// Tag is the entry's short word, translated: drawn as a pill beside it.
+	Tag string `json:"tag,omitempty"`
 	// A destination can exist for an actor and still be closed to them right
 	// now. The entry stays in the menu and says so instead of disappearing.
 	Locked     bool   `json:"locked,omitempty"`
@@ -329,6 +331,9 @@ func (generator *Generator) buildNavigation(c *gin.Context, role string, lang lo
 				Floating:    entry.Floating,
 				Target:      target,
 				Query:       entry.Query,
+			}
+			if entry.Tag != "" {
+				configEntry.Tag = generator.Translate(lang, entry.Tag)
 			}
 			if titleKey, ok := generator.GroupTitles[entry.Group]; ok {
 				configEntry.GroupTitle = generator.Translate(lang, titleKey)

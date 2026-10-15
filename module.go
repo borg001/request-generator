@@ -32,10 +32,13 @@ type NavigationEntry struct {
 	// Floating draws the entry on a wide screen as a small round button in
 	// the bottom right corner instead of a menu line; a phone keeps it in
 	// its menu.
-	Floating bool                   `json:"floating,omitempty"`
-	Target   NavigationTarget       `json:"target,omitempty"`
-	Roles    []actions.Role         `json:"roles,omitempty"`
-	Query    map[string]interface{} `json:"query,omitempty"`
+	Floating bool `json:"floating,omitempty"`
+	// Tag is a short word drawn as a pill beside the entry - «soon» for a
+	// destination that is coming. A translation key, resolved per language.
+	Tag    string                 `json:"tag,omitempty"`
+	Target NavigationTarget       `json:"target,omitempty"`
+	Roles  []actions.Role         `json:"roles,omitempty"`
+	Query  map[string]interface{} `json:"query,omitempty"`
 }
 
 type NavigationTarget struct {

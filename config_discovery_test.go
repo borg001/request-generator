@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/darkrain/request-generator/actions"
@@ -174,4 +175,32 @@ func TestConfigNavigationCarriesFloating(t *testing.T) {
 	}
 	require.Equal(t, map[string]bool{"items.list": false, "items.corner": true}, floating)
 	require.NotContains(t, w.Body.String(), `"floating":false`)
+}
+
+// An entry's short word - «soon» for a destination that is coming - reaches
+// the browser translated, and an entry without one carries none
+// (theGHub1/api#531).
+func TestConfigNavigationCarriesTag(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	m := &BaseModule{
+		Name: "items", Path: "/api",
+		Render: renderer.Universal{List: &renderer.ListPage{ID: "items"}},
+		Navigation: []NavigationEntry{
+			{ActionName: "list", ID: "items.list", Path: "/items", Show: true},
+			{ActionName: "list", ID: "items.forum", Path: "/forum", Show: true, Tag: "Soon"},
+		},
+		Actions: []actions.ModuleAction{actions.ListModuleAction{}},
+	}
+	g := &Generator{Modules: []*BaseModule{m}, Locales: []locale.Lang{locale.EN}, DefaultLocale: locale.EN}
+	c, w := discoveryContext("reader", "en")
+	g.actionConfigEndpoint()(c)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	var response ConfigResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	tags := map[string]string{}
+	for _, entry := range response.Navigation {
+		tags[entry.ID] = entry.Tag
+	}
+	require.Equal(t, map[string]string{"items.list": "", "items.forum": "Soon"}, tags)
+	require.Equal(t, 1, strings.Count(w.Body.String(), `"tag":`))
 }

@@ -1036,6 +1036,7 @@ presentation. Значения переключателей, availability и upd
 | `navigation[].account` | Optional. Пункт, ведущий в собственный профиль актора: меню телефона рисует его как аккаунт — аватар вместо иконки и под ним переключатель доступности из меню аккаунта. |
 | `navigation[].locked` | Optional. Пункт существует для актора, но сейчас закрыт: он остаётся в меню и сообщает об этом, а не исчезает. |
 | `navigation[].lock_reason` | Optional причина закрытия. Generator её не переводит: `AccessGate` возвращает готовый текст. |
+| `navigation[].tag` | Optional короткое слово рядом с пунктом (`NavigationEntry.Tag`, ключ перевода): например, «soon» у раздела, который скоро откроется. Generator переводит его на язык запроса. |
 | `navigation[].lock_action` | Optional typed `Action`: шаг, который открывает закрытый пункт (верификация, недозаполненный профиль); consumer предлагает его, когда выбирают закрытый пункт. Его даёт `Generator.AccessGateAction` и только для закрытых пунктов `navigation`, не для `routes` и `widgets`. Тексты действия generator не переводит. |
 | `navigation_more_label` | Уже локализованная подпись overflow-кнопки mobile navigation. |
 | `routes` | Реестр page routes текущего актора: пункты `navigation` с `target.type=page` и страницы из `BaseModule.Routes`. Каждый элемент содержит уникальный `path` и `target` того же shape, что `navigation[].target`. |
