@@ -330,3 +330,31 @@ func TestFieldPresentationCalendarMarks(t *testing.T) {
 
 	require.ErrorContains(t, (&FieldPresentation{CalendarMarks: []CalendarMark{{Label: "x"}}}).Validate(), "calendar mark 0 needs a field")
 }
+
+// A cell can stand for something the device must connect before it is on - a
+// browser's push subscription: it names the value that says the device is
+// connected and the action that connects it, both or neither
+// (theGHub1/api#546).
+func TestFieldMatrixCellConnection(t *testing.T) {
+	connect := &Action{ID: "enable_browser_push", Type: ActionEmit, Label: "prompts.push.action", Client: &ClientAction{Name: "browser.push.subscribe"}}
+	matrix := func(cell FieldMatrixCell) *FieldMatrix {
+		return &FieldMatrix{Type: FieldMatrixTypeTable, Table: &FieldMatrixTable{
+			Heads: []string{"type", "push"},
+			Rows:  []FieldMatrixRow{{ID: "global", Label: "global", Cells: []FieldMatrixCell{cell}}},
+		}}
+	}
+	require.NoError(t, matrix(FieldMatrixCell{Field: "push_enabled", ConnectedField: "push_connected", ConnectAction: connect}).Validate("channels"))
+	require.Error(t, matrix(FieldMatrixCell{Field: "push_enabled", ConnectedField: "push_connected"}).Validate("channels"), "a connection needs its action")
+	require.Error(t, matrix(FieldMatrixCell{Field: "push_enabled", ConnectAction: connect}).Validate("channels"), "an action needs the value it connects")
+	require.Error(t, matrix(FieldMatrixCell{Text: "-", ConnectedField: "push_connected", ConnectAction: connect}).Validate("channels"), "a text cell connects nothing")
+
+	original := matrix(FieldMatrixCell{Field: "push_enabled", ConnectedField: "push_connected", ConnectAction: connect})
+	copied := cloneFieldMatrix(original)
+	copied.Table.Rows[0].Cells[0].ConnectAction.ID = "changed"
+	assert.Equal(t, "enable_browser_push", original.Table.Rows[0].Cells[0].ConnectAction.ID, "the action is copied, not shared")
+
+	raw, err := json.Marshal(original.Table.Rows[0].Cells[0])
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), `"connected_field":"push_connected"`)
+	assert.Contains(t, string(raw), `"connect_action":{`)
+}

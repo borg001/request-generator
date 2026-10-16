@@ -518,6 +518,7 @@ func cloneFieldMatrixCells(values []FieldMatrixCell) []FieldMatrixCell {
 	for i, cell := range values {
 		out[i] = cell
 		out[i].EnabledIf = cloneCondition(cell.EnabledIf)
+		out[i].ConnectAction = cloneAction(cell.ConnectAction)
 	}
 	return out
 }

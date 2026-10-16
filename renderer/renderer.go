@@ -2578,6 +2578,13 @@ type FieldMatrixCell struct {
 	// and cannot be changed. A channel turned off for every notification
 	// reads off in the row of each type at once (theGHub1/api#405).
 	EnabledIf *Condition `json:"enabled_if,omitempty"`
+	// ConnectedField names a value of the record that says this device is
+	// connected to what the cell switches on - a browser holding its push
+	// subscription. While it is false the cell reads off, whatever the field
+	// holds; switched on, the cell runs ConnectAction first and turns the
+	// field on only once that has connected the device (theGHub1/api#546).
+	ConnectedField string  `json:"connected_field,omitempty"`
+	ConnectAction  *Action `json:"connect_action,omitempty"`
 }
 
 // FieldMatrixDataSource connects a table layout to a standard list/update
@@ -2703,6 +2710,17 @@ func validateFieldMatrixCells(sectionID string, rowIndex, heads int, hasLabel bo
 		}
 		if cell.EnabledIf != nil && cell.Field == "" {
 			return fmt.Errorf("renderer.Universal: matrix section %q row %d cell %d enabled condition requires field", sectionID, rowIndex, cellIndex)
+		}
+		if (cell.ConnectedField == "") != (cell.ConnectAction == nil) {
+			return fmt.Errorf("renderer.Universal: matrix section %q row %d cell %d needs both connected_field and connect_action", sectionID, rowIndex, cellIndex)
+		}
+		if cell.ConnectAction != nil {
+			if cell.Field == "" {
+				return fmt.Errorf("renderer.Universal: matrix section %q row %d cell %d connection requires field", sectionID, rowIndex, cellIndex)
+			}
+			if err := cell.ConnectAction.Validate(); err != nil {
+				return fmt.Errorf("renderer.Universal: matrix section %q row %d cell %d connect_action: %w", sectionID, rowIndex, cellIndex, err)
+			}
 		}
 	}
 	return nil

@@ -403,6 +403,12 @@ func (localizer textLocalizer) localizeFieldMatrix(matrix *FieldMatrix) {
 		localizer.localizeTextFields(&row.Label, &row.Description)
 		for j := range row.Cells {
 			localizer.localizeTextFields(&row.Cells[j].Label, &row.Cells[j].Text)
+			localizer.localizeRendererAction(row.Cells[j].ConnectAction)
+		}
+	}
+	if source := matrix.Table.Source; source != nil && source.Row != nil {
+		for j := range source.Row.Cells {
+			localizer.localizeRendererAction(source.Row.Cells[j].ConnectAction)
 		}
 	}
 }
