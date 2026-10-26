@@ -2749,6 +2749,22 @@ type MediaPresetsConfig struct {
 	AddLabel  string `json:"add_label,omitempty"`
 }
 
+// MediaFocalPoint is a point of a picture, as fractions of its width and
+// height from the top left corner.
+type MediaFocalPoint struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
+// MediaCrop is a part of a picture, as fractions of its width and height
+// from the top left corner.
+type MediaCrop struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+	W float64 `json:"w"`
+	H float64 `json:"h"`
+}
+
 type MediaGalleryItem struct {
 	ID              string          `json:"id,omitempty"`
 	MediaID         int64           `json:"media_id,omitempty"`
@@ -2783,6 +2799,15 @@ type MediaGalleryItem struct {
 	// Cover marks the picture that stands for the whole set - a profile's
 	// cover. It is shown as the set's face and is not one of its items.
 	Cover bool `json:"cover,omitempty"`
+	// Fit and FocalPoint frame the picture the way its publication framed
+	// it: "crop" fills the frame around the focal point, as the publication
+	// shows it; empty leaves the frame to the consumer.
+	Fit        string           `json:"fit,omitempty"`
+	FocalPoint *MediaFocalPoint `json:"focal_point,omitempty"`
+	// Crop is the part of the picture its owner's avatar shows, when the
+	// picture is that avatar and was framed for it. A consumer that lets the
+	// owner frame it again starts from here.
+	Crop *MediaCrop `json:"crop,omitempty"`
 	// RemoveRefusal is said instead of removing an item that cannot go - the
 	// photo that is a person's face and cover, which is replaced, never taken
 	// away (theGHub1/api#449). Empty means the item is removed as any other.
