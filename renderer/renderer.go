@@ -1972,6 +1972,10 @@ type MediaCropperConfig struct {
 	Accept       string                     `json:"accept,omitempty"`
 	Viewport     MediaCropperViewportConfig `json:"viewport"`
 	Output       MediaCropperOutputConfig   `json:"output"`
+	// Frame keeps the picture whole: no file is cut. The part chosen goes
+	// with the action as the link's crop, and whoever serves the picture in
+	// that role shows that part of it. Output then says nothing.
+	Frame bool `json:"frame,omitempty"`
 }
 
 type MediaCropperViewportConfig struct {
